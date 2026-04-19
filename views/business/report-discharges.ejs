@@ -1,0 +1,39 @@
+<section class="module-hero">
+  <div>
+    <h2>Báo cáo xuất viện tổng hợp</h2>
+    <p class="text-muted">Danh sách lưu trữ các hồ sơ bệnh nhân đã hoàn tất đợt điều trị nội trú</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In báo cáo</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="table-responsive">
+    <table class="table app-table">
+      <thead>
+        <tr>
+          <th>Bệnh nhân</th>
+          <th>Mã BN</th>
+          <th>Ngày xuất viện</th>
+          <th>Điều kiện ra viện</th>
+          <th>Thanh toán</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr>
+            <td><strong><%= row.patientName %></strong></td>
+            <td><span class="patient-code-pill"><%= row.patientCode %></span></td>
+            <td><%= format.date(row.dischargeDate) %></td>
+            <td class="text-wrap-cell"><%= row.dischargeCondition %></td>
+            <td><%- include('../partials/badge', { text: row.paymentStatus }) %></td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr><td colspan="5" class="text-center py-4 text-muted">Chưa có hồ sơ xuất viện để báo cáo</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>

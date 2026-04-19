@@ -1,0 +1,28 @@
+<%
+  const text = locals.text || '';
+  const map = {
+    'Đang điều trị': 'info',
+    'Ổn định': 'success',
+    'Theo dõi': 'warning',
+    'Nguy cấp': 'danger',
+    'Cao': 'danger',
+    'Trung bình': 'warning',
+    'Thấp': 'success',
+    'Trống': 'success',
+    'Đang sử dụng': 'info',
+    'Chờ vệ sinh': 'warning',
+    'Bảo trì': 'danger',
+    'Cách ly': 'danger',
+    'Hoàn thành': 'success',
+    'Chưa thực hiện': 'secondary',
+    'Đang thực hiện': 'info',
+    'Chờ kết quả': 'warning',
+    'Đã có kết quả': 'success',
+    'Đã thanh toán': 'success',
+    'Chưa thanh toán': 'danger',
+    'Một phần': 'warning',
+    'Hoạt động': 'success',
+    'Khóa': 'danger'
+  };
+%>
+<span class="status-badge status-<%= map[text] || 'secondary' %>"><%= text %></span>

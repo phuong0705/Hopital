@@ -1,0 +1,72 @@
+<section class="module-hero">
+  <div>
+    <h2>Thống kê bệnh nhân nội trú</h2>
+    <p class="text-muted">Theo dõi công suất sử dụng giường bệnh và quân số bệnh nhân theo từng khoa</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" data-print-page><i class="bi bi-printer me-2"></i>In báo cáo</button>
+  </div>
+</section>
+
+<div class="row g-4 mt-2">
+  <% rows.forEach(row => { 
+    const occupancy = row.totalBeds > 0 ? Math.round((row.patientCount / row.totalBeds) * 100) : 0;
+    let colorClass = 'bg-success';
+    if (occupancy > 90) colorClass = 'bg-danger';
+    else if (occupancy > 70) colorClass = 'bg-warning';
+  %>
+    <div class="col-md-6 col-xl-4">
+      <div class="panel">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <h5 class="mb-0"><%= row.departmentName %></h5>
+            <small class="text-muted">Công suất hiện tại</small>
+          </div>
+          <span class="badge <%= colorClass.replace('bg-', 'bg-soft text-') %>"><%= occupancy %>%</span>
+        </div>
+        <div class="progress mb-3" style="height: 8px;">
+          <div class="progress-bar <%= colorClass %>" style="width: <%= occupancy %>%"></div>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span><strong><%= row.patientCount %></strong> bệnh nhân</span>
+          <span class="text-muted">/ <%= row.totalBeds %> giường</span>
+        </div>
+      </div>
+    </div>
+  <% }) %>
+</div>
+
+<section class="panel mt-4">
+  <div class="panel-header"><h2>Chi tiết theo khoa</h2></div>
+  <div class="table-responsive mt-3">
+    <table class="table app-table">
+      <thead>
+        <tr>
+          <th>Tên khoa</th>
+          <th>Bệnh nhân hiện có</th>
+          <th>Tổng số giường</th>
+          <th>Giường trống</th>
+          <th>Tỷ lệ lấp đầy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr>
+            <td><strong><%= row.departmentName %></strong></td>
+            <td><%= row.patientCount %> BN</td>
+            <td><%= row.totalBeds %> giường</td>
+            <td><%= Math.max(row.totalBeds - row.patientCount, 0) %></td>
+            <td>
+              <div class="d-flex align-items-center">
+                <span class="me-2"><%= row.totalBeds > 0 ? Math.round((row.patientCount / row.totalBeds) * 100) : 0 %>%</span>
+                <div class="progress flex-grow-1" style="height: 4px; min-width: 50px;">
+                  <div class="progress-bar" style="width: <%= row.totalBeds > 0 ? (row.patientCount / row.totalBeds) * 100 : 0 %>%"></div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>

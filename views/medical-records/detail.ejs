@@ -1,0 +1,63 @@
+<%
+  const record = data.record;
+%>
+<section class="detail-hero">
+  <div>
+    <span class="status-badge status-info"><%= record.record_code %></span>
+    <h2><%= record.full_name %></h2>
+    <p><%= record.patient_code %> · <%= record.gender %> · <%= format.age(record.date_of_birth) %> tuổi · <%= record.department_name %></p>
+  </div>
+  <a href="/medical-records" class="btn btn-light"><i class="bi bi-arrow-left me-2"></i>Quay lại</a>
+</section>
+
+<section class="dashboard-grid mt-4">
+  <div class="panel">
+    <div class="panel-header"><h2>Thông tin bệnh án</h2></div>
+    <dl class="info-list">
+      <dt>Chẩn đoán nhập viện</dt><dd><%= record.diagnosis_on_admission %></dd>
+      <dt>Tiền sử bệnh</dt><dd><%= record.medical_history %></dd>
+      <dt>Dị ứng</dt><dd><%= record.allergies %></dd>
+      <dt>Dấu hiệu sinh tồn</dt><dd><%= record.vital_signs %></dd>
+      <dt>Ghi chú bác sĩ</dt><dd><%= record.doctor_notes %></dd>
+    </dl>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h2>Kết quả xét nghiệm gần nhất</h2></div>
+    <div class="list-stack">
+      <% data.labs.slice(0, 4).forEach(lab => { %>
+        <div class="list-item">
+          <span class="list-icon info"><i class="bi bi-clipboard2-data"></i></span>
+          <div><strong><%= lab.testType %></strong><small><%= lab.resultSummary || 'Chưa có kết quả' %></small></div>
+          <%- include('../partials/badge', { text: lab.status }) %>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="dashboard-grid mt-4">
+  <div class="panel">
+    <div class="panel-header"><h2>Danh sách thuốc</h2></div>
+    <div class="table-responsive">
+      <table class="table app-table"><thead><tr><th>Thuốc</th><th>Liều</th><th>Lần dùng</th><th>Đường dùng</th><th>Thời gian</th></tr></thead><tbody>
+        <% data.medicines.forEach(item => { %>
+          <tr><td><%= item.medicineName %></td><td><%= item.dosage %></td><td><%= item.frequency %></td><td><%= item.route %></td><td><%= format.date(item.startDate) %> - <%= format.date(item.endDate) %></td></tr>
+        <% }) %>
+      </tbody></table>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h2>Timeline diễn biến điều trị</h2></div>
+    <div class="timeline">
+      <% data.treatments.forEach(item => { %>
+        <div class="timeline-item">
+          <span></span>
+          <div>
+            <strong><%= format.datetime(item.scheduledTime) %> · <%= item.treatmentContent %></strong>
+            <p><%= item.assigneeName %> · <%= item.note || 'Không có ghi chú' %></p>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>

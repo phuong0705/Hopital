@@ -1,0 +1,41 @@
+<%- include('../partials/patient-portal-header', { data }) %>
+
+<section class="dashboard-grid mt-4">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Thông tin xuất viện</h2>
+      </div>
+    </div>
+    <% if (data.discharge) { %>
+      <dl class="info-list">
+        <dt>Ngày xuất viện</dt><dd><%= format.datetime(data.discharge.dischargeDate) %></dd>
+        <dt>Điều kiện xuất viện</dt><dd><%= data.discharge.dischargeCondition %></dd>
+        <dt>Tóm tắt điều trị</dt><dd><%= data.discharge.treatmentSummary %></dd>
+        <dt>Tổng chi phí</dt><dd><%= format.currency(data.discharge.totalCost) %></dd>
+        <dt>Thanh toán</dt><dd><%- include('../partials/badge', { text: data.discharge.paymentStatus }) %></dd>
+      </dl>
+    <% } else { %>
+      <div class="patient-note">
+        <i class="bi bi-info-circle"></i>
+        <div>
+          <strong>Chưa có hồ sơ xuất viện</strong>
+        </div>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Nhắc việc trước khi xuất viện</h2>
+      </div>
+    </div>
+    <div class="checklist">
+      <label><input type="checkbox"> Xác nhận thông tin BHYT và CCCD với quầy tiếp nhận</label>
+      <label><input type="checkbox"> Kiểm tra đơn thuốc ra viện và lịch tái khám</label>
+      <label><input type="checkbox"> Kiểm tra viện phí trước khi làm thủ tục xuất viện</label>
+      <label><input type="checkbox"> Nhận giấy ra viện và hướng dẫn chăm sóc sau điều trị</label>
+    </div>
+  </div>
+</section>

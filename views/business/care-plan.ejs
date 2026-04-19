@@ -1,0 +1,57 @@
+<section class="module-hero">
+  <div>
+    <h2>Lập phác đồ điều trị nội trú</h2>
+    <p class="text-muted">Xây dựng kế hoạch điều trị chi tiết cho bệnh nhân đang lưu viện</p>
+  </div>
+  <div class="module-actions">
+    <a href="/dashboard" class="btn btn-light"><i class="bi bi-grid me-2"></i>Tổng quan</a>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm tên bệnh nhân hoặc mã HSBA..." data-module-search="planTable">
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table app-table" id="planTable">
+      <thead>
+        <tr>
+          <th>Bệnh nhân</th>
+          <th>Mã HSBA</th>
+          <th>Chẩn đoán xác định</th>
+          <th>Khoa điều trị</th>
+          <th>Ngày nhập viện</th>
+          <th class="text-end">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.patientName} ${row.recordCode}`.toLowerCase() %>">
+            <td>
+              <strong><%= row.patientName %></strong><br>
+              <small class="text-muted"><%= row.patientCode %></small>
+            </td>
+            <td><span class="patient-code-pill"><%= row.recordCode %></span></td>
+            <td class="text-wrap-cell"><%= row.diagnosis || 'Chưa cập nhật' %></td>
+            <td><%= row.departmentName %></td>
+            <td><%= format.date(row.createdAt) %></td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-primary" href="/medical-records/<%= row.recordId %>">
+                <i class="bi bi-diagram-3 me-1"></i>Lập phác đồ
+              </a>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">Không có hồ sơ chờ lập phác đồ</td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -1,0 +1,137 @@
+<%
+  const filterValues = filters || {};
+  const statusOptions = ['Đang điều trị', 'Theo dõi', 'Ổn định', 'Chờ xuất viện'];
+  const priorityOptions = ['Thấp', 'Trung bình', 'Cao', 'Nguy cấp'];
+  const hasFilters = Object.values(filterValues).some(Boolean);
+  const roleCode = currentUser ? currentUser.roleCode : '';
+  const canUpdateStatus = ['ADMIN', 'DOCTOR', 'NURSE'].includes(roleCode);
+  const canTransfer = ['ADMIN', 'NURSE', 'RECEPTIONIST'].includes(roleCode);
+  const canDischarge = ['ADMIN', 'DOCTOR', 'RECEPTIONIST'].includes(roleCode);
+%>
+
+<section class="patient-list-hero">
+  <div class="d-flex align-items-center gap-3">
+    <a href="/patients" class="btn btn-light action-icon">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <div>
+      <h2>Danh sách bệnh nhân nội trú</h2>
+    </div>
+  </div>
+  <div class="patient-list-actions">
+    <button class="btn btn-light" type="button" id="printPatientsBtn">
+      <i class="bi bi-printer me-2"></i>In
+    </button>
+    <button class="btn btn-light" type="button" id="exportPatientsBtn" data-table="patientsTable" data-filename="benh-nhan-noi-tru.csv">
+      <i class="bi bi-filetype-csv me-2"></i>CSV
+    </button>
+    <a href="/patients/reception" class="btn btn-primary">
+      <i class="bi bi-person-plus-fill me-2"></i>Tiếp nhận mới
+    </a>
+  </div>
+</section>
+
+<section class="panel patient-list-panel mt-4">
+  <form class="patient-filter-form compact" method="get" action="/patients/list">
+    <div class="patient-search-field">
+      <i class="bi bi-search"></i>
+      <input name="keyword" class="form-control" placeholder="Tìm mã BN, họ tên, CCCD" value="<%= filterValues.keyword || '' %>">
+    </div>
+    <select name="departmentId" class="form-select">
+      <option value="">Tất cả khoa</option>
+      <% departments.forEach(department => { %>
+        <option value="<%= department.departmentId %>" <%= String(filterValues.departmentId || '') === String(department.departmentId) ? 'selected' : '' %>><%= department.departmentName %></option>
+      <% }) %>
+    </select>
+    <select name="doctorId" class="form-select">
+      <option value="">Tất cả bác sĩ</option>
+      <% doctors.forEach(doctor => { %>
+        <option value="<%= doctor.doctorId %>" <%= String(filterValues.doctorId || '') === String(doctor.doctorId) ? 'selected' : '' %>><%= doctor.fullName %></option>
+      <% }) %>
+    </select>
+    <button class="btn btn-dark" type="submit"><i class="bi bi-funnel me-2"></i>Lọc</button>
+    <% if (hasFilters) { %>
+      <a class="btn btn-light" href="/patients/list"><i class="bi bi-x-circle me-2"></i>Bỏ lọc</a>
+    <% } %>
+  </form>
+
+  <div class="patient-list-meta">
+    <span>Hiển thị <strong><%= patients.length %></strong> hồ sơ</span>
+    <% if (hasFilters) { %>
+      <span class="patient-filter-chip"><i class="bi bi-sliders"></i>Đang áp dụng bộ lọc</span>
+    <% } %>
+  </div>
+
+  <% if (patients.length) { %>
+    <div class="table-responsive patient-table-wrap">
+      <table class="table app-table patient-table patient-table-compact" id="patientsTable">
+        <thead>
+          <tr>
+            <th>Mã bệnh nhân</th>
+            <th>Bệnh nhân</th>
+            <th>Tuổi</th>
+            <th>Giới tính</th>
+            <th class="text-end">Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% patients.forEach(patient => { %>
+            <tr class="patient-row">
+              <td><span class="patient-code-pill"><%= patient.patientCode %></span></td>
+              <td>
+                <div class="patient-person compact">
+                  <span class="patient-avatar"><%= patient.fullName.charAt(0) %></span>
+                  <div>
+                    <strong><%= patient.fullName %></strong>
+                    <small><%= patient.phone || patient.identityNumber || 'Chưa có SĐT' %></small>
+                  </div>
+                </div>
+              </td>
+              <td><strong><%= format.age(patient.dateOfBirth) %></strong></td>
+              <td><strong><%= patient.gender %></strong></td>
+              <td>
+                <div class="table-actions justify-content-end">
+                  <a href="/patients/<%= patient.patientId %>" class="btn btn-sm btn-light action-icon" data-bs-toggle="tooltip" data-bs-title="Xem chi tiết">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <% if (canUpdateStatus) { %>
+                    <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#updateModal"
+                      data-admission-id="<%= patient.admissionId %>"
+                      data-patient-name="<%= patient.fullName %>"
+                      data-patient-code="<%= patient.patientCode %>"
+                      data-status="<%= patient.status %>"
+                      data-priority="<%= patient.priorityLevel %>">
+                      <i class="bi bi-pencil-square"></i>
+                    </button>
+                  <% } %>
+                  <% if (canTransfer) { %>
+                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="modal" data-bs-target="#transferModal"
+                      data-admission-id="<%= patient.admissionId %>"
+                      data-patient-name="<%= patient.fullName %>"
+                      data-patient-code="<%= patient.patientCode %>">
+                      Chuyển phòng
+                    </button>
+                  <% } %>                  <% if (canDischarge) { %>
+                    <button class="btn btn-sm btn-danger-soft action-icon" type="button" data-bs-toggle="modal" data-bs-target="#dischargeModal"
+                      data-admission-id="<%= patient.admissionId %>"
+                      data-patient-name="<%= patient.fullName %>"
+                      data-patient-code="<%= patient.patientCode %>">
+                      <i class="bi bi-box-arrow-right"></i>
+                    </button>
+                  <% } %>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <div class="empty-inline patient-empty-state">
+      <i class="bi bi-search"></i>
+      <strong>Không tìm thấy bệnh nhân phù hợp</strong>
+    </div>
+  <% } %>
+</section>
+
+<%- include('../partials/action-modals', { statusOptions, priorityOptions }) %>

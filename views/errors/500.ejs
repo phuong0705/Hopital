@@ -1,0 +1,13 @@
+<section class="empty-state">
+  <i class="bi bi-exclamation-octagon"></i>
+  <h2>Lỗi hệ thống</h2>
+  <p>Ứng dụng gặp sự cố khi xử lý yêu cầu. Kiểm tra kết nối SQL Server và cấu hình `.env`.</p>
+  <% if (errorMessage) { %>
+    <div class="alert alert-danger text-start mt-3">
+      <strong>Chi tiết lỗi:</strong> <%= errorMessage %>
+    </div>
+  <% } %>
+  <% if (error) { %>
+    <pre class="error-box"><%= error.stack %></pre>
+  <% } %>
+</section>

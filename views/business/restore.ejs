@@ -1,0 +1,48 @@
+<section class="module-hero">
+  <div>
+    <h2>Phục hồi dữ liệu hệ thống</h2>
+    <p class="text-muted">Khôi phục trạng thái dữ liệu từ các bản sao lưu đã tạo</p>
+  </div>
+</section>
+
+<div class="row g-4 mt-2">
+  <div class="col-lg-6">
+    <div class="panel h-100">
+      <div class="panel-header"><h2>Tải lên bản sao lưu</h2></div>
+      <div class="py-4">
+        <div class="mb-4 text-center">
+          <i class="bi bi-cloud-arrow-down text-warning display-1 mb-3"></i>
+          <p class="text-muted">Hỗ trợ các định dạng tệp: <strong>.bak, .sql, .zip</strong></p>
+        </div>
+        <div class="app-form">
+          <div class="mb-3">
+            <label class="form-label">Chọn tệp tin khôi phục</label>
+            <input type="file" class="form-control">
+          </div>
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Lưu ý quan trọng:</strong> Tiến trình phục hồi sẽ ghi đè lên toàn bộ dữ liệu hiện tại. Hãy đảm bảo bạn đã tạo bản sao lưu dự phòng trước khi thực hiện.
+          </div>
+          <button class="btn btn-warning w-100 py-2" onclick="confirm('Bạn có chắc chắn muốn tiến hành phục hồi dữ liệu? Hệ thống sẽ tạm dừng hoạt động trong vài phút.')">
+            <i class="bi bi-arrow-clockwise me-2"></i>Tiến hành phục hồi ngay
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-header"><h2>Hướng dẫn an toàn</h2></div>
+      <div class="mt-3">
+        <ol class="list-group list-group-numbered list-group-flush">
+          <li class="list-group-item py-3">Kiểm tra phiên bản của bản sao lưu phải tương thích với phiên bản hệ thống hiện tại.</li>
+          <li class="list-group-item py-3">Thông báo cho tất cả người dùng thoát khỏi hệ thống trước khi bắt đầu.</li>
+          <li class="list-group-item py-3">Ngắt kết nối với các dịch vụ đồng bộ dữ liệu bên ngoài (nếu có).</li>
+          <li class="list-group-item py-3">Kiểm tra dung lượng bộ nhớ trống trên máy chủ tối thiểu gấp đôi kích thước tệp sao lưu.</li>
+          <li class="list-group-item py-3">Chờ thông báo "Hoàn tất" từ hệ thống trước khi đăng nhập lại.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>

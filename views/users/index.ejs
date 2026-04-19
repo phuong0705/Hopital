@@ -1,0 +1,13 @@
+<section class="panel">
+  <div class="panel-header"><div><h2>Quản lí tài khoản</h2></div><button class="btn btn-primary"><i class="bi bi-person-plus-fill me-2"></i>Tạo mới</button></div>
+  <div class="table-responsive">
+    <table class="table app-table">
+      <thead><tr><th>Username</th><th>Họ tên</th><th>Email</th><th>Role</th><th>Trạng thái</th><th>Ngày tạo</th><th>Hành động</th></tr></thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr><td><strong><%= row.username %></strong></td><td><%= row.fullName %></td><td><%= row.email %></td><td><span class="role-pill"><%= row.roleName %></span></td><td><%- include('../partials/badge', { text: row.status }) %></td><td><%= format.date(row.createdAt) %></td><td><div class="table-actions"><button class="btn btn-sm btn-light">Reset mật khẩu</button><button class="btn btn-sm btn-danger-soft">Khóa</button></div></td></tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>

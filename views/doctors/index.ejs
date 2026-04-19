@@ -1,0 +1,74 @@
+<%
+  const specialties = [...new Set(rows.map(item => item.specialty).filter(Boolean))];
+  const shifts = [...new Set(rows.map(item => item.shiftName).filter(Boolean))];
+%>
+
+<section class="staff-hero">
+  <div>
+    <h2>Nhân sự y tế</h2>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="staff-toolbar">
+    <div class="search-box staff-search">
+      <i class="bi bi-search"></i>
+      <input id="doctorSearch" type="search" placeholder="Tìm tên, mã bác sĩ, email, số điện thoại">
+    </div>
+    <select id="specialtyFilter" class="form-select">
+      <option value="">Tất cả chuyên khoa</option>
+      <% specialties.forEach(item => { %>
+        <option value="<%= item %>"><%= item %></option>
+      <% }) %>
+    </select>
+    <select id="shiftFilter" class="form-select">
+      <option value="">Tất cả ca trực</option>
+      <% shifts.forEach(item => { %>
+        <option value="<%= item %>"><%= item %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="doctor-grid enhanced mt-3" id="doctorGrid">
+    <% rows.forEach(row => { %>
+      <article class="doctor-card enhanced"
+        data-search="<%= `${row.fullName} ${row.doctorCode} ${row.email} ${row.phone} ${row.specialty}`.toLowerCase() %>"
+        data-specialty="<%= row.specialty %>"
+        data-shift="<%= row.shiftName %>">
+        <div class="doctor-card-top">
+          <div class="doctor-avatar"><%= row.fullName.charAt(0) %></div>
+          <div>
+            <h3><%= row.fullName %></h3>
+            <p><%= row.doctorCode %> · <%= row.specialty %></p>
+            <div class="doctor-inline-tags">
+              <span><i class="bi bi-people"></i><%= row.patientCount %> bệnh nhân</span>
+            </div>
+          </div>
+          <span class="status-badge status-info"><%= row.shiftName %></span>
+        </div>
+
+        <div class="doctor-meta-grid">
+          <div>
+            <small>SĐT</small>
+            <strong><%= row.phone %></strong>
+          </div>
+          <div>
+            <small>Email</small>
+            <strong><%= row.email %></strong>
+          </div>
+        </div>
+
+        <div class="doctor-actions">
+          <a class="btn btn-sm btn-light icon-action" href="/patients?doctorId=<%= row.doctorId %>" data-bs-toggle="tooltip" data-bs-title="Bệnh nhân phụ trách" aria-label="Bệnh nhân phụ trách"><i class="bi bi-people"></i></a>
+          <a class="btn btn-sm btn-light icon-action" href="tel:<%= row.phone %>" data-bs-toggle="tooltip" data-bs-title="Gọi điện" aria-label="Gọi điện"><i class="bi bi-telephone"></i></a>
+          <a class="btn btn-sm btn-primary icon-action" href="mailto:<%= row.email %>" data-bs-toggle="tooltip" data-bs-title="Gửi email" aria-label="Gửi email"><i class="bi bi-envelope"></i></a>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+
+  <div id="doctorEmptyState" class="empty-inline d-none">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy nhân sự phù hợp</strong>
+  </div>
+</section>

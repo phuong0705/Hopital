@@ -1,0 +1,47 @@
+<%
+  const user = currentUser || {
+    fullName: 'Khách',
+    roleName: 'Chưa đăng nhập',
+    username: 'guest',
+    roleCode: ''
+  };
+  const canQuickReception = ['ADMIN', 'RECEPTIONIST'].includes(user.roleCode);
+  const isPatient = user.roleCode === 'PATIENT';
+%>
+<header class="topbar">
+  <div class="topbar-actions">
+    <% if (!isPatient) { %>
+      <form class="search-box d-none d-xl-flex" action="/patients" method="get">
+        <i class="bi bi-search"></i>
+        <input name="keyword" type="search" placeholder="Tìm bệnh nhân, CCCD, mã hồ sơ">
+      </form>
+    <% } %>
+    <button class="icon-btn" data-bs-toggle="tooltip" data-bs-title="Thông báo">
+      <i class="bi bi-bell-fill"></i>
+      <span class="notification-dot"></span>
+    </button>
+    <% if (canQuickReception) { %>
+      <a class="btn btn-primary btn-soft" href="/patients/reception">
+        <i class="bi bi-plus-lg"></i>
+        <span>Tiếp nhận mới</span>
+      </a>
+    <% } %>
+    <div class="dropdown">
+      <button class="user-chip dropdown-toggle" data-bs-toggle="dropdown">
+        <span class="avatar"><%= user.fullName.charAt(0) %></span>
+        <span class="d-none d-lg-block text-start">
+          <strong><%= user.fullName %></strong>
+          <small><%= user.roleName %></small>
+        </span>
+      </button>
+      <div class="dropdown-menu dropdown-menu-end shadow-sm">
+        <span class="dropdown-item-text text-muted small">@<%= user.username %></span>
+        <a class="dropdown-item" href="<%= isPatient ? '/patients/me' : '/settings' %>"><i class="bi bi-person-gear me-2"></i>Hồ sơ cá nhân</a>
+        <div class="dropdown-divider"></div>
+        <form action="/logout" method="post">
+          <button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</header>

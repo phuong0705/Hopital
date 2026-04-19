@@ -1,0 +1,48 @@
+<%- include('../partials/patient-portal-header', { data }) %>
+
+<section class="dashboard-grid mt-4">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Viện phí / thanh toán</h2>
+      </div>
+      <% if (data.billing) { %>
+        <%- include('../partials/badge', { text: data.billing.paymentStatus }) %>
+      <% } %>
+    </div>
+    <% if (data.billing) { %>
+      <dl class="info-list">
+        <dt>Mã phiếu</dt><dd><%= data.billing.billCode %></dd>
+        <dt>Chi phí khám</dt><dd><%= format.currency(data.billing.consultationFee) %></dd>
+        <dt>Chi phí giường</dt><dd><%= format.currency(data.billing.bedFee) %></dd>
+        <dt>Chi phí thuốc</dt><dd><%= format.currency(data.billing.medicineFee) %></dd>
+        <dt>Chi phí xét nghiệm</dt><dd><%= format.currency(data.billing.labFee) %></dd>
+        <dt>BHYT hỗ trợ</dt><dd><%= format.currency(data.billing.insuranceCovered) %></dd>
+        <dt>Tổng thanh toán</dt><dd><strong><%= format.currency(data.billing.totalAmount) %></strong></dd>
+      </dl>
+    <% } else { %>
+    <% } %>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Chi tiết chi phí</h2>
+      </div>
+    </div>
+    <div class="list-stack">
+      <% data.billingItems.forEach(item => { %>
+        <div class="list-item">
+          <span class="list-icon info"><i class="bi bi-receipt"></i></span>
+          <div>
+            <strong><%= item.itemName %></strong>
+            <small><%= item.itemType %> · SL <%= item.quantity %> · Đơn giá <%= format.currency(item.unitPrice) %></small>
+          </div>
+          <strong><%= format.currency(item.amount) %></strong>
+        </div>
+      <% }) %>
+      <% if (!data.billingItems.length) { %>
+      <% } %>
+    </div>
+  </div>
+</section>

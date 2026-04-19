@@ -1,0 +1,77 @@
+<section class="module-hero">
+  <div>
+    <h2>Quản lí khoa phòng</h2>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <button class="btn btn-light" type="button" data-export-table="departmentsTable" data-filename="khoa-phong.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
+  </div>
+</section>
+
+<section class="panel module-panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm mã khoa, tên khoa, trưởng khoa" data-module-search="departmentsTable">
+    </div>
+    <select class="form-select" data-module-filter="departmentsTable" data-filter-key="usage">
+      <option value="">Tất cả công suất</option>
+      <option value="low">Dưới 50%</option>
+      <option value="medium">50% - 79%</option>
+      <option value="high">Từ 80%</option>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table departments-table" id="departmentsTable">
+      <thead>
+        <tr>
+          <th>Khoa</th>
+          <th>Trưởng khoa</th>
+          <th>Phòng</th>
+          <th>Giường</th>
+          <th>Sử dụng</th>
+          <th>Còn trống</th>
+          <th>Công suất</th>
+          <th class="text-end">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => {
+          const percent = row.totalBeds ? Math.round(row.usedBeds / row.totalBeds * 100) : 0;
+          const usage = percent >= 80 ? 'high' : (percent >= 50 ? 'medium' : 'low');
+        %>
+          <tr data-search="<%= `${row.departmentCode} ${row.departmentName} ${row.headDoctor}`.toLowerCase() %>" data-usage="<%= usage %>">
+            <td>
+              <div class="module-primary">
+                <strong><%= row.departmentName %></strong>
+                <small><%= row.departmentCode %></small>
+              </div>
+            </td>
+            <td><%= row.headDoctor %></td>
+            <td><%= row.roomCount %></td>
+            <td><%= row.totalBeds %></td>
+            <td><%= row.usedBeds %></td>
+            <td><%= row.availableBeds %></td>
+            <td>
+              <div class="module-progress">
+                <div class="progress app-progress"><div class="progress-bar" style="width:<%= percent %>%"></div></div>
+                <strong><%= percent %>%</strong>
+              </div>
+            </td>
+            <td class="text-end">
+              <a href="/departments/<%= row.departmentId %>" class="btn btn-sm btn-light action-icon" data-bs-toggle="tooltip" data-bs-title="Xem chi tiết">
+                <i class="bi bi-eye"></i>
+              </a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty-inline module-empty d-none" data-empty-for="departmentsTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy khoa phù hợp</strong>
+  </div>
+</section>

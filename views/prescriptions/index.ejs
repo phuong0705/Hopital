@@ -1,0 +1,159 @@
+<%
+  const canPrescribe = currentUser && ['ADMIN', 'DOCTOR'].includes(currentUser.roleCode);
+%>
+
+<section class="module-hero">
+  <div>
+    <h2>Thuốc và đơn thuốc</h2>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <button class="btn btn-light" type="button" data-export-table="prescriptionsTable" data-filename="don-thuoc.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
+    <% if (canPrescribe) { %>
+      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#prescriptionModal"><i class="bi bi-plus-lg me-2"></i>Kê đơn</button>
+    <% } %>
+  </div>
+</section>
+
+<section class="panel module-panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm bệnh nhân, thuốc, bác sĩ kê" data-module-search="prescriptionsTable">
+    </div>
+    <select class="form-select" data-module-filter="prescriptionsTable" data-filter-key="route">
+      <option value="">Tất cả đường dùng</option>
+      <% [...new Set(rows.map(row => row.route))].forEach(route => { %>
+        <option><%= route %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table prescriptions-table" id="prescriptionsTable">
+      <thead>
+        <tr>
+          <th>Đơn thuốc</th>
+          <th>Bệnh nhân</th>
+          <th>Thuốc</th>
+          <th>Liều / lần dùng</th>
+          <th>Đường dùng</th>
+          <th>Thời gian</th>
+          <th>Bác sĩ kê</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.prescriptionCode} ${row.patientName} ${row.medicineName} ${row.doctorName}`.toLowerCase() %>" data-route="<%= row.route %>">
+            <td><span class="module-code"><%= row.prescriptionCode %></span></td>
+            <td><%= row.patientName %></td>
+            <td>
+              <div class="module-primary">
+                <strong><%= row.medicineName %></strong>
+                <small><%= row.dosage %></small>
+              </div>
+            </td>
+            <td><%= row.frequency %></td>
+            <td><span class="module-soft-pill"><%= row.route %></span></td>
+            <td><%= format.date(row.startDate) %> - <%= format.date(row.endDate) %></td>
+            <td><%= row.doctorName %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty-inline module-empty d-none" data-empty-for="prescriptionsTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy đơn thuốc phù hợp</strong>
+  </div>
+</section>
+
+<% if (canPrescribe) { %>
+<div class="modal fade" id="prescriptionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/prescriptions" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Kê đơn thuốc</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Bệnh nhân / hồ sơ</label>
+              <select name="recordId" class="form-select" required>
+                <% activeRecords.forEach(item => { %>
+                  <option value="<%= item.recordId %>"><%= item.patientCode %> - <%= item.patientName %> - <%= item.departmentName %> - <%= item.recordCode %></option>
+                <% }) %>
+              </select>
+            </div>
+            <% if (selectedDoctor) { %>
+              <input type="hidden" name="doctorId" value="<%= selectedDoctor.doctorId %>">
+              <div class="col-md-6">
+                <label class="form-label">Bác sĩ kê</label>
+                <input class="form-control" value="<%= selectedDoctor.fullName %> - <%= selectedDoctor.specialty %>" disabled>
+              </div>
+            <% } else { %>
+              <div class="col-md-6">
+                <label class="form-label">Bác sĩ kê</label>
+                <select name="doctorId" class="form-select" required>
+                  <% doctors.forEach(doctor => { %>
+                    <option value="<%= doctor.doctorId %>"><%= doctor.fullName %> - <%= doctor.specialty %></option>
+                  <% }) %>
+                </select>
+              </div>
+            <% } %>
+            <div class="col-md-6">
+              <label class="form-label">Tên thuốc</label>
+              <input name="medicineName" class="form-control" placeholder="Ceftriaxone" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Liều dùng</label>
+              <input name="dosage" class="form-control" placeholder="2g" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Số lần dùng</label>
+              <input name="frequency" class="form-control" placeholder="1 lần/ngày" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Đường dùng</label>
+              <select name="route" class="form-select" required>
+                <option>Uống</option>
+                <option>Tĩnh mạch</option>
+                <option>Tiêm dưới da</option>
+                <option>Tiêm bắp</option>
+                <option>Khí dung</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Số lượng</label>
+              <input name="quantity" type="number" min="1" value="1" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Đơn vị</label>
+              <input name="unit" class="form-control" value="viên" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Bắt đầu</label>
+              <input name="startDate" type="date" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Kết thúc</label>
+              <input name="endDate" type="date" class="form-control" required>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Ghi chú</label>
+              <input name="note" class="form-control" placeholder="Dặn dò khi dùng thuốc">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-light" type="button" data-bs-dismiss="modal">Đóng</button>
+          <button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>Lưu đơn thuốc</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<% } %>

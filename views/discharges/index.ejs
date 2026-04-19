@@ -1,0 +1,85 @@
+<section class="module-hero">
+  <div>
+    <h2>Quản lý xuất viện</h2>
+    <p class="text-muted">Danh sách hồ sơ bệnh nhân đã hoàn tất điều trị và làm thủ tục xuất viện</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-export-table="dischargeTable" data-filename="danh-sach-xuat-vien.csv"><i class="bi bi-filetype-csv me-2"></i>Xuất CSV</button>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#dischargeModal">
+      <i class="bi bi-file-earmark-medical me-2"></i>Tạo hồ sơ xuất viện
+    </button>
+  </div>
+</section>
+
+<section class="panel module-panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm tên bệnh nhân hoặc mã BN..." data-module-search="dischargeTable">
+    </div>
+    <select class="form-select w-auto" data-module-filter="dischargeTable" data-filter-key="payment">
+      <option value="">Tất cả trạng thái thanh toán</option>
+      <option>Đã thanh toán</option>
+      <option>Chưa thanh toán</option>
+      <option>Một phần</option>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="dischargeTable">
+      <thead>
+        <tr>
+          <th>Bệnh nhân</th>
+          <th>Điều kiện xuất viện</th>
+          <th>Ngày xuất viện</th>
+          <th>Tóm tắt điều trị</th>
+          <th>Tổng chi phí</th>
+          <th>Thanh toán</th>
+          <th class="text-end">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.patientCode} ${row.patientName}`.toLowerCase() %>" data-payment="<%= row.paymentStatus %>">
+            <td>
+              <strong><%= row.patientName %></strong><br>
+              <small class="text-muted"><%= row.patientCode %></small>
+            </td>
+            <td><%= row.dischargeCondition %></td>
+            <td><%= format.date(row.dischargeDate) %></td>
+            <td class="text-wrap-cell" style="max-width: 250px;"><%= row.treatmentSummary %></td>
+            <td><strong><%= format.currency(row.totalCost) %></strong></td>
+            <td><%- include('../partials/badge', { text: row.paymentStatus }) %></td>
+            <td class="text-end">
+              <div class="table-actions justify-content-end">
+                <a href="/medical-records/<%= row.recordId %>" class="btn btn-sm btn-light action-icon" data-bs-toggle="tooltip" title="Xem hồ sơ bệnh án">
+                  <i class="bi bi-journal-text"></i>
+                </a>
+                <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#dischargePaymentModal"
+                  data-id="<%= row.dischargeId %>"
+                  data-patient-name="<%= row.patientName %>"
+                  data-patient-code="<%= row.patientCode %>"
+                  data-status="<%= row.paymentStatus %>"
+                  title="Cập nhật thanh toán">
+                  <i class="bi bi-credit-card"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">Chưa có hồ sơ xuất viện nào</td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty-inline module-empty d-none" data-empty-for="dischargeTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy hồ sơ xuất viện phù hợp</strong>
+  </div>
+</section>
+
+<%- include('../partials/action-modals') %>

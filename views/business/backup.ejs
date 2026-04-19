@@ -1,0 +1,84 @@
+<section class="module-hero">
+  <div>
+    <h2>Sao lưu dữ liệu hệ thống</h2>
+    <p class="text-muted">Tạo bản sao lưu an toàn cho toàn bộ cơ sở dữ liệu bệnh viện</p>
+  </div>
+</section>
+
+<div class="row g-4 mt-2">
+  <div class="col-lg-4">
+    <div class="panel h-100">
+      <div class="panel-header"><h2>Lệnh sao lưu</h2></div>
+      <div class="text-center py-4">
+        <i class="bi bi-cloud-arrow-up text-primary display-1 mb-4"></i>
+        <p>Bản sao lưu gần nhất: <br><strong>19/04/2026 10:30</strong></p>
+        <button class="btn btn-primary btn-lg w-100 mt-3" onclick="alert('Tiến trình sao lưu đang được khởi tạo. Vui lòng không đóng trình duyệt...')">
+          <i class="bi bi-play-fill me-2"></i>Bắt đầu sao lưu
+        </button>
+      </div>
+      <div class="mt-4 pt-4 border-top">
+        <h6>Tùy chọn sao lưu</h6>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" checked id="check1">
+          <label class="form-check-label" for="check1">Bao gồm tệp tin đính kèm</label>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" checked id="check2">
+          <label class="form-check-label" for="check2">Nén dữ liệu (.zip)</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="check3">
+          <label class="form-check-label" for="check3">Gửi báo cáo qua email</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="panel">
+      <div class="panel-header"><h2>Lịch sử sao lưu</h2></div>
+      <div class="table-responsive mt-3">
+        <table class="table app-table">
+          <thead>
+            <tr>
+              <th>Tên bản sao lưu</th>
+              <th>Ngày tạo</th>
+              <th>Dung lượng</th>
+              <th>Trạng thái</th>
+              <th class="text-end">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>full_backup_20260419.bak</strong></td>
+              <td>19/04/2026 10:30</td>
+              <td>124.5 MB</td>
+              <td><span class="badge bg-success">Thành công</span></td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-light"><i class="bi bi-download"></i></button>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>daily_sync_20260418.bak</strong></td>
+              <td>18/04/2026 23:55</td>
+              <td>85.2 MB</td>
+              <td><span class="badge bg-success">Thành công</span></td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-light"><i class="bi bi-download"></i></button>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>manual_test_20260417.bak</strong></td>
+              <td>17/04/2026 15:20</td>
+              <td>122.1 MB</td>
+              <td><span class="badge bg-success">Thành công</span></td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-light"><i class="bi bi-download"></i></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,68 @@
+<section class="module-hero">
+  <div>
+    <h2>Lập phiếu khám bệnh</h2>
+    <p class="text-muted">Đăng ký thông tin khám cho bệnh nhân mới hoặc tái khám</p>
+  </div>
+  <div class="module-actions">
+    <a href="/dashboard" class="btn btn-light"><i class="bi bi-grid me-2"></i>Tổng quan</a>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <form action="/nghiep-vu/lap-phieu-kham" method="post" class="app-form">
+    <div class="row g-4">
+      <div class="col-md-6">
+        <label class="form-label">Bệnh nhân</label>
+        <select name="patientId" class="form-select" required>
+          <option value="">-- Chọn bệnh nhân --</option>
+          <% patients.forEach(p => { %>
+            <option value="<%= p.patientId %>"><%= p.patientCode %> - <%= p.fullName %></option>
+          <% }) %>
+        </select>
+        <div class="form-text">Bệnh nhân chưa có hồ sơ? <a href="/patients/reception">Tiếp nhận mới tại đây</a></div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Loại hình khám</label>
+        <select name="examType" class="form-select">
+          <option>Khám thường</option>
+          <option>Khám cấp cứu</option>
+          <option>Khám dịch vụ</option>
+          <option>Tái khám</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Khoa khám</label>
+        <select name="departmentId" class="form-select" required>
+          <option value="">-- Chọn khoa --</option>
+          <% departments.forEach(d => { %>
+            <option value="<%= d.departmentId %>"><%= d.departmentName %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Bác sĩ chỉ định</label>
+        <select name="doctorId" class="form-select" required>
+          <option value="">-- Chọn bác sĩ --</option>
+          <% doctors.forEach(doc => { %>
+            <option value="<%= doc.doctorId %>"><%= doc.fullName %> - <%= doc.specialty %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="col-12">
+        <label class="form-label">Lý do khám / Triệu chứng ban đầu</label>
+        <textarea name="reason" class="form-control" rows="3" placeholder="Mô tả tình trạng bệnh nhân..." required></textarea>
+      </div>
+      <div class="col-12">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="isUrgent" id="urgentSwitch">
+          <label class="form-check-label text-danger fw-bold" for="urgentSwitch">Ưu tiên cấp cứu</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 pt-3 border-top d-flex gap-2">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-save me-2"></i>Lưu và In phiếu khám</button>
+      <button type="reset" class="btn btn-light">Hủy</button>
+    </div>
+  </form>
+</section>

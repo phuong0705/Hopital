@@ -1,0 +1,69 @@
+<section class="module-hero">
+  <div>
+    <h2>Tổng hợp kết quả xét nghiệm</h2>
+    <p class="text-muted">Xem và đánh giá toàn bộ các chỉ định cận lâm sàng trong đợt điều trị</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In danh sách</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm tên bệnh nhân hoặc mã xét nghiệm" data-module-search="labSummaryTable">
+    </div>
+    <select class="form-select w-auto" data-module-filter="labSummaryTable" data-filter-key="status">
+      <option value="">Tất cả trạng thái</option>
+      <option>Chờ lấy mẫu</option>
+      <option>Đang thực hiện</option>
+      <option>Đã có kết quả</option>
+    </select>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table app-table" id="labSummaryTable">
+      <thead>
+        <tr>
+          <th>Bệnh nhân</th>
+          <th>Loại xét nghiệm</th>
+          <th>Thời gian chỉ định</th>
+          <th>Trạng thái</th>
+          <th>Kết quả / Kết luận</th>
+          <th class="text-end">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.patientName} ${row.testType}`.toLowerCase() %>" data-status="<%= row.status %>">
+            <td>
+              <strong><%= row.patientName %></strong><br>
+              <small class="text-muted"><%= row.patientCode %></small>
+            </td>
+            <td><strong><%= row.testType %></strong></td>
+            <td><%= format.datetime(row.orderedDate) %></td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td class="text-wrap-cell" style="max-width: 300px;">
+              <% if (row.status === 'Đã có kết quả') { %>
+                <div class="text-success"><%= row.resultSummary %></div>
+              <% } else { %>
+                <span class="text-muted italic">Đang chờ kết quả...</span>
+              <% } %>
+            </td>
+            <td class="text-end">
+              <a href="/medical-records/<%= row.recordId %>" class="btn btn-sm btn-light" data-bs-toggle="tooltip" title="Xem hồ sơ bệnh án">
+                <i class="bi bi-journal-medical"></i>
+              </a>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">Chưa có chỉ định xét nghiệm nào</td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>

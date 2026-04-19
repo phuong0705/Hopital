@@ -1,0 +1,122 @@
+<section class="module-hero">
+  <div>
+    <h2>Quản lý ca trực hệ thống</h2>
+    <p class="text-muted">Cấu hình khung giờ và quy định cho các ca làm việc trong bệnh viện</p>
+  </div>
+</section>
+
+<div class="row g-4 mt-2">
+  <div class="col-lg-4">
+    <div class="panel">
+      <div class="panel-header"><h2>Cấu hình ca</h2></div>
+      <div class="list-group list-group-flush mt-3">
+        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+          <div>
+            <strong>Ca Sáng</strong><br>
+            <small class="text-muted">07:00 - 13:00</small>
+          </div>
+          <span class="badge bg-success">Đang áp dụng</span>
+        </div>
+        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+          <div>
+            <strong>Ca Chiều</strong><br>
+            <small class="text-muted">13:00 - 19:00</small>
+          </div>
+          <span class="badge bg-success">Đang áp dụng</span>
+        </div>
+        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+          <div>
+            <strong>Ca Đêm</strong><br>
+            <small class="text-muted">19:00 - 07:00 (Sáng sau)</small>
+          </div>
+          <span class="badge bg-success">Đang áp dụng</span>
+        </div>
+      </div>
+      <button class="btn btn-light w-100 mt-3" data-bs-toggle="modal" data-bs-target="#newShiftModal"><i class="bi bi-gear me-2"></i>Thêm ca mới</button>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+...
+</div>
+
+<div class="modal fade" id="newShiftModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form onsubmit="event.preventDefault(); alert('Tính năng cấu hình ca trực nâng cao đang được cập nhật...'); bootstrap.Modal.getInstance(document.getElementById('newShiftModal')).hide();">
+        <div class="modal-header">
+          <h5 class="modal-title">Thêm ca trực mới</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Tên ca trực</label>
+            <input type="text" class="form-control" placeholder="Ví dụ: Ca gãy, Ca trực lễ..." required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ngày áp dụng</label>
+            <div class="row g-2">
+              <div class="col-md-6">
+                <select class="form-select">
+                  <option value="daily">Hàng ngày</option>
+                  <option value="specific">Ngày cụ thể</option>
+                  <option value="weekday">Thứ trong tuần</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <input type="date" class="form-control" id="shiftDateInput">
+              </div>
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">Giờ bắt đầu</label>
+              <input type="time" class="form-control" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Giờ kết thúc</label>
+              <input type="time" class="form-control" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu cấu hình</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+    <div class="panel">
+      <div class="panel-header"><h2>Thống kê nhân sự theo ca</h2></div>
+      <div class="table-responsive mt-3">
+        <table class="table app-table">
+          <thead>
+            <tr>
+              <th>Ca trực</th>
+              <th>Nhân sự hiện có</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Ca Sáng</strong></td>
+              <td>12 bác sĩ, 24 điều dưỡng</td>
+              <td><span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Đủ quân số</span></td>
+            </tr>
+            <tr>
+              <td><strong>Ca Chiều</strong></td>
+              <td>8 bác sĩ, 16 điều dưỡng</td>
+              <td><span class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>Thiếu nhân sự khoa Nhi</span></td>
+            </tr>
+            <tr>
+              <td><strong>Ca Đêm</strong></td>
+              <td>5 bác sĩ, 10 điều dưỡng</td>
+              <td><span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Đủ quân số</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

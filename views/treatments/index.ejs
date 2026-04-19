@@ -1,0 +1,134 @@
+<section class="treatment-hero">
+  <div>
+    <h2>Lịch điều trị</h2>
+    <% if (selectedDoctor) { %>
+      <div class="treatment-selected-doctor">
+        <span><i class="bi bi-person-badge"></i><%= selectedDoctor.fullName %></span>
+        <span><i class="bi bi-heart-pulse"></i><%= selectedDoctor.specialty %></span>
+      </div>
+    <% } %>
+  </div>
+  <a class="btn btn-primary" href="/nursing"><i class="bi bi-clipboard2-heart me-2"></i>Danh sách chăm sóc</a>
+</section>
+
+<% if (!isDoctor) { %>
+  <section class="treatment-doctor-grid mt-4">
+    <% doctors.forEach(doctor => {
+      const active = Number(doctor.doctorId) === Number(selectedDoctorId);
+      const completed = Number(doctor.completedCount || 0);
+      const total = Number(doctor.scheduleCount || 0);
+    %>
+      <a class="treatment-doctor-card <%= active ? 'active' : '' %>" href="/treatments?doctorId=<%= doctor.doctorId %>">
+        <div class="doctor-avatar"><%= doctor.fullName.charAt(0) %></div>
+        <div class="treatment-doctor-main">
+          <strong><%= doctor.fullName %></strong>
+          <span><%= doctor.doctorCode %> - <%= doctor.specialty %></span>
+          <small><%= doctor.departmentName %></small>
+        </div>
+        <div class="treatment-doctor-stats">
+          <span><%= doctor.patientCount || 0 %> BN</span>
+          <span><%= completed %>/<%= total %> y lệnh</span>
+        </div>
+      </a>
+    <% }) %>
+  </section>
+<% } %>
+
+<section class="panel mt-4">
+  <div class="treatment-toolbar">
+    <div class="search-box staff-search">
+      <i class="bi bi-search"></i>
+      <input id="treatmentSearch" type="search" placeholder="Tìm bệnh nhân, chẩn đoán, y lệnh">
+    </div>
+    <select id="treatmentStatusFilter" class="form-select">
+      <option value="">Tất cả trạng thái</option>
+      <option>Chưa thực hiện</option>
+      <option>Đang thực hiện</option>
+      <option>Hoàn thành</option>
+    </select>
+  </div>
+
+  <div class="treatment-list patient-schedule-grid mt-3" id="treatmentList">
+    <% rows.forEach(row => {
+      const datetime = format.datetime(row.scheduledTime);
+      const firstPart = datetime.split(' ')[0];
+      const timePart = datetime.replace(firstPart, '').trim();
+      const location = [row.roomCode, row.bedCode].filter(Boolean).join(' / ') || 'Chưa xếp giường';
+    %>
+      <article class="treatment-card patient-schedule-card"
+        data-search="<%= `${row.patientCode} ${row.patientName} ${row.diagnosis || ''} ${row.treatmentContent} ${row.assigneeName}`.toLowerCase() %>"
+        data-status="<%= row.status %>">
+        <div class="treatment-time">
+          <strong><%= firstPart %></strong>
+          <span><%= timePart %></span>
+        </div>
+        <div class="treatment-main">
+          <div class="patient-schedule-head">
+            <div>
+              <h3><%= row.patientName %></h3>
+              <small><%= row.patientCode %> - <%= row.gender %> - <%= location %></small>
+            </div>
+            <%- include('../partials/badge', { text: row.priorityLevel }) %>
+          </div>
+          <p><%= row.treatmentContent %></p>
+          <div class="patient-schedule-meta">
+            <span><i class="bi bi-hospital"></i><%= row.departmentName %></span>
+            <span><i class="bi bi-clipboard2-pulse"></i><%= row.diagnosis || 'Chưa cập nhật chẩn đoán' %></span>
+            <span><i class="bi bi-person-check"></i><%= row.assigneeName %></span>
+          </div>
+        </div>
+        <div class="treatment-state">
+          <%- include('../partials/badge', { text: row.status }) %>
+          <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#treatmentModal"
+            data-id="<%= row.scheduleId %>"
+            data-patient="<%= row.patientName %>"
+            data-content="<%= row.treatmentContent %>"
+            data-status="<%= row.status %>"
+            data-note="<%= row.note || '' %>">
+            Cập nhật
+          </button>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+
+  <div id="treatmentEmptyState" class="empty-inline <%= rows.length ? 'd-none' : '' %>">
+    <i class="bi bi-calendar-x"></i>
+    <strong>Chưa có lịch điều trị phù hợp</strong>
+  </div>
+</section>
+
+<div class="modal fade" id="treatmentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form id="treatmentUpdateForm" method="POST" action="/treatments/0/status">
+      <div class="modal-header">
+        <h5 class="modal-title">Cập nhật y lệnh</h5>
+        <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <dl class="info-list">
+          <dt>Bệnh nhân</dt><dd id="modalTreatmentPatient">-</dd>
+          <dt>Y lệnh</dt><dd id="modalTreatmentContent">-</dd>
+        </dl>
+        <div class="mt-3">
+          <label class="form-label">Trạng thái</label>
+          <select class="form-select" id="modalTreatmentStatus" name="status">
+            <option>Chưa thực hiện</option>
+            <option>Đang thực hiện</option>
+            <option>Hoàn thành</option>
+          </select>
+        </div>
+        <div class="mt-3">
+          <label class="form-label">Ghi chú điều dưỡng</label>
+          <textarea class="form-control" id="modalTreatmentNote" name="note" rows="3" placeholder="Nhập ghi chú thực hiện nếu có"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" type="button" data-bs-dismiss="modal">Đóng</button>
+        <button class="btn btn-primary" type="submit">Lưu cập nhật</button>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,139 @@
+<section class="module-hero">
+  <div>
+    <h2>Phân công bác sĩ trực</h2>
+    <p class="text-muted">Quản lý lịch trực và phân bổ bác sĩ phụ trách các khoa theo ca</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#dutyModal"><i class="bi bi-plus-lg me-2"></i>Thêm phân công</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="table-responsive">
+    <table class="table app-table">
+      <thead>
+        <tr>
+          <th>Bác sĩ</th>
+          <th>Khoa công tác</th>
+          <th>Chuyên khoa</th>
+          <th>Ca trực hiện tại</th>
+          <th>Bệnh nhân đang phụ trách</th>
+          <th class="text-end">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr>
+            <td>
+              <strong><%= row.fullName %></strong><br>
+              <small class="text-muted"><%= row.doctorCode %></small>
+            </td>
+            <td><%= row.departmentName %></td>
+            <td><%= row.specialty %></td>
+            <td><span class="badge bg-primary-soft text-primary"><%= row.shiftName %></span></td>
+            <td><strong><%= row.activePatients %></strong> bệnh nhân</td>
+            <td class="text-end">
+              <div class="table-actions justify-content-end">
+                <button class="btn btn-sm btn-light action-icon" title="Đổi phân công" 
+                  data-bs-toggle="modal" data-bs-target="#dutyModal"
+                  data-id="<%= row.doctorId %>"
+                  data-name="<%= row.fullName %>"
+                  data-dept="<%= row.departmentId %>"
+                  data-shift="<%= row.shiftName %>">
+                  <i class="bi bi-arrow-repeat"></i>
+                </button>
+                <button class="btn btn-sm btn-light text-danger action-icon" title="Gỡ phân công"
+                  data-bs-toggle="modal" data-bs-target="#removeDutyModal"
+                  data-id="<%= row.doctorId %>"
+                  data-name="<%= row.fullName %>">
+                  <i class="bi bi-person-x"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Update Duty Modal (existing) -->
+...
+<!-- Remove Duty Modal -->
+<div class="modal fade" id="removeDutyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form id="removeDutyForm" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Gỡ phân công</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body text-center py-4">
+          <i class="bi bi-exclamation-triangle text-danger display-4 mb-3"></i>
+          <p>Bạn có chắc chắn muốn gỡ phân công trực cho bác sĩ <strong id="removeDoctorName">...</strong>?</p>
+          <p class="text-muted small">Thông tin về khoa và ca trực sẽ bị xóa.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-danger">Xác nhận gỡ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Duty Modal (existing script logic...)
+    const dutyModal = document.getElementById('dutyModal');
+    dutyModal?.addEventListener('show.bs.modal', (event) => {
+      const button = event.relatedTarget;
+      const id = button?.getAttribute('data-id');
+      const name = button?.getAttribute('data-name');
+      const dept = button?.getAttribute('data-dept');
+      const shift = button?.getAttribute('data-shift');
+      
+      const form = document.getElementById('dutyForm');
+      const title = document.getElementById('dutyModalTitle');
+      const selectWrapper = document.getElementById('doctorSelectWrapper');
+      const nameDisplay = document.getElementById('dutyDoctorNameDisplay');
+      const doctorSelect = document.getElementById('dutyDoctorSelect');
+      const deptSelect = document.getElementById('dutyDeptSelect');
+      const shiftSelect = document.getElementById('dutyShiftSelect');
+
+      if (id) {
+        form.action = '/nghiep-vu/quan-ly-bac-si-truc/' + id;
+        title.textContent = 'Cập nhật phân công';
+        selectWrapper.classList.add('d-none');
+        doctorSelect.removeAttribute('name');
+        doctorSelect.required = false;
+        nameDisplay.classList.remove('d-none');
+        nameDisplay.value = name;
+        deptSelect.value = dept;
+        shiftSelect.value = shift;
+      } else {
+        form.action = '/nghiep-vu/quan-ly-bac-si-truc/new';
+        title.textContent = 'Phân công trực mới';
+        selectWrapper.classList.remove('d-none');
+        doctorSelect.setAttribute('name', 'doctorId');
+        doctorSelect.required = true;
+        doctorSelect.value = '';
+        nameDisplay.classList.add('d-none');
+      }
+    });
+
+    // Remove Duty Modal
+    const removeModal = document.getElementById('removeDutyModal');
+    removeModal?.addEventListener('show.bs.modal', (event) => {
+      const button = event.relatedTarget;
+      const id = button.getAttribute('data-id');
+      const name = button.getAttribute('data-name');
+      
+      const form = document.getElementById('removeDutyForm');
+      const nameText = document.getElementById('removeDoctorName');
+      
+      form.action = '/nghiep-vu/quan-ly-bac-si-truc/' + id + '/delete';
+      nameText.textContent = name;
+    });
+  });
+</script>

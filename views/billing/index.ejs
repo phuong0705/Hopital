@@ -1,0 +1,122 @@
+<section class="module-hero">
+  <div>
+    <h2>Viện phí / thanh toán</h2>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <button class="btn btn-light" type="button" data-export-table="billingTable" data-filename="vien-phi.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#billingModal"><i class="bi bi-receipt me-2"></i>Lập phiếu thu</button>
+  </div>
+</section>
+
+<section class="panel module-panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm mã phiếu hoặc bệnh nhân" data-module-search="billingTable">
+    </div>
+    <select class="form-select" data-module-filter="billingTable" data-filter-key="status">
+      <option value="">Tất cả trạng thái</option>
+      <% [...new Set(rows.map(row => row.paymentStatus))].forEach(status => { %>
+        <option><%= status %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table billing-table" id="billingTable">
+      <thead>
+        <tr>
+          <th>Phiếu thu</th>
+          <th>Bệnh nhân</th>
+          <th>Chi phí</th>
+          <th>BHYT hỗ trợ</th>
+          <th>Tổng thanh toán</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => {
+          const feeSummary = `Khám ${format.currency(row.consultationFee)} · Giường ${format.currency(row.bedFee)} · Thuốc ${format.currency(row.medicineFee)} · XN ${format.currency(row.labFee)}`;
+        %>
+          <tr data-search="<%= `${row.billCode} ${row.patientName}`.toLowerCase() %>" data-status="<%= row.paymentStatus %>">
+            <td><span class="module-code"><%= row.billCode %></span></td>
+            <td><%= row.patientName %></td>
+            <td class="text-wrap-cell compact"><%= feeSummary %></td>
+            <td><%= format.currency(row.insuranceCovered) %></td>
+            <td><strong class="module-money"><%= format.currency(row.totalAmount) %></strong></td>
+            <td><%- include('../partials/badge', { text: row.paymentStatus }) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty-inline module-empty d-none" data-empty-for="billingTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy phiếu viện phí phù hợp</strong>
+  </div>
+</section>
+
+<div class="modal fade" id="billingModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/billing" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Lập phiếu thu viện phí</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Bệnh nhân / lượt nhập viện</label>
+              <select name="admissionId" class="form-select" required>
+                <% activeAdmissions.forEach(item => { %>
+                  <option value="<%= item.admissionId %>"><%= item.patientCode %> - <%= item.patientName %> · <%= item.departmentName %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Chi phí khám</label>
+              <input name="consultationFee" type="number" min="0" value="0" class="form-control billing-input">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Chi phí giường</label>
+              <input name="bedFee" type="number" min="0" value="0" class="form-control billing-input">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Chi phí thuốc</label>
+              <input name="medicineFee" type="number" min="0" value="0" class="form-control billing-input">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Chi phí xét nghiệm</label>
+              <input name="labFee" type="number" min="0" value="0" class="form-control billing-input">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">BHYT hỗ trợ</label>
+              <input name="insuranceCovered" type="number" min="0" value="0" class="form-control billing-input">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Trạng thái</label>
+              <select name="paymentStatus" class="form-select">
+                <option>Chưa thanh toán</option>
+                <option>Một phần</option>
+                <option>Đã thanh toán</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <div class="billing-preview">
+                <span>Tạm tính</span>
+                <strong id="billingPreviewTotal">0 đ</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button class="btn btn-primary"><i class="bi bi-save me-2"></i>Lưu phiếu thu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

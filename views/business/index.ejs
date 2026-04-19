@@ -1,0 +1,46 @@
+<section class="module-hero business-hero">
+  <div>
+    <span class="module-code"><%= group.code %>. <%= group.title %></span>
+    <h1><%= item.title %></h1>
+  </div>
+  <div class="module-actions">
+    <a class="btn btn-light" href="/dashboard"><i class="bi bi-grid me-2"></i>Tổng quan</a>
+    <% if (!item.href.startsWith('/nghiep-vu/')) { %>
+      <a class="btn btn-primary" href="<%= item.href %>"><i class="bi bi-arrow-right-circle me-2"></i>Mở chức năng</a>
+    <% } %>
+  </div>
+</section>
+
+<section class="business-layout mt-4">
+  <div class="panel business-main-card">
+    <div class="business-icon">
+      <i class="bi <%= item.icon %>"></i>
+    </div>
+    <div>
+      <span class="business-step"><%= item.code %></span>
+      <h2><%= item.title %></h2>
+      <p>
+        Nghiệp vụ này thuộc nhóm <strong><%= group.title %></strong>. Trang được chuẩn hóa để bổ sung xử lý chi tiết,
+        form nghiệp vụ, danh sách hồ sơ và báo cáo khi mở rộng hệ thống.
+      </p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Quy trình liên quan</h2>
+        <p>Các bước cùng nhóm nghiệp vụ theo sơ đồ quản lý khám chữa bệnh nội trú.</p>
+      </div>
+    </div>
+    <div class="business-step-grid">
+      <% relatedItems.forEach(related => { %>
+        <a class="business-step-card" href="<%= related.href %>">
+          <span><%= related.code %></span>
+          <i class="bi <%= related.icon %>"></i>
+          <strong><%= related.title %></strong>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+</section>

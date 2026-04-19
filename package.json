@@ -1,0 +1,35 @@
+{
+  "name": "quan-ly-kham-chua-benh-noi-tru",
+  "version": "1.0.0",
+  "description": "He thong web quan li kham chua benh noi tru bang Node.js, Express, EJS va SQL Server",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "db:test": "node scripts/db-test.js"
+  },
+  "keywords": [
+    "hospital",
+    "inpatient",
+    "express",
+    "ejs",
+    "sql-server"
+  ],
+  "author": "Codex",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "connect-flash": "^0.1.1",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "express-ejs-layouts": "^2.5.1",
+    "express-session": "^1.18.0",
+    "method-override": "^3.0.0",
+    "msnodesqlv8": "^5.1.9",
+    "mssql": "^11.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

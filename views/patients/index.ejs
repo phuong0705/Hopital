@@ -1,0 +1,43 @@
+<section class="patient-list-hero">
+  <div>
+    <h2>Tổng quan điều trị</h2>
+    <p class="text-muted">Chọn bác sĩ để xem danh sách bệnh nhân đang phụ trách</p>
+  </div>
+  <div class="patient-list-actions">
+    <a href="/patients/list" class="btn btn-light">
+      <i class="bi bi-list-ul me-2"></i>Xem tất cả bệnh nhân
+    </a>
+    <a href="/patients/reception" class="btn btn-primary">
+      <i class="bi bi-person-plus-fill me-2"></i>Tiếp nhận mới
+    </a>
+  </div>
+</section>
+
+<section class="treatment-doctor-grid mt-4">
+  <a class="treatment-doctor-card <%= !selectedDoctorId ? 'active' : '' %>" href="/patients/list">
+    <div class="doctor-avatar"><i class="bi bi-people"></i></div>
+    <div class="treatment-doctor-main">
+      <strong>Tất cả bác sĩ</strong>
+      <span>Tất cả chuyên khoa</span>
+      <small>Toàn bệnh viện</small>
+    </div>
+    <div class="treatment-doctor-stats">
+      <span><%= doctors.reduce((sum, d) => sum + (d.patientCount || 0), 0) %> BN</span>
+    </div>
+  </a>
+  <% doctors.forEach(doctor => {
+    const active = String(doctor.doctorId) === String(selectedDoctorId);
+  %>
+    <a class="treatment-doctor-card <%= active ? 'active' : '' %>" href="/patients/list?doctorId=<%= doctor.doctorId %>">
+      <div class="doctor-avatar"><%= doctor.fullName.charAt(0) %></div>
+      <div class="treatment-doctor-main">
+        <strong><%= doctor.fullName %></strong>
+        <span><%= doctor.doctorCode %> - <%= doctor.specialty %></span>
+        <small><%= doctor.shiftName %></small>
+      </div>
+      <div class="treatment-doctor-stats">
+        <span><%= doctor.patientCount || 0 %> BN</span>
+      </div>
+    </a>
+  <% }) %>
+</section>

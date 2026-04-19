@@ -1,0 +1,183 @@
+<%
+  const statusList = locals.statusOptions || ['Đang điều trị', 'Theo dõi', 'Ổn định', 'Chờ xuất viện'];
+  const priorityList = locals.priorityOptions || ['Thấp', 'Trung bình', 'Cao', 'Nguy cấp'];
+%>
+
+<div class="modal fade" id="updateModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form id="patientStatusForm" action="/patients/0/status" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Cập nhật tình trạng</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-patient-preview" id="updatePatientPreview">
+            <i class="bi bi-person-heart"></i>
+            <div>
+              <strong>Chọn bệnh nhân từ danh sách</strong>
+            </div>
+          </div>
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
+              <label class="form-label">Tình trạng điều trị</label>
+              <select class="form-select" name="status" id="updatePatientStatus" required>
+                <% statusList.forEach(status => { %>
+                  <option><%= status %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Mức độ ưu tiên</label>
+              <select class="form-select" name="priorityLevel" id="updatePatientPriority" required>
+                <% priorityList.forEach(priority => { %>
+                  <option><%= priority %></option>
+                <% }) %>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button class="btn btn-primary" type="submit">Lưu cập nhật</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="transferModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/beds/transfer" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Chuyển phòng / giường</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <% if (typeof activeAdmissions !== 'undefined' && typeof availableBeds !== 'undefined') { %>
+            <div class="modal-patient-preview mb-3" id="transferPatientPreview">
+              <i class="bi bi-arrow-left-right"></i>
+              <div>
+                <strong>Chọn bệnh nhân từ danh sách</strong>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Bệnh nhân đang điều trị</label>
+              <select name="admissionId" class="form-select" id="transferAdmissionSelect" required>
+                <% activeAdmissions.forEach(item => { %>
+                  <option value="<%= item.admissionId %>"><%= item.patientCode %> - <%= item.patientName %> · hiện tại: <%= item.roomCode || 'Chưa xếp phòng' %> / <%= item.bedCode || 'Chưa xếp giường' %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Giường trống chuyển đến</label>
+              <select name="bedId" class="form-select" required>
+                <% availableBeds.forEach(item => { %>
+                  <option value="<%= item.bedId %>"><%= item.departmentName %> · <%= item.roomCode %> / <%= item.bedCode %></option>
+                <% }) %>
+              </select>
+            </div>
+          <% } else { %>
+          <% } %>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button class="btn btn-primary">Chuyển phòng</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="dischargeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/discharges" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Tạo hồ sơ xuất viện</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <% if (typeof activeAdmissions !== 'undefined') { %>
+            <div class="row g-3">
+              <div class="col-md-7">
+                <div class="modal-patient-preview mb-3" id="dischargePatientPreview">
+                  <i class="bi bi-box-arrow-right"></i>
+                  <div>
+                    <strong>Chọn bệnh nhân từ danh sách</strong>
+                  </div>
+                </div>
+                <label class="form-label">Bệnh nhân / lượt nhập viện</label>
+                <select name="admissionId" class="form-select" id="dischargeAdmissionSelect" required>
+                  <% activeAdmissions.forEach(item => { %>
+                    <option value="<%= item.admissionId %>"><%= item.patientCode %> - <%= item.patientName %> · <%= item.departmentName %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="col-md-5">
+                <label class="form-label">Ngày xuất viện</label>
+                <input name="dischargeDate" id="dischargeDateInput" type="datetime-local" class="form-control" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Điều kiện xuất viện</label>
+                <textarea name="dischargeCondition" class="form-control" rows="4" required>Ổn định, đủ điều kiện xuất viện</textarea>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Tóm tắt điều trị</label>
+                <textarea name="treatmentSummary" class="form-control" rows="4" required></textarea>
+              </div>
+              <div class="col-md-5">
+                <label class="form-label">Trạng thái thanh toán</label>
+                <select name="paymentStatus" class="form-select">
+                  <option>Chưa thanh toán</option>
+                  <option>Một phần</option>
+                  <option>Đã thanh toán</option>
+                </select>
+              </div>
+            </div>
+          <% } else { %>
+          <% } %>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button class="btn btn-danger">Tạo xuất viện</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="dischargePaymentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form id="dischargePaymentForm" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Cập nhật thanh toán</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-patient-preview mb-3" id="dischargePaymentPreview">
+            <i class="bi bi-credit-card-2-front"></i>
+            <div>
+              <strong>Bệnh nhân</strong><br>
+              <span>Mã BN</span>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Trạng thái thanh toán</label>
+            <select name="paymentStatus" class="form-select" id="dischargePaymentStatus" required>
+              <option>Chưa thanh toán</option>
+              <option>Một phần</option>
+              <option>Đã thanh toán</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-2"></i>Cập nhật</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

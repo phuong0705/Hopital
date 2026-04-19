@@ -1,0 +1,74 @@
+<section class="detail-hero patient-detail-hero">
+  <div>
+    <span class="status-badge status-info"><%= patient.patient_code %></span>
+    <h2><%= patient.full_name %></h2>
+    <p><%= patient.gender %> · <%= format.age(patient.date_of_birth) %> tuổi · <%= patient.phone || 'Chưa có SĐT' %></p>
+  </div>
+  <%- include('../partials/badge', { text: patient.admission_status || 'Đang điều trị' }) %>
+</section>
+
+<section class="patient-detail-grid mt-4">
+  <div class="panel patient-clinical-summary">
+    <div class="panel-header">
+      <div>
+        <h2>Thông tin điều trị</h2>
+      </div>
+    </div>
+    <div class="patient-detail-cards">
+      <div class="patient-detail-card">
+        <i class="bi bi-door-open"></i>
+        <small>Phòng / giường</small>
+        <strong><%= patient.room_code || 'Chưa xếp phòng' %> / <%= patient.bed_code || 'Chưa xếp giường' %></strong>
+      </div>
+      <div class="patient-detail-card">
+        <i class="bi bi-virus"></i>
+        <small>Bệnh / chẩn đoán</small>
+        <strong><%= patient.initial_diagnosis || 'Chưa cập nhật' %></strong>
+      </div>
+      <div class="patient-detail-card">
+        <i class="bi bi-person-vcard"></i>
+        <small>Bác sĩ phụ trách</small>
+        <strong><%= patient.doctor_name || 'Chưa phân công' %></strong>
+      </div>
+      <div class="patient-detail-card">
+        <i class="bi bi-hospital"></i>
+        <small>Khoa điều trị</small>
+        <strong><%= patient.department_name || 'Chưa xếp khoa' %></strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Thông tin nhập viện</h2>
+      </div>
+    </div>
+    <dl class="info-list compact">
+      <dt>Ngày nhập viện</dt>
+      <dd><%= patient.admission_date ? format.datetime(patient.admission_date) : 'Chưa cập nhật' %></dd>
+      <dt>Tình trạng ban đầu</dt>
+      <dd><%= patient.initial_condition || 'Chưa cập nhật' %></dd>
+      <dt>Mức độ ưu tiên</dt>
+      <dd><%- include('../partials/badge', { text: patient.priority_level || 'Trung bình' }) %></dd>
+    </dl>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Thông tin hành chính</h2>
+      </div>
+    </div>
+    <dl class="info-list compact">
+      <dt>CCCD</dt>
+      <dd><%= patient.identity_number || 'Chưa cập nhật' %></dd>
+      <dt>BHYT</dt>
+      <dd><%= patient.health_insurance_no || 'Chưa cập nhật' %></dd>
+      <dt>Địa chỉ</dt>
+      <dd><%= patient.address || 'Chưa cập nhật' %></dd>
+      <dt>Người thân</dt>
+      <dd><%= patient.emergency_contact_name || 'Chưa cập nhật' %> <%= patient.emergency_contact_phone ? `· ${patient.emergency_contact_phone}` : '' %></dd>
+    </dl>
+  </div>
+</section>

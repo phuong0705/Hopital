@@ -1,0 +1,31 @@
+<div class="modal fade" id="supportModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/patients/me/support" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Gửi yêu cầu hỗ trợ</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nhóm yêu cầu</label>
+            <select class="form-select" name="requestType">
+              <option>Hỏi điều dưỡng</option>
+              <option>Hỏi bác sĩ</option>
+              <option>Hỗ trợ viện phí</option>
+              <option>Cập nhật thông tin cá nhân</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Nội dung</label>
+            <textarea class="form-control" name="message" rows="4" placeholder="Nhập nội dung cần hỗ trợ" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button class="btn btn-primary">Gửi yêu cầu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

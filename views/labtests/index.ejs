@@ -1,0 +1,82 @@
+<section class="module-hero">
+  <div>
+    <h2>Xét nghiệm / cận lâm sàng</h2>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <button class="btn btn-light" type="button" data-export-table="labtestsTable" data-filename="xet-nghiem.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#labtestModal"><i class="bi bi-plus-lg me-2"></i>Tạo chỉ định</button>
+  </div>
+</section>
+
+<section class="panel module-panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm bệnh nhân, mã chỉ định, loại xét nghiệm" data-module-search="labtestsTable">
+    </div>
+    <select class="form-select" data-module-filter="labtestsTable" data-filter-key="status">
+      <option value="">Tất cả trạng thái</option>
+      <% [...new Set(rows.map(row => row.status))].forEach(status => { %>
+        <option><%= status %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table labtests-table" id="labtestsTable">
+      <thead>
+        <tr>
+          <th>Chỉ định</th>
+          <th>Bệnh nhân</th>
+          <th>Loại xét nghiệm</th>
+          <th>Ngày chỉ định</th>
+          <th>Trạng thái</th>
+          <th>Kết quả</th>
+          <th>Bác sĩ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.testCode} ${row.patientName} ${row.testType} ${row.resultSummary || ''} ${row.doctorName}`.toLowerCase() %>" data-status="<%= row.status %>">
+            <td><span class="module-code"><%= row.testCode %></span></td>
+            <td><%= row.patientName %></td>
+            <td><%= row.testType %></td>
+            <td><%= format.datetime(row.orderedDate) %></td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td class="text-wrap-cell compact"><%= row.resultSummary || 'Chưa có kết quả' %></td>
+            <td><%= row.doctorName %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty-inline module-empty d-none" data-empty-for="labtestsTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy chỉ định phù hợp</strong>
+  </div>
+</section>
+
+<div class="modal fade" id="labtestModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Tạo chỉ định cận lâm sàng</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-patient-preview">
+          <i class="bi bi-clipboard2-pulse"></i>
+          <div>
+            <strong>Tạo chỉ định từ hồ sơ bệnh án</strong>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" type="button" data-bs-dismiss="modal">Đóng</button>
+        <a class="btn btn-primary" href="/medical-records">Mở hồ sơ bệnh án</a>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,54 @@
+<section class="module-hero">
+  <div>
+    <h2>Tra cứu dữ liệu khám bệnh</h2>
+    <p class="text-muted">Tìm kiếm và xem lại lịch sử khám, hồ sơ bệnh nhân trên toàn hệ thống</p>
+  </div>
+  <div class="module-actions">
+    <a href="/dashboard" class="btn btn-light"><i class="bi bi-grid me-2"></i>Tổng quan</a>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm mã BN, họ tên, CCCD hoặc SĐT" data-module-search="lookupTable">
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table app-table" id="lookupTable">
+      <thead>
+        <tr>
+          <th>Mã BN</th>
+          <th>Họ tên</th>
+          <th>Ngày sinh</th>
+          <th>Giới tính</th>
+          <th>Số điện thoại</th>
+          <th>Địa chỉ</th>
+          <th class="text-end">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% patients.forEach(p => { %>
+          <tr data-search="<%= `${p.patientCode} ${p.fullName} ${p.identityNumber} ${p.phone}`.toLowerCase() %>">
+            <td><span class="patient-code-pill"><%= p.patientCode %></span></td>
+            <td><strong><%= p.fullName %></strong></td>
+            <td><%= format.date(p.dateOfBirth) %></td>
+            <td><%= p.gender %></td>
+            <td><%= p.phone || 'N/A' %></td>
+            <td class="text-wrap-cell"><%= p.address || 'N/A' %></td>
+            <td class="text-end">
+              <a href="/patients/<%= p.patientId %>" class="btn btn-sm btn-light action-icon" data-bs-toggle="tooltip" title="Xem hồ sơ">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="/medical-records?patientId=<%= p.patientId %>" class="btn btn-sm btn-light action-icon" data-bs-toggle="tooltip" title="Lịch sử khám">
+                <i class="bi bi-journal-medical"></i>
+              </a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>

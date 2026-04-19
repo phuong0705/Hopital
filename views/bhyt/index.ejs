@@ -1,0 +1,76 @@
+<section class="module-hero">
+  <div>
+    <h2>Quản lý Bảo hiểm Y tế (BHYT)</h2>
+    <p class="text-muted">Danh sách bệnh nhân sử dụng thẻ BHYT và tình trạng hỗ trợ chi phí</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In danh sách</button>
+    <button class="btn btn-light" type="button" data-export-table="bhytTable" data-filename="quan-ly-bhyt.csv"><i class="bi bi-filetype-csv me-2"></i>Xuất CSV</button>
+  </div>
+</section>
+
+<section class="panel module-panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm mã BN, họ tên hoặc số thẻ BHYT" data-module-search="bhytTable">
+    </div>
+    <select class="form-select" data-module-filter="bhytTable" data-filter-key="status">
+      <option value="">Tất cả trạng thái điều trị</option>
+      <option>Đang điều trị</option>
+      <option>Theo dõi</option>
+      <option>Chờ xuất viện</option>
+      <option>Chưa nhập viện</option>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table bhyt-table" id="bhytTable">
+      <thead>
+        <tr>
+          <th>Bệnh nhân</th>
+          <th>Mã BN</th>
+          <th>Số thẻ BHYT</th>
+          <th>Khoa điều trị</th>
+          <th>Tình trạng</th>
+          <th>Tổng viện phí</th>
+          <th>BHYT chi trả</th>
+          <th>Tỷ lệ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { 
+          const insuranceRatio = row.totalBill > 0 ? Math.round((row.totalCovered / row.totalBill) * 100) : 0;
+        %>
+          <tr data-search="<%= `${row.patientCode} ${row.fullName} ${row.insuranceNo}`.toLowerCase() %>" data-status="<%= row.admissionStatus || 'Chưa nhập viện' %>">
+            <td><strong><%= row.fullName %></strong></td>
+            <td><span class="module-code"><%= row.patientCode %></span></td>
+            <td><span class="badge bg-info-soft text-info"><i class="bi bi-card-checklist me-1"></i><%= row.insuranceNo || 'Chưa cập nhật' %></span></td>
+            <td><%= row.departmentName || '-' %></td>
+            <td><%- include('../partials/badge', { text: row.admissionStatus || 'Chưa nhập viện' }) %></td>
+            <td><%= format.currency(row.totalBill || 0) %></td>
+            <td><strong class="text-success"><%= format.currency(row.totalCovered || 0) %></strong></td>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="progress flex-grow-1 me-2" style="height: 6px;">
+                  <div class="progress-bar bg-success" role="progressbar" style="width: <%= insuranceRatio %>%"></div>
+                </div>
+                <small class="text-muted"><%= insuranceRatio %>%</small>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">Không có dữ liệu bệnh nhân sử dụng BHYT</td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty-inline module-empty d-none" data-empty-for="bhytTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy thông tin BHYT phù hợp</strong>
+  </div>
+</section>

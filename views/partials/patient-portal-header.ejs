@@ -1,0 +1,15 @@
+<%
+  const patient = data.patient;
+%>
+<section class="patient-hero">
+  <div>
+    <span class="status-badge status-info"><%= patient.patient_code %></span>
+    <h2><%= patient.full_name %></h2>
+    <p><%= patient.gender %> · <%= format.age(patient.date_of_birth) %> tuổi · <%= patient.phone || 'Chưa cập nhật số điện thoại' %></p>
+  </div>
+  <div class="patient-hero-actions">
+    <a class="btn btn-light" href="/patients/me/support">
+      <i class="bi bi-headset me-2"></i>Hỗ trợ
+    </a>
+  </div>
+</section>

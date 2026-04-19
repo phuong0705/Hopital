@@ -1,0 +1,390 @@
+<section class="module-hero">
+  <div class="d-flex align-items-center gap-3">
+    <a href="/departments" class="btn btn-light action-icon"><i class="bi bi-arrow-left"></i></a>
+    <div>
+      <h2 class="mb-0">Khoa <%= department.departmentName %></h2>
+      <small class="text-muted"><%= department.departmentCode %> · <%= department.location %></small>
+    </div>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#roomModal">
+      <i class="bi bi-plus-circle me-2"></i>Thêm phòng mới
+    </button>
+  </div>
+</section>
+
+<div class="row mt-4 g-4">
+  <!-- Card 1: General Info -->
+  <div class="col-lg-4">
+    <section class="panel h-100">
+      <h5 class="panel-title mb-3"><i class="bi bi-info-circle me-2 text-primary"></i>Thông tin chung</h5>
+      <dl class="info-list mb-0">
+        <dt>Trưởng khoa</dt><dd><strong><%= department.head_doctor %></strong></dd>
+        <dt>Điện thoại</dt><dd><%= department.phone %></dd>
+        <dt>Vị trí</dt><dd><%= department.location %></dd>
+      </dl>
+    </section>
+  </div>
+
+  <!-- Card 2: Occupancy Stats -->
+  <div class="col-lg-4">
+    <section class="panel h-100">
+      <h5 class="panel-title mb-3"><i class="bi bi-graph-up me-2 text-primary"></i>Công suất hiện tại</h5>
+      <div class="dept-stats">
+        <div class="dept-stat-item">
+          <small>Phòng</small>
+          <strong><%= department.roomCount %></strong>
+        </div>
+        <div class="dept-stat-item">
+          <small>Giường</small>
+          <strong><%= department.totalBeds %></strong>
+        </div>
+        <div class="dept-stat-item">
+          <small>Sử dụng</small>
+          <strong class="text-primary"><%= department.usedBeds %></strong>
+        </div>
+        <div class="dept-stat-item">
+          <small>Trống</small>
+          <strong class="text-success"><%= department.availableBeds %></strong>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Card 3: Staff Summary -->
+  <div class="col-lg-4">
+    <section class="panel h-100">
+      <h5 class="panel-title mb-3"><i class="bi bi-person-vcard me-2 text-primary"></i>Nhân sự khoa (<%= staff.length %>)</h5>
+      <div class="list-stack" style="max-height: 160px; overflow-y: auto; padding-right: 5px;">
+        <% staff.forEach(person => { %>
+          <div class="list-item py-2 px-3 mb-2">
+            <div class="doctor-avatar mini"><%= person.name.charAt(0) %></div>
+            <div class="ms-2">
+              <strong style="font-size: 13px;"><%= person.name %></strong>
+              <small class="d-block text-muted" style="font-size: 11px;"><%= person.role %><%= person.specialty ? ` · ${person.specialty}` : '' %></small>
+            </div>
+          </div>
+        <% }) %>
+        <% if (!staff.length) { %>
+          <p class="text-muted small mb-0">Chưa có nhân sự</p>
+        <% } %>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <section class="panel">
+      <nav class="nav nav-pills dept-tabs mb-4" id="deptTabs">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#roomsTab">
+          <i class="bi bi-door-open me-2"></i>Phòng bệnh
+        </button>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#bedsTab">
+          <i class="bi bi-layout-sidebar-inset me-2"></i>Giường bệnh
+        </button>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#patientsTab">
+          <i class="bi bi-people me-2"></i>Bệnh nhân hiện tại
+        </button>
+      </nav>
+
+      <div class="tab-content">
+        <!-- Rooms Tab -->
+        <div class="tab-pane fade show active" id="roomsTab">
+          <div class="table-responsive">
+            <table class="table app-table module-table">
+              <thead>
+                <tr>
+                  <th>Mã phòng</th>
+                  <th>Tên phòng / Loại</th>
+                  <th>Tầng</th>
+                  <th>Công suất giường</th>
+                  <th class="text-end">Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% rooms.forEach(room => { 
+                   const percent = room.totalBeds ? Math.round(room.usedBeds / room.totalBeds * 100) : 0;
+                %>
+                  <tr>
+                    <td><span class="module-code"><%= room.roomCode %></span></td>
+                    <td>
+                      <div class="module-primary">
+                        <strong><%= room.roomName || 'Phòng bệnh' %></strong>
+                        <small><%= room.roomType %></small>
+                      </div>
+                    </td>
+                    <td>Tầng <%= room.floorNo %></td>
+                    <td>
+                      <div class="module-progress">
+                        <div class="progress app-progress" style="width: 80px;">
+                          <div class="progress-bar" style="width: <%= percent %>%"></div>
+                        </div>
+                        <strong><%= room.usedBeds %>/<%= room.totalBeds %></strong>
+                      </div>
+                    </td>
+                    <td class="text-end">
+                      <div class="table-actions justify-content-end">
+                        <button class="btn btn-sm btn-light action-icon" data-bs-toggle="modal" data-bs-target="#roomModal"
+                          data-id="<%= room.roomId %>" data-code="<%= room.roomCode %>" data-name="<%= room.roomName %>"
+                          data-floor="<%= room.floorNo %>" data-type="<%= room.roomType %>">
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                        <form action="/departments/rooms/<%= room.roomId %>/delete?departmentId=<%= department.departmentId %>" method="POST" class="d-inline" onsubmit="return confirm('Xóa phòng này sẽ xóa tất cả giường thuộc phòng. Bạn chắc chắn?')">
+                          <button class="btn btn-sm btn-light action-icon text-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                <% }) %>
+                <% if (!rooms.length) { %>
+                  <tr><td colspan="5" class="text-center py-4 text-muted">Chưa có phòng bệnh nào</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Beds Tab -->
+        <div class="tab-pane fade" id="bedsTab">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0 font-800">Danh sách tất cả giường</h6>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#bedModal">
+              <i class="bi bi-plus-lg me-1"></i>Thêm giường
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table app-table module-table">
+              <thead>
+                <tr>
+                  <th>Mã giường</th>
+                  <th>Phòng</th>
+                  <th>Bệnh nhân hiện tại</th>
+                  <th>Trạng thái</th>
+                  <th class="text-end">Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% beds.forEach(bed => { %>
+                  <tr>
+                    <td><span class="module-code"><%= bed.bedCode %></span></td>
+                    <td>
+                      <div class="module-primary">
+                        <strong><%= bed.roomCode %></strong>
+                        <small><%= bed.roomType %></small>
+                      </div>
+                    </td>
+                    <td>
+                      <% if (bed.patientName) { %>
+                        <strong><%= bed.patientName %></strong>
+                      <% } else { %>
+                        <span class="text-muted">-</span>
+                      <% } %>
+                    </td>
+                    <td><%- include('../partials/badge', { text: bed.status }) %></td>
+                    <td class="text-end">
+                      <div class="table-actions justify-content-end">
+                        <button class="btn btn-sm btn-light action-icon" data-bs-toggle="modal" data-bs-target="#bedModal"
+                          data-id="<%= bed.bedId %>" data-code="<%= bed.bedCode %>" data-room-id="<%= bed.roomId %>"
+                          data-status="<%= bed.status %>" data-note="<%= bed.note %>">
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                        <form action="/departments/beds/<%= bed.bedId %>/delete?departmentId=<%= department.departmentId %>" method="POST" class="d-inline" onsubmit="return confirm('Chắc chắn xóa giường này?')">
+                          <button class="btn btn-sm btn-light action-icon text-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                <% }) %>
+                <% if (!beds.length) { %>
+                  <tr><td colspan="5" class="text-center py-4 text-muted">Chưa có giường bệnh nào</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Patients Tab -->
+        <div class="tab-pane fade" id="patientsTab">
+          <div class="table-responsive">
+            <table class="table app-table module-table">
+              <thead>
+                <tr>
+                  <th>Bệnh nhân</th>
+                  <th>Chẩn đoán</th>
+                  <th>Phòng / Giường</th>
+                  <th>Ngày nhập viện</th>
+                  <th class="text-end">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% patients.forEach(p => { %>
+                  <tr>
+                    <td>
+                      <div class="patient-person">
+                        <div class="doctor-avatar mini"><%= p.fullName.charAt(0) %></div>
+                        <div>
+                          <strong><%= p.fullName %></strong>
+                          <small><%= p.patientCode %></small>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-wrap-cell" style="max-width: 250px;"><%= p.diagnosis %></td>
+                    <td>
+                      <span class="patient-location"><i class="bi bi-hospital me-1"></i><%= p.roomCode %> / <%= p.bedCode %></span>
+                    </td>
+                    <td><%= format.date(p.admissionDate) %></td>
+                    <td class="text-end">
+                      <a href="/patients/<%= p.patientId %>" class="btn btn-sm btn-light action-icon" data-bs-toggle="tooltip" title="Xem hồ sơ">
+                        <i class="bi bi-eye"></i>
+                      </a>
+                    </td>
+                  </tr>
+                <% }) %>
+                <% if (!patients.length) { %>
+                  <tr><td colspan="5" class="text-center py-4 text-muted">Hiện tại không có bệnh nhân nào nằm tại khoa</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Modals -->
+<!-- Room Modal -->
+<div class="modal fade" id="roomModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form id="roomForm" method="POST" action="/departments/rooms">
+        <input type="hidden" name="departmentId" value="<%= department.departmentId %>">
+        <div class="modal-header">
+          <h5 class="modal-title" id="roomModalTitle">Thêm phòng mới</h5>
+          <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">Mã phòng</label>
+              <input name="roomCode" class="form-control" required placeholder="VD: A401">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Tầng</label>
+              <input name="floorNo" type="number" class="form-control" required value="1">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Tên phòng / Ghi chú</label>
+              <input name="roomName" class="form-control" placeholder="VD: Phòng bệnh nặng">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Loại phòng</label>
+              <select name="roomType" class="form-select">
+                <option>Thường</option>
+                <option>Cấp cứu</option>
+                <option>Hồi sức</option>
+                <option>Cách ly</option>
+                <option>Dịch vụ</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-light" type="button" data-bs-dismiss="modal">Đóng</button>
+          <button class="btn btn-primary" type="submit">Lưu thông tin</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Bed Modal -->
+<div class="modal fade" id="bedModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form id="bedForm" method="POST" action="/departments/beds?departmentId=<%= department.departmentId %>">
+        <div class="modal-header">
+          <h5 class="modal-title" id="bedModalTitle">Thêm giường bệnh</h5>
+          <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Phòng</label>
+              <select name="roomId" class="form-select" required>
+                <% rooms.forEach(room => { %>
+                  <option value="<%= room.roomId %>"><%= room.roomCode %> - <%= room.roomName %> (<%= room.roomType %>)</option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Mã giường</label>
+              <input name="bedCode" class="form-control" required placeholder="VD: B01">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Trạng thái</label>
+              <select name="status" class="form-select">
+                <option>Trống</option>
+                <option>Đang sử dụng</option>
+                <option>Chờ vệ sinh</option>
+                <option>Bảo trì</option>
+                <option>Cách ly</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Ghi chú</label>
+              <input name="note" class="form-control" placeholder="Tình trạng trang thiết bị giường">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-light" type="button" data-bs-dismiss="modal">Đóng</button>
+          <button class="btn btn-primary" type="submit">Lưu thông tin</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('roomModal').addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-id');
+    const form = document.getElementById('roomForm');
+    const title = document.getElementById('roomModalTitle');
+    
+    if (id) {
+      title.innerText = 'Cập nhật phòng ' + button.getAttribute('data-code');
+      form.action = '/departments/rooms/' + id;
+      form.querySelector('[name=roomCode]').value = button.getAttribute('data-code');
+      form.querySelector('[name=roomName]').value = button.getAttribute('data-name');
+      form.querySelector('[name=floorNo]').value = button.getAttribute('data-floor');
+      form.querySelector('[name=roomType]').value = button.getAttribute('data-type');
+    } else {
+      title.innerText = 'Thêm phòng mới';
+      form.action = '/departments/rooms';
+      form.reset();
+    }
+  });
+
+  document.getElementById('bedModal').addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-id');
+    const form = document.getElementById('bedForm');
+    const title = document.getElementById('bedModalTitle');
+    
+    if (id) {
+      title.innerText = 'Cập nhật giường ' + button.getAttribute('data-code');
+      form.action = '/departments/beds/' + id + '?departmentId=<%= department.departmentId %>';
+      form.querySelector('[name=bedCode]').value = button.getAttribute('data-code');
+      form.querySelector('[name=roomId]').value = button.getAttribute('data-room-id');
+      form.querySelector('[name=status]').value = button.getAttribute('data-status');
+      form.querySelector('[name=note]').value = button.getAttribute('data-note');
+    } else {
+      title.innerText = 'Thêm giường bệnh';
+      form.action = '/departments/beds?departmentId=<%= department.departmentId %>';
+      form.reset();
+    }
+  });
+</script>

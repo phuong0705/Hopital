@@ -1,0 +1,42 @@
+<%- include('../partials/patient-portal-header', { data }) %>
+
+<section class="dashboard-grid mt-4">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Gửi yêu cầu hỗ trợ</h2>
+      </div>
+    </div>
+    <form action="/patients/me/support" method="post" class="app-form">
+      <div class="mb-3">
+        <label class="form-label">Nhóm yêu cầu</label>
+        <select class="form-select" name="requestType">
+          <option>Hỏi điều dưỡng</option>
+          <option>Hỏi bác sĩ</option>
+          <option>Hỗ trợ viện phí</option>
+          <option>Cập nhật thông tin cá nhân</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Nội dung</label>
+        <textarea class="form-control" name="message" rows="6" placeholder="Nhập nội dung cần hỗ trợ" required></textarea>
+      </div>
+      <button class="btn btn-primary"><i class="bi bi-send me-2"></i>Gửi yêu cầu</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Thông tin liên hệ</h2>
+      </div>
+    </div>
+    <dl class="info-list">
+      <dt>Số điện thoại</dt><dd><%= data.patient.phone || 'Chưa cập nhật' %></dd>
+      <dt>Địa chỉ</dt><dd><%= data.patient.address || 'Chưa cập nhật' %></dd>
+      <dt>Người thân</dt><dd><%= data.patient.emergency_contact_name || 'Chưa cập nhật' %></dd>
+      <dt>SĐT người thân</dt><dd><%= data.patient.emergency_contact_phone || 'Chưa cập nhật' %></dd>
+    </dl>
+    <div class="alert alert-info mt-3 mb-0">Để thay đổi thông tin chính thức, vui lòng ghi rõ nội dung cần cập nhật trong yêu cầu hỗ trợ.</div>
+  </div>
+</section>

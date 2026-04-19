@@ -1,0 +1,74 @@
+<section class="module-hero">
+  <div>
+    <h2>Theo dõi thời gian nằm viện</h2>
+    <p class="text-muted">Quản lý thời gian điều trị của bệnh nhân nội trú để tối ưu hóa công suất giường</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In danh sách</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm tên bệnh nhân hoặc mã BN" data-module-search="stayTable">
+    </div>
+    <select class="form-select w-auto" data-module-filter="stayTable" data-filter-key="department">
+      <option value="">Tất cả các khoa</option>
+      <% const departments = [...new Set(rows.map(r => r.departmentName))]; %>
+      <% departments.forEach(dept => { %>
+        <option><%= dept %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table app-table" id="stayTable">
+      <thead>
+        <tr>
+          <th>Bệnh nhân</th>
+          <th>Khoa điều trị</th>
+          <th>Phòng/Giường</th>
+          <th>Ngày nhập viện</th>
+          <th>Thời gian nằm</th>
+          <th>Tình trạng</th>
+          <th class="text-end">Cảnh báo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { 
+          let alertClass = 'text-success';
+          if (row.daysStayed > 15) alertClass = 'text-danger fw-bold';
+          else if (row.daysStayed > 7) alertClass = 'text-warning fw-bold';
+        %>
+          <tr data-search="<%= `${row.patientCode} ${row.patientName}`.toLowerCase() %>" data-department="<%= row.departmentName %>">
+            <td>
+              <strong><%= row.patientName %></strong><br>
+              <small class="text-muted"><%= row.patientCode %></small>
+            </td>
+            <td><%= row.departmentName %></td>
+            <td>P. <%= row.roomCode %> / G. <%= row.bedCode %></td>
+            <td><%= format.date(row.admissionDate) %></td>
+            <td class="<%= alertClass %>"><%= row.daysStayed %> ngày</td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td class="text-end">
+              <% if (row.daysStayed > 15) { %>
+                <span class="badge bg-danger">Quá hạn (15+)</span>
+              <% } else if (row.daysStayed > 7) { %>
+                <span class="badge bg-warning text-dark">Dài hạn (>7)</span>
+              <% } else { %>
+                <span class="badge bg-success">Bình thường</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">Hiện không có bệnh nhân nội trú nào</td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>

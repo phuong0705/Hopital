@@ -1,0 +1,23 @@
+<%- include('../partials/patient-portal-header', { data }) %>
+
+<section class="panel mt-4">
+  <div class="panel-header">
+    <div>
+      <h2>Xét nghiệm / cận lâm sàng</h2>
+    </div>
+  </div>
+  <div class="list-stack">
+    <% data.labTests.forEach(item => { %>
+      <div class="list-item">
+        <span class="list-icon warning"><i class="bi bi-clipboard2-pulse-fill"></i></span>
+        <div>
+          <strong><%= item.testType %> · <%= item.testCode %></strong>
+          <small><%= format.datetime(item.orderedDate) %> · <%= item.resultSummary || 'Chưa có kết quả' %></small>
+        </div>
+        <%- include('../partials/badge', { text: item.status }) %>
+      </div>
+    <% }) %>
+    <% if (!data.labTests.length) { %>
+    <% } %>
+  </div>
+</section>

@@ -1,0 +1,35 @@
+<section class="module-hero">
+  <div>
+    <h2>Thống kê sử dụng thuốc</h2>
+    <p class="text-muted">Danh sách các loại thuốc được kê đơn nhiều nhất trong hệ thống</p>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="table-responsive">
+    <table class="table app-table">
+      <thead>
+        <tr>
+          <th>Tên thuốc</th>
+          <th>Số lượng đã dùng</th>
+          <th>Số đơn thuốc liên quan</th>
+          <th>Mức độ phổ biến</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr>
+            <td><strong><%= row.medicineName %></strong></td>
+            <td><span class="text-primary fw-bold"><%= row.totalUsed %></span> đơn vị</td>
+            <td><%= row.prescriptionCount %> đơn</td>
+            <td>
+              <div class="progress" style="height: 6px; width: 100px;">
+                <div class="progress-bar" style="width: <%= Math.min(row.totalUsed * 2, 100) %>%"></div>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>

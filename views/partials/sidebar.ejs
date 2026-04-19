@@ -1,0 +1,82 @@
+<%
+  const role = currentUser ? currentUser.roleCode : '';
+  const isPatient = role === 'PATIENT';
+  const isAdmin = role === 'ADMIN';
+  const canGroup = (group) => isAdmin || group.roles.includes(role);
+  const canItem = (item, group) => isAdmin || (item.roles || group.roles).includes(role);
+  const patientMenu = [
+    { key: 'my-profile', label: 'Hồ sơ của tôi', icon: 'bi-person-heart', href: '/patients/me' },
+    { key: 'patient-care', label: 'Lịch điều trị', icon: 'bi-calendar2-pulse', href: '/patients/me/treatments' },
+    { key: 'patient-medicine', label: 'Thuốc của tôi', icon: 'bi-capsule-pill', href: '/patients/me/medicines' },
+    { key: 'patient-labs', label: 'Xét nghiệm', icon: 'bi-clipboard2-pulse-fill', href: '/patients/me/labtests' },
+    { key: 'patient-billing', label: 'Viện phí', icon: 'bi-credit-card-2-front-fill', href: '/patients/me/billing' },
+    { key: 'patient-discharge', label: 'Xuất viện', icon: 'bi-box-arrow-right', href: '/patients/me/discharge' },
+    { key: 'patient-support', label: 'Hỗ trợ', icon: 'bi-headset', href: '/patients/me/support' }
+  ];
+%>
+<aside class="sidebar">
+  <a class="brand" href="<%= isPatient ? '/patients/me' : '/dashboard' %>">
+    <span class="brand-mark"><i class="bi bi-heart-pulse-fill"></i></span>
+    <span>
+      <strong>Nội trú HIS</strong>
+      <small>Bệnh viện Đa khoa Việt Nam</small>
+    </span>
+  </a>
+  <nav class="sidebar-nav" id="sidebarBusinessMenu">
+    <% if (isPatient) { %>
+      <% patientMenu.forEach(item => { %>
+        <a class="nav-link <%= activeMenu === item.key ? 'active' : '' %>" href="<%= item.href %>">
+          <i class="bi <%= item.icon %>"></i>
+          <span><%= item.label %></span>
+        </a>
+      <% }) %>
+    <% } else { %>
+      <a class="nav-link <%= activeMenu === 'dashboard' ? 'active' : '' %>" href="/dashboard">
+        <i class="bi bi-grid-1x2-fill"></i>
+        <span>Tổng quan</span>
+      </a>
+      <% 
+        let activeGroupFound = false;
+        businessGroups.filter(canGroup).forEach(group => { 
+          const visibleItems = group.items.filter(item => canItem(item, group));
+          let isOpen = false;
+          // Chỉ mở rộng nhóm đầu tiên khớp với activeMenu để tránh mở nhiều nhóm trùng lặp
+          if (!activeGroupFound) {
+            isOpen = visibleItems.some(item => activeMenu === item.key);
+            if (isOpen) activeGroupFound = true;
+          }
+          const collapseId = `businessGroup${group.code}`;
+        %>
+        <button
+          class="nav-section nav-section-toggle <%= isOpen ? '' : 'collapsed' %>"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#<%= collapseId %>"
+          aria-expanded="<%= isOpen ? 'true' : 'false' %>"
+          aria-controls="<%= collapseId %>">
+          <span class="nav-section-left">
+            <i class="bi <%= group.icon %>"></i>
+            <span><%= group.code %>. <%= group.title %></span>
+          </span>
+          <i class="bi bi-chevron-down nav-section-chevron"></i>
+        </button>
+        <div class="collapse <%= isOpen ? 'show' : '' %>" id="<%= collapseId %>">
+          <div class="nav-child-group">
+            <% visibleItems.forEach(item => { 
+              const linkHref = item.href.includes('?') ? `${item.href}&activeMenu=${item.key}` : `${item.href}?activeMenu=${item.key}`;
+            %>
+              <a class="nav-link nav-child <%= activeMenu === item.key ? 'active' : '' %>" href="<%= linkHref %>">
+                <i class="bi <%= item.icon %>"></i>
+                <span><%= item.code %> <%= item.title %></span>
+              </a>
+            <% }) %>
+          </div>
+        </div>
+      <% }) %>
+    <% } %>
+  </nav>
+  <div class="sidebar-footer">
+    <span class="status-dot"></span>
+    <span>SQL Server local</span>
+  </div>
+</aside>

@@ -1,0 +1,31 @@
+<%- include('../partials/patient-portal-header', { data }) %>
+
+<section class="panel mt-4">
+  <div class="panel-header">
+    <div>
+      <h2>Thuốc của tôi</h2>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table app-table">
+      <thead>
+        <tr><th>Tên thuốc</th><th>Liều dùng</th><th>Số lần dùng</th><th>Đường dùng</th><th>Thời gian</th><th>Bác sĩ kê</th></tr>
+      </thead>
+      <tbody>
+        <% data.prescriptions.forEach(item => { %>
+          <tr>
+            <td><strong><%= item.medicineName %></strong></td>
+            <td><%= item.dosage %></td>
+            <td><%= item.frequency %></td>
+            <td><%= item.route %></td>
+            <td><%= format.date(item.startDate) %> - <%= format.date(item.endDate) %></td>
+            <td><%= item.doctorName %></td>
+          </tr>
+        <% }) %>
+        <% if (!data.prescriptions.length) { %>
+          <tr><td colspan="6" class="text-muted">Chưa có thuốc được kê.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>

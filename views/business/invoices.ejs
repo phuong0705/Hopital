@@ -1,0 +1,57 @@
+<section class="module-hero">
+  <div>
+    <h2>Quản lý hóa đơn & chứng từ</h2>
+    <p class="text-muted">Danh sách hóa đơn điện tử đã phát hành và lịch sử thanh toán</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In báo cáo</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm số hóa đơn hoặc tên BN" data-module-search="invoiceTable">
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table app-table" id="invoiceTable">
+      <thead>
+        <tr>
+          <th>Số hóa đơn</th>
+          <th>Bệnh nhân</th>
+          <th>Ngày phát hành</th>
+          <th>Tổng tiền</th>
+          <th>BHYT hỗ trợ</th>
+          <th>Thực thu</th>
+          <th class="text-end">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.billCode} ${row.patientName}`.toLowerCase() %>">
+            <td><span class="module-code"><%= row.billCode %></span></td>
+            <td><strong><%= row.patientName %></strong></td>
+            <td><%= format.date(row.createdAt) %></td>
+            <td><%= format.currency(row.totalAmount + (row.insuranceCovered || 0)) %></td>
+            <td class="text-success">- <%= format.currency(row.insuranceCovered || 0) %></td>
+            <td><strong class="text-primary"><%= format.currency(row.totalAmount) %></strong></td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-light action-icon" type="button" data-print-page data-bs-toggle="tooltip" title="Xem & In hóa đơn">
+                <i class="bi bi-file-earmark-text"></i>
+              </button>
+              <button class="btn btn-sm btn-light action-icon" type="button" data-print-page data-bs-toggle="tooltip" title="Tải PDF">
+                <i class="bi bi-download"></i>
+              </button>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr><td colspan="7" class="text-center py-4 text-muted">Chưa có hóa đơn nào được phát hành</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>

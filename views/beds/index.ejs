@@ -1,0 +1,75 @@
+<section class="module-hero">
+  <div>
+    <h2>Quản lí giường bệnh</h2>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <button class="btn btn-light" type="button" data-export-table="bedsTable" data-filename="giuong-benh.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
+  </div>
+</section>
+
+<section class="panel module-panel mt-4">
+  <div class="module-toolbar three">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm mã giường, phòng, khoa, bệnh nhân" data-module-search="bedsTable">
+    </div>
+    <select class="form-select" data-module-filter="bedsTable" data-filter-key="status">
+      <option value="">Tất cả trạng thái</option>
+      <option>Trống</option>
+      <option>Đang sử dụng</option>
+      <option>Chờ vệ sinh</option>
+      <option>Bảo trì</option>
+      <option>Cách ly</option>
+    </select>
+    <select class="form-select" data-module-filter="bedsTable" data-filter-key="department">
+      <option value="">Tất cả khoa</option>
+      <% [...new Set(rows.map(row => row.departmentName))].forEach(department => { %>
+        <option><%= department %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table beds-table" id="bedsTable">
+      <thead>
+        <tr>
+          <th>Giường</th>
+          <th>Khoa / phòng</th>
+          <th>Trạng thái</th>
+          <th>Bệnh nhân</th>
+          <th>Bắt đầu dùng</th>
+          <th class="text-end no-export">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.bedCode} ${row.roomCode} ${row.departmentName} ${row.patientName || ''}`.toLowerCase() %>" data-status="<%= row.status %>" data-department="<%= row.departmentName %>">
+            <td><span class="module-code"><%= row.bedCode %></span></td>
+            <td>
+              <div class="module-primary">
+                <strong><%= row.departmentName %></strong>
+                <small>Phòng <%= row.roomCode %></small>
+              </div>
+            </td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td><%= row.patientName || 'Không có' %></td>
+            <td><%= row.startDate ? format.date(row.startDate) : '-' %></td>
+            <td class="text-end no-export">
+              <button class="btn btn-sm btn-light" type="button" data-bs-toggle="modal" data-bs-target="#transferModal">
+                Chuyển giường
+              </button>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty-inline module-empty d-none" data-empty-for="bedsTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy giường phù hợp</strong>
+  </div>
+</section>
+
+<%- include('../partials/action-modals') %>

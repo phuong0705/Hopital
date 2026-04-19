@@ -1,0 +1,58 @@
+<section class="module-hero">
+  <div>
+    <h2>Theo dõi kết quả khám & xét nghiệm</h2>
+    <p class="text-muted">Cập nhật và theo dõi tình trạng các chỉ định cận lâm sàng</p>
+  </div>
+  <div class="module-actions">
+    <a href="/dashboard" class="btn btn-light"><i class="bi bi-grid me-2"></i>Tổng quan</a>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm tên bệnh nhân hoặc mã xét nghiệm" data-module-search="resultsTable">
+    </div>
+    <select class="form-select w-auto" data-module-filter="resultsTable" data-filter-key="status">
+      <option value="">Tất cả trạng thái</option>
+      <option>Chờ lấy mẫu</option>
+      <option>Đang thực hiện</option>
+      <option>Đã có kết quả</option>
+    </select>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table app-table" id="resultsTable">
+      <thead>
+        <tr>
+          <th>Bệnh nhân</th>
+          <th>Loại xét nghiệm</th>
+          <th>Ngày chỉ định</th>
+          <th>Bác sĩ chỉ định</th>
+          <th>Trạng thái</th>
+          <th>Kết luận sơ bộ</th>
+          <th class="text-end">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.patientName} ${row.testType}`.toLowerCase() %>" data-status="<%= row.status %>">
+            <td>
+              <strong><%= row.patientName %></strong><br>
+              <small class="text-muted"><%= row.patientCode %></small>
+            </td>
+            <td><%= row.testType %></td>
+            <td><%= format.date(row.orderedDate) %></td>
+            <td><%= row.doctorName %></td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td class="text-wrap-cell"><%= row.resultSummary || 'Đang cập nhật...' %></td>
+            <td class="text-end">
+              <a href="/medical-records/<%= row.recordId %>" class="btn btn-sm btn-primary">Xem chi tiết</a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>

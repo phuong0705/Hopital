@@ -1,0 +1,47 @@
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Danh sách chăm sóc điều dưỡng</h2>
+    </div>
+    <a class="btn btn-primary" href="/treatments"><i class="bi bi-calendar2-pulse me-2"></i>Y lệnh trong ngày</a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table app-table">
+      <thead>
+        <tr>
+          <th>Mã BN</th>
+          <th>Bệnh nhân</th>
+          <th>Khoa</th>
+          <th>Phòng / giường</th>
+          <th>Ưu tiên</th>
+          <th>Dấu hiệu sinh tồn</th>
+          <th>Y lệnh gần nhất</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr>
+            <td><strong><%= row.patientCode %></strong></td>
+            <td><%= row.patientName %></td>
+            <td><%= row.departmentName %></td>
+            <td><%= row.roomCode || 'Chưa xếp' %> / <%= row.bedCode || 'Chưa xếp' %></td>
+            <td><%- include('../partials/badge', { text: row.priorityLevel }) %></td>
+            <td class="text-wrap-cell"><%= row.vitalSigns || 'Chưa cập nhật' %></td>
+            <td class="text-wrap-cell">
+              <strong><%= row.treatmentContent || 'Chưa có y lệnh' %></strong>
+              <% if (row.scheduledTime) { %>
+                <small><%= format.datetime(row.scheduledTime) %> · <%= row.assigneeName || 'Chưa phân công' %></small>
+              <% } %>
+            </td>
+            <td><%- include('../partials/badge', { text: row.treatmentStatus || 'Chưa thực hiện' }) %></td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr><td colspan="8" class="text-muted">Chưa có bệnh nhân cần theo dõi trong ca.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>

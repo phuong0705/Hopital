@@ -1,0 +1,33 @@
+<section class="module-hero">
+  <div>
+    <h2>Thống kê lượt khám bệnh</h2>
+    <p class="text-muted">Phân tích mật độ tiếp nhận bệnh nhân theo thời gian</p>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="panel-header"><h2>Lượt tiếp nhận 30 ngày gần nhất</h2></div>
+  <div class="table-responsive mt-3">
+    <table class="table app-table">
+      <thead>
+        <tr>
+          <th>Ngày</th>
+          <th>Số lượt khám</th>
+          <th>Xu hướng</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach((row, index) => { 
+          const prev = rows[index + 1] ? rows[index + 1].visitCount : row.visitCount;
+          const trend = row.visitCount >= prev ? 'bi-caret-up-fill text-success' : 'bi-caret-down-fill text-danger';
+        %>
+          <tr>
+            <td><strong><%= format.date(row.date) %></strong></td>
+            <td><span class="badge bg-light text-dark fs-6 px-3"><%= row.visitCount %> lượt</span></td>
+            <td><i class="bi <%= trend %> me-1"></i> <%= Math.abs(row.visitCount - prev) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>

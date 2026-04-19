@@ -1,0 +1,167 @@
+<section class="module-hero">
+  <div>
+    <span class="module-code">1.4 Danh mục thuốc</span>
+    <h2>Danh mục thuốc</h2>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <button class="btn btn-light" type="button" data-export-table="medicinesTable" data-filename="danh-muc-thuoc.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
+    <% if (['ADMIN', 'DOCTOR'].includes(currentUser.roleCode)) { %>
+      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#medicineModal">
+        <i class="bi bi-plus-lg me-2"></i>Thêm thuốc
+      </button>
+    <% } %>
+  </div>
+</section>
+
+<section class="panel module-panel mt-4">
+  <div class="module-toolbar three">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm mã thuốc, tên thuốc, hoạt chất, nhóm thuốc" data-module-search="medicinesTable">
+    </div>
+    <select class="form-select" data-module-filter="medicinesTable" data-filter-key="group">
+      <option value="">Tất cả nhóm thuốc</option>
+      <% [...new Set(rows.map(row => row.medicineGroup).filter(Boolean))].forEach(group => { %>
+        <option value="<%= group %>"><%= group %></option>
+      <% }) %>
+    </select>
+    <select class="form-select" data-module-filter="medicinesTable" data-filter-key="status">
+      <option value="">Tất cả trạng thái</option>
+      <option value="Đang sử dụng">Đang sử dụng</option>
+      <option value="Ngưng sử dụng">Ngưng sử dụng</option>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="medicinesTable">
+      <thead>
+        <tr>
+          <th>Mã thuốc</th>
+          <th>Thuốc</th>
+          <th>Nhóm</th>
+          <th>Dạng / hàm lượng</th>
+          <th>Đường dùng</th>
+          <th>Đơn giá</th>
+          <th>Tồn cảnh báo</th>
+          <th>Trạng thái</th>
+          <th class="text-end no-export">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => {
+          const statusClass = row.status === 'Đang sử dụng' ? 'status-success' : 'status-secondary';
+        %>
+          <tr
+            data-search="<%= `${row.medicineCode} ${row.medicineName} ${row.activeIngredient || ''} ${row.medicineGroup} ${row.usageNote || ''}`.toLowerCase() %>"
+            data-group="<%= row.medicineGroup %>"
+            data-status="<%= row.status %>">
+            <td><span class="patient-code-pill"><%= row.medicineCode %></span></td>
+            <td>
+              <div class="module-primary">
+                <strong><%= row.medicineName %></strong>
+                <small><%= row.activeIngredient || 'Chưa cập nhật hoạt chất' %></small>
+              </div>
+            </td>
+            <td><%= row.medicineGroup %></td>
+            <td><%= row.dosageForm %><small><%= row.strength || '-' %></small></td>
+            <td><%= row.route || '-' %></td>
+            <td><strong><%= Number(row.unitPrice || 0).toLocaleString('vi-VN') %> đ</strong><small>/<%= row.unit %></small></td>
+            <td><%= row.stockWarningLevel %> <%= row.unit %></td>
+            <td><span class="status-badge <%= statusClass %>"><%= row.status %></span></td>
+            <td class="text-end no-export">
+              <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#medicineDetail<%= row.medicineId %>" data-bs-title="Xem chi tiết">
+                <i class="bi bi-eye"></i>
+              </button>
+              <% if (['ADMIN', 'DOCTOR'].includes(currentUser.roleCode)) { %>
+                <form action="/nghiep-vu/danh-muc-thuoc/<%= row.medicineId %>/status" method="post" class="d-inline">
+                  <input type="hidden" name="status" value="<%= row.status === 'Đang sử dụng' ? 'Ngưng sử dụng' : 'Đang sử dụng' %>">
+                  <button class="btn btn-sm btn-light action-icon" type="submit">
+                    <i class="bi <%= row.status === 'Đang sử dụng' ? 'bi-lock' : 'bi-unlock' %>"></i>
+                  </button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty-inline module-empty d-none" data-empty-for="medicinesTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy thuốc phù hợp</strong>
+  </div>
+</section>
+
+<% rows.forEach(row => { %>
+  <div class="modal fade" id="medicineDetail<%= row.medicineId %>" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content app-modal">
+        <div class="modal-header">
+          <div>
+            <span class="module-code"><%= row.medicineCode %> · <%= row.medicineGroup %></span>
+            <h5 class="modal-title"><%= row.medicineName %></h5>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <div class="info-list compact">
+            <div><small>Hoạt chất</small><strong><%= row.activeIngredient || '-' %></strong></div>
+            <div><small>Dạng bào chế</small><strong><%= row.dosageForm %></strong></div>
+            <div><small>Hàm lượng</small><strong><%= row.strength || '-' %></strong></div>
+            <div><small>Đường dùng</small><strong><%= row.route || '-' %></strong></div>
+            <div><small>Đơn vị</small><strong><%= row.unit %></strong></div>
+            <div><small>Đơn giá</small><strong><%= Number(row.unitPrice || 0).toLocaleString('vi-VN') %> đ</strong></div>
+          </div>
+          <div class="mt-3 disease-detail-block">
+            <i class="bi bi-journal-medical"></i>
+            <h6>Ghi chú sử dụng</h6>
+            <p><%= row.usageNote || 'Chưa cập nhật.' %></p>
+          </div>
+          <div class="mt-3 disease-detail-block warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            <h6>Chống chỉ định/thận trọng</h6>
+            <p><%= row.contraindications || 'Cần kiểm tra dị ứng, chức năng gan thận và tương tác thuốc trước khi dùng.' %></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<% }) %>
+
+<% if (['ADMIN', 'DOCTOR'].includes(currentUser.roleCode)) { %>
+  <div class="modal fade" id="medicineModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content app-modal">
+        <div class="modal-header">
+          <h5 class="modal-title">Thêm thuốc</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <form action="/nghiep-vu/danh-muc-thuoc" method="post">
+          <div class="modal-body">
+            <div class="form-grid">
+              <div><label class="form-label">Mã thuốc</label><input class="form-control" name="medicineCode" placeholder="TH006" required></div>
+              <div><label class="form-label">Tên thuốc</label><input class="form-control" name="medicineName" placeholder="Amoxicillin 500mg" required></div>
+              <div><label class="form-label">Hoạt chất</label><input class="form-control" name="activeIngredient" placeholder="Amoxicillin"></div>
+              <div><label class="form-label">Nhóm thuốc</label><input class="form-control" name="medicineGroup" placeholder="Kháng sinh" required></div>
+              <div><label class="form-label">Dạng bào chế</label><input class="form-control" name="dosageForm" placeholder="Viên nang" required></div>
+              <div><label class="form-label">Hàm lượng</label><input class="form-control" name="strength" placeholder="500mg"></div>
+              <div><label class="form-label">Đường dùng</label><input class="form-control" name="route" placeholder="Uống"></div>
+              <div><label class="form-label">Đơn vị</label><input class="form-control" name="unit" placeholder="viên" value="viên"></div>
+              <div><label class="form-label">Đơn giá</label><input class="form-control" name="unitPrice" type="number" min="0" value="0"></div>
+              <div><label class="form-label">Tồn cảnh báo</label><input class="form-control" name="stockWarningLevel" type="number" min="0" value="20"></div>
+              <div class="span-2"><label class="form-label">Ghi chú sử dụng</label><textarea class="form-control" name="usageNote" rows="3"></textarea></div>
+              <div class="span-2"><label class="form-label">Chống chỉ định/thận trọng</label><textarea class="form-control" name="contraindications" rows="3"></textarea></div>
+              <div><label class="form-label">Trạng thái</label><select class="form-select" name="status"><option selected>Đang sử dụng</option><option>Ngưng sử dụng</option></select></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>Lưu thuốc</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+<% } %>

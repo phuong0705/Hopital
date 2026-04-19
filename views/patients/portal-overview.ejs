@@ -1,0 +1,85 @@
+<%
+  const patient = data.patient;
+  const nextTreatment = data.treatments && data.treatments.length ? data.treatments[0] : null;
+  const pendingLabs = data.labTests.filter(item => item.status !== 'Đã có kết quả').length;
+  const unpaid = data.billing && data.billing.paymentStatus !== 'Đã thanh toán';
+%>
+
+<%- include('../partials/patient-portal-header', { data }) %>
+
+<section class="patient-summary-grid mt-4">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Thông tin điều trị</h2>
+      </div>
+      <%- include('../partials/badge', { text: patient.admission_status || 'Chưa nhập viện' }) %>
+    </div>
+    <dl class="info-list compact">
+      <dt>Mã hồ sơ</dt><dd><%= patient.record_code || 'Chưa có' %></dd>
+      <dt>Khoa</dt><dd><%= patient.department_name || 'Chưa phân khoa' %></dd>
+      <dt>Phòng / giường</dt><dd><%= patient.room_code || 'Chưa xếp' %> / <%= patient.bed_code || 'Chưa xếp' %></dd>
+      <dt>Bác sĩ</dt><dd><%= patient.doctor_name || 'Chưa phân công' %></dd>
+      <dt>Chẩn đoán</dt><dd><%= patient.initial_diagnosis || 'Chưa cập nhật' %></dd>
+    </dl>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Cần chú ý</h2>
+      </div>
+    </div>
+    <div class="list-stack">
+      <a class="list-item list-link" href="/patients/me/treatments">
+        <span class="list-icon info"><i class="bi bi-calendar2-pulse"></i></span>
+        <div>
+          <strong>Y lệnh gần nhất</strong>
+          <small><%= nextTreatment ? `${format.datetime(nextTreatment.scheduledTime)} · ${nextTreatment.treatmentContent}` : 'Chưa có lịch điều trị' %></small>
+        </div>
+      </a>
+      <a class="list-item list-link" href="/patients/me/labtests">
+        <span class="list-icon warning"><i class="bi bi-clipboard2-pulse"></i></span>
+        <div>
+          <strong>Xét nghiệm chờ kết quả</strong>
+          <small><%= pendingLabs %> chỉ định cần theo dõi</small>
+        </div>
+      </a>
+      <a class="list-item list-link" href="/patients/me/billing">
+        <span class="list-icon info"><i class="bi bi-credit-card-2-front"></i></span>
+        <div>
+          <strong>Viện phí</strong>
+          <small><%= data.billing ? `${format.currency(data.billing.totalAmount)} · ${data.billing.paymentStatus}` : 'Chưa phát sinh viện phí' %></small>
+        </div>
+        <% if (unpaid) { %><span class="status-badge status-warning">Cần theo dõi</span><% } %>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="patient-action-grid compact mt-4">
+  <a class="patient-action-card" href="/patients/me/treatments">
+    <i class="bi bi-calendar2-pulse"></i>
+    <strong>Lịch điều trị</strong>
+  </a>
+  <a class="patient-action-card" href="/patients/me/medicines">
+    <i class="bi bi-capsule-pill"></i>
+    <strong>Thuốc</strong>
+  </a>
+  <a class="patient-action-card" href="/patients/me/labtests">
+    <i class="bi bi-clipboard2-data"></i>
+    <strong>Xét nghiệm</strong>
+  </a>
+  <a class="patient-action-card <%= unpaid ? 'is-warning' : '' %>" href="/patients/me/billing">
+    <i class="bi bi-credit-card-2-front"></i>
+    <strong>Viện phí</strong>
+  </a>
+  <a class="patient-action-card" href="/patients/me/discharge">
+    <i class="bi bi-box-arrow-right"></i>
+    <strong>Xuất viện</strong>
+  </a>
+  <a class="patient-action-card" href="/patients/me/support">
+    <i class="bi bi-headset"></i>
+    <strong>Hỗ trợ</strong>
+  </a>
+</section>
