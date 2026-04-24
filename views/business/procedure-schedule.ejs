@@ -1,0 +1,118 @@
+<section class="module-hero">
+  <div>
+    <h2>Lịch mổ / Thủ thuật</h2>
+    <% if (selectedDoctor) { %>
+      <p class="text-muted mb-0"><%= selectedDoctor.fullName %> · <%= selectedDoctor.specialty %></p>
+    <% } %>
+  </div>
+  <div class="module-actions">
+    <a class="btn btn-light" href="/treatments?activeMenu=doctor-procedure-schedule"><i class="bi bi-calendar2-week me-2"></i>Lịch điều trị</a>
+    <a class="btn btn-primary" href="/nghiep-vu/chi-dinh-cdha-thu-thuat?activeMenu=doctor-imaging-procedure-order"><i class="bi bi-bezier2 me-2"></i>Mở chỉ định CĐHA</a>
+  </div>
+</section>
+
+<section class="patient-action-grid compact mt-4">
+  <div class="patient-action-card">
+    <i class="bi bi-scissors"></i>
+    <strong><%= procedureRows.length %> ca mổ / thủ thuật</strong>
+    <span>Đếm từ lịch điều trị hôm nay theo nội dung mang tính thủ thuật.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-list-check"></i>
+    <strong><%= supportRows.length %> lịch hỗ trợ theo dõi</strong>
+    <span>Hiển thị thêm y lệnh liên quan nếu chưa có ca thủ thuật riêng.</span>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="panel-header">
+    <div>
+      <h2>Ca mổ / thủ thuật cần theo dõi</h2>
+      <p>Dữ liệu lấy từ TreatmentSchedules hiện có của bác sĩ đăng nhập.</p>
+    </div>
+  </div>
+  <div class="treatment-list patient-schedule-grid">
+    <% procedureRows.forEach(row => {
+      const datetime = format.datetime(row.scheduledTime);
+      const firstPart = datetime.split(' ')[0];
+      const timePart = datetime.replace(firstPart, '').trim();
+      const location = [row.roomCode, row.bedCode].filter(Boolean).join(' / ') || 'Chưa xếp giường';
+    %>
+      <article class="treatment-card patient-schedule-card">
+        <div class="treatment-time">
+          <strong><%= firstPart %></strong>
+          <span><%= timePart %></span>
+        </div>
+        <div class="treatment-main">
+          <div class="patient-schedule-head">
+            <div>
+              <h3><%= row.patientName %></h3>
+              <small><%= row.gender %> · <%= location %></small>
+            </div>
+            <%- include('../partials/badge', { text: row.priorityLevel }) %>
+          </div>
+          <p><%= row.treatmentContent %></p>
+          <div class="patient-schedule-meta">
+            <span><i class="bi bi-hospital"></i><%= row.departmentName %></span>
+            <span><i class="bi bi-clipboard2-pulse"></i><%= row.diagnosis || 'Chưa cập nhật chẩn đoán' %></span>
+            <span><i class="bi bi-person-check"></i><%= row.assigneeName %></span>
+          </div>
+        </div>
+        <div class="treatment-state">
+          <%- include('../partials/badge', { text: row.status }) %>
+          <a class="btn btn-sm btn-primary" href="/medical-records/<%= row.recordId %>?activeMenu=doctor-medical-records">Mở HSBA</a>
+        </div>
+      </article>
+    <% }) %>
+    <% if (!procedureRows.length) { %>
+      <div class="empty-inline">
+        <i class="bi bi-calendar-x"></i>
+        <strong>Chưa có ca mổ / thủ thuật riêng</strong>
+        <span>Hệ thống đang hiển thị thêm lịch hỗ trợ bên dưới để bác sĩ vẫn theo dõi được công việc trong ngày.</span>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="panel-header">
+    <div>
+      <h2>Lịch hỗ trợ trong ngày</h2>
+      <p>Dùng để phối hợp chuẩn bị thủ thuật, theo dõi hậu thủ thuật hoặc thay thế khi chưa có lịch mổ riêng.</p>
+    </div>
+  </div>
+  <div class="module-table-wrap">
+    <table class="table app-table module-table">
+      <thead>
+        <tr>
+          <th>Thời gian</th>
+          <th>Bệnh nhân</th>
+          <th>Nội dung</th>
+          <th>Điều dưỡng</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% supportRows.forEach(row => { %>
+          <tr>
+            <td><%= format.datetime(row.scheduledTime) %></td>
+            <td>
+              <div class="module-primary">
+                <strong><%= row.patientName %></strong>
+                <small><%= row.patientCode %></small>
+              </div>
+            </td>
+            <td class="text-wrap-cell"><%= row.treatmentContent %></td>
+            <td><%= row.assigneeName %></td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+          </tr>
+        <% }) %>
+        <% if (!supportRows.length) { %>
+          <tr>
+            <td colspan="5" class="text-center py-4 text-muted">Không có lịch theo dõi nào cho bác sĩ này trong ngày.</td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>

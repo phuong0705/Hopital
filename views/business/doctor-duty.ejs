@@ -1,10 +1,9 @@
 <section class="module-hero">
   <div>
     <h2>Phân công bác sĩ trực</h2>
-    <p class="text-muted">Quản lý lịch trực và phân bổ bác sĩ phụ trách các khoa theo ca</p>
   </div>
   <div class="module-actions">
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#dutyModal"><i class="bi bi-plus-lg me-2"></i>Thêm phân công</button>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#dutyModal">Thêm phân công</button>
   </div>
 </section>
 
@@ -25,8 +24,7 @@
         <% rows.forEach(row => { %>
           <tr>
             <td>
-              <strong><%= row.fullName %></strong><br>
-              <small class="text-muted"><%= row.doctorCode %></small>
+              <strong><%= row.fullName %></strong>
             </td>
             <td><%= row.departmentName %></td>
             <td><%= row.specialty %></td>

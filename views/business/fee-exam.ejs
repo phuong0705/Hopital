@@ -1,7 +1,6 @@
 <section class="module-hero">
   <div>
     <h2>Tính phí khám bệnh</h2>
-    <p class="text-muted">Tính toán và áp mã phí cho các lượt khám ngoại trú và xét nghiệm</p>
   </div>
   <div class="module-actions">
     <a href="/billing" class="btn btn-primary"><i class="bi bi-receipt me-2"></i>Lập phiếu thu</a>
@@ -20,7 +19,7 @@
     <table class="table app-table" id="feeTable">
       <thead>
         <tr>
-          <th>Mã BN</th>
+          <th></th>
           <th>Bệnh nhân</th>
           <th>Khoa chỉ định</th>
           <th>Nội dung khám</th>
@@ -29,9 +28,13 @@
         </tr>
       </thead>
       <tbody>
-        <% patients.filter(p => p.status === 'Đang điều trị').forEach(p => { %>
+        <% patients.filter(p => p.status === 'Đang điều trị' || p.status === 'Theo dõi').forEach(p => { %>
           <tr data-search="<%= `${p.patientCode} ${p.fullName}`.toLowerCase() %>">
-            <td><span class="patient-code-pill"><%= p.patientCode %></span></td>
+            <td>
+              <div class="module-primary">
+                <strong><%= p.patientCode %></strong>
+              </div>
+            </td>
             <td><strong><%= p.fullName %></strong></td>
             <td><%= p.departmentName || 'Phòng khám chung' %></td>
             <td><%= p.initialDiagnosis || 'Khám tổng quát' %></td>

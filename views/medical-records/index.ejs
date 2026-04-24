@@ -4,13 +4,11 @@
   </div>
   <div class="table-responsive">
     <table class="table app-table">
-      <thead><tr><th>Mã hồ sơ</th><th>Bệnh nhân</th><th>Mã BN</th><th>Chẩn đoán nhập viện</th><th>Dấu hiệu sinh tồn</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead>
+      <thead><tr><th>Bệnh nhân</th><th>Chẩn đoán nhập viện</th><th>Dấu hiệu sinh tồn</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead>
       <tbody>
         <% rows.forEach(row => { %>
           <tr>
-            <td><strong><%= row.recordCode %></strong></td>
             <td><%= row.patientName %></td>
-            <td><%= row.patientCode %></td>
             <td class="text-wrap-cell"><%= row.diagnosis %></td>
             <td><%= row.vitalSigns %></td>
             <td><%- include('../partials/badge', { text: row.status }) %></td>

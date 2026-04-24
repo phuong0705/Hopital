@@ -1,7 +1,6 @@
 <section class="module-hero">
   <div>
     <h2>Chẩn bệnh & Điều trị ngoại trú</h2>
-    <p class="text-muted">Danh sách bệnh nhân đang chờ chẩn đoán và kết luận khám</p>
   </div>
   <div class="module-actions">
     <a href="/dashboard" class="btn btn-light"><i class="bi bi-grid me-2"></i>Tổng quan</a>
@@ -20,9 +19,9 @@
     <table class="table app-table" id="diagnosisTable">
       <thead>
         <tr>
-          <th>Mã HSBA</th>
+          <th></th>
           <th>Bệnh nhân</th>
-          <th>Mã BN</th>
+          <th></th>
           <th>Chẩn đoán ban đầu</th>
           <th>Trạng thái</th>
           <th>Ngày tạo</th>
@@ -32,9 +31,9 @@
       <tbody>
         <% rows.forEach(row => { %>
           <tr data-search="<%= `${row.recordCode} ${row.patientName}`.toLowerCase() %>">
-            <td><strong><%= row.recordCode %></strong></td>
+            <td></td>
             <td><%= row.patientName %></td>
-            <td><span class="patient-code-pill"><%= row.patientCode %></span></td>
+            <td></td>
             <td class="text-wrap-cell"><%= row.diagnosis %></td>
             <td><%- include('../partials/badge', { text: row.status }) %></td>
             <td><%= format.date(row.createdAt) %></td>

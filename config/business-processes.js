@@ -100,11 +100,7 @@ const businessGroups = [
     icon: 'bi-bar-chart-line',
     roles: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST'],
     items: [
-      { key: 'report-inpatient', code: '8.1', title: 'Thống kê bệnh nhân nội trú', href: '/nghiep-vu/thong-ke-benh-nhan-noi-tru', icon: 'bi-people' },
-      { key: 'report-revenue', code: '8.2', title: 'Thống kê doanh thu', href: '/nghiep-vu/thong-ke-doanh-thu', icon: 'bi-currency-dollar' },
-      { key: 'report-visits', code: '8.3', title: 'Thống kê lượt khám', href: '/nghiep-vu/thong-ke-luot-kham', icon: 'bi-clipboard2-check' },
-      { key: 'report-medicines', code: '8.4', title: 'Thống kê sử dụng thuốc', href: '/nghiep-vu/thong-ke-su-dung-thuoc', icon: 'bi-capsule' },
-      { key: 'report-discharges', code: '8.5', title: 'Báo cáo xuất viện', href: '/nghiep-vu/bao-cao-xuat-vien', icon: 'bi-box-arrow-right' }
+      { key: 'report-statistics', code: '8.1', title: 'Báo cáo thống kê', href: '/reports', icon: 'bi-bar-chart-line' }
     ]
   },
   {

@@ -5,7 +5,10 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js",
+    "dev": "node scripts/dev-runner.js",
+    "dev:backend": "nodemon app.js",
+    "reports:dev": "npm --prefix frontend run dev",
+    "reports:build": "npm --prefix frontend run build",
     "db:test": "node scripts/db-test.js"
   },
   "keywords": [

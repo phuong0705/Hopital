@@ -30,13 +30,15 @@ async function getInpatients(filters = {}) {
       p.full_name AS fullName, p.date_of_birth AS dateOfBirth, p.gender, p.phone, p.identity_number AS identityNumber,
       a.initial_diagnosis AS diagnosis,
       d.department_name AS departmentName, r.room_code AS roomCode, b.bed_code AS bedCode,
-      doc.full_name AS doctorName, a.admission_date AS admissionDate, a.status, a.priority_level AS priorityLevel
+      doc.full_name AS doctorName, a.admission_date AS admissionDate, a.status, a.priority_level AS priorityLevel,
+      mr.record_id AS recordId, mr.vital_signs AS vitalSigns
     FROM Admissions a
     INNER JOIN Patients p ON p.patient_id = a.patient_id
     INNER JOIN Departments d ON d.department_id = a.department_id
     LEFT JOIN Rooms r ON r.room_id = a.room_id
     LEFT JOIN Beds b ON b.bed_id = a.bed_id
     LEFT JOIN Doctors doc ON doc.doctor_id = a.doctor_id
+    LEFT JOIN MedicalRecords mr ON mr.admission_id = a.admission_id
     WHERE ${where.join(' AND ')}
     ORDER BY a.admission_date DESC
   `, params);
@@ -91,7 +93,7 @@ async function getPatientDetail(patientId, doctorId = null) {
   return rows[0];
 }
 
-async function getPatientPortal(patientId) {
+async function getPatientPortal(patientId, filters = {}) {
   const patientRows = await query(`
     SELECT TOP 1 p.*, a.admission_id, a.admission_date, a.initial_diagnosis, a.initial_condition,
       a.status AS admission_status, a.priority_level, d.department_name, r.room_code, b.bed_code,
@@ -108,34 +110,70 @@ async function getPatientPortal(patientId) {
     ORDER BY a.admission_date DESC
   `, { patientId });
 
+  // Treatments with optional date filter
+  let treatmentWhere = "WHERE mr.patient_id = @patientId";
+  const treatmentParams = { patientId };
+  if (filters.startDate) {
+    treatmentWhere += " AND ts.scheduled_time >= @startDate";
+    treatmentParams.startDate = filters.startDate;
+  }
+  if (filters.endDate) {
+    treatmentWhere += " AND ts.scheduled_time <= @endDate";
+    treatmentParams.endDate = filters.endDate + ' 23:59:59';
+  }
+
   const treatments = await query(`
-    SELECT TOP 5 ts.scheduled_time AS scheduledTime, ts.treatment_content AS treatmentContent,
+    SELECT ${filters.startDate || filters.endDate ? '' : 'TOP 10'} ts.scheduled_time AS scheduledTime, ts.treatment_content AS treatmentContent,
       ts.assignee_name AS assigneeName, ts.status, ts.note
     FROM TreatmentSchedules ts
     INNER JOIN MedicalRecords mr ON mr.record_id = ts.record_id
-    WHERE mr.patient_id = @patientId
+    ${treatmentWhere}
     ORDER BY ts.scheduled_time DESC
-  `, { patientId });
+  `, treatmentParams);
+
+  // Prescriptions with optional date filter
+  let prescriptionWhere = "WHERE mr.patient_id = @patientId";
+  const prescriptionParams = { patientId };
+  if (filters.startDate) {
+    prescriptionWhere += " AND pr.start_date >= @startDate";
+    prescriptionParams.startDate = filters.startDate;
+  }
+  if (filters.endDate) {
+    prescriptionWhere += " AND pr.start_date <= @endDate";
+    prescriptionParams.endDate = filters.endDate + ' 23:59:59';
+  }
 
   const prescriptions = await query(`
-    SELECT TOP 6 pi.medicine_name AS medicineName, pi.dosage, pi.frequency, pi.route,
+    SELECT ${filters.startDate || filters.endDate ? '' : 'TOP 10'} pi.medicine_name AS medicineName, pi.dosage, pi.frequency, pi.route,
       pr.start_date AS startDate, pr.end_date AS endDate, doc.full_name AS doctorName
     FROM Prescriptions pr
     INNER JOIN PrescriptionItems pi ON pi.prescription_id = pr.prescription_id
     INNER JOIN MedicalRecords mr ON mr.record_id = pr.record_id
     INNER JOIN Doctors doc ON doc.doctor_id = pr.doctor_id
-    WHERE mr.patient_id = @patientId
+    ${prescriptionWhere}
     ORDER BY pr.start_date DESC
-  `, { patientId });
+  `, prescriptionParams);
+
+  // Lab Tests with optional date filter
+  let labWhere = "WHERE mr.patient_id = @patientId";
+  const labParams = { patientId };
+  if (filters.startDate) {
+    labWhere += " AND lt.ordered_date >= @startDate";
+    labParams.startDate = filters.startDate;
+  }
+  if (filters.endDate) {
+    labWhere += " AND lt.ordered_date <= @endDate";
+    labParams.endDate = filters.endDate + ' 23:59:59';
+  }
 
   const labTests = await query(`
-    SELECT TOP 6 lt.test_code AS testCode, lt.test_type AS testType, lt.ordered_date AS orderedDate,
+    SELECT ${filters.startDate || filters.endDate ? '' : 'TOP 10'} lt.test_code AS testCode, lt.test_type AS testType, lt.ordered_date AS orderedDate,
       lt.status, lt.result_summary AS resultSummary
     FROM LabTests lt
     INNER JOIN MedicalRecords mr ON mr.record_id = lt.record_id
-    WHERE mr.patient_id = @patientId
+    ${labWhere}
     ORDER BY lt.ordered_date DESC
-  `, { patientId });
+  `, labParams);
 
   const billingRows = await query(`
     SELECT TOP 1 b.bill_code AS billCode, b.consultation_fee AS consultationFee,
@@ -246,11 +284,107 @@ async function createSupportRequest(data) {
   });
 }
 
+async function createBooking(data) {
+  await execute(`
+    DECLARE @patientName NVARCHAR(150);
+    SELECT @patientName = full_name FROM Patients WHERE patient_id = @patientId;
+
+    INSERT INTO FollowUpBookings (patient_id, requested_date, requested_time, department_id, doctor_id, reason)
+    VALUES (@patientId, @requestedDate, @requestedTime, @departmentId, @doctorId, @reason);
+
+    INSERT INTO Notifications (title, message, type)
+    VALUES (N'Lịch hẹn mới', 
+      CONCAT(N'Bệnh nhân ', @patientName, N' đăng ký tái khám ngày ', FORMAT(CAST(@requestedDate AS DATE), 'dd/MM/yyyy')), 
+      'booking-new');
+  `, {
+    patientId: Number(data.patientId),
+    requestedDate: data.requestedDate,
+    requestedTime: data.requestedTime,
+    departmentId: Number(data.departmentId),
+    doctorId: data.doctorId ? Number(data.doctorId) : null,
+    reason: data.reason || ''
+  });
+}
+
+async function getBookingHistory(patientId) {
+  return query(`
+    SELECT b.booking_id AS bookingId, b.requested_date AS requestedDate, b.requested_time AS requestedTime,
+      d.department_name AS departmentName, doc.full_name AS doctorName, b.reason, b.status, b.created_at AS createdAt
+    FROM FollowUpBookings b
+    INNER JOIN Departments d ON d.department_id = b.department_id
+    LEFT JOIN Doctors doc ON doc.doctor_id = b.doctor_id
+    WHERE b.patient_id = @patientId
+    ORDER BY b.requested_date DESC, b.requested_time DESC
+  `, { patientId });
+}
+
+async function payBilling(billingId) {
+  await execute(`
+    DECLARE @patientName NVARCHAR(150), @billCode VARCHAR(40);
+    
+    SELECT @patientName = p.full_name, @billCode = b.bill_code
+    FROM Billing b
+    INNER JOIN Admissions a ON a.admission_id = b.admission_id
+    INNER JOIN Patients p ON p.patient_id = a.patient_id
+    WHERE b.billing_id = @billingId;
+
+    UPDATE Billing
+    SET payment_status = N'Đã thanh toán'
+    WHERE billing_id = @billingId;
+
+    INSERT INTO Notifications (title, message, type)
+    VALUES (N'Thanh toán viện phí', 
+      CONCAT(N'Bệnh nhân ', @patientName, N' đã thanh toán hóa đơn ', @billCode), 
+      'payment-success');
+  `, { billingId: Number(billingId) });
+}
+
+async function getNotifications(userId) {
+  return query(`
+    SELECT notification_id AS id, title, message, type, is_read AS isRead, created_at AS createdAt
+    FROM Notifications
+    WHERE user_id = @userId OR user_id IS NULL
+    ORDER BY created_at DESC
+  `, { userId });
+}
+
+async function getUnreadNotificationCount(userId) {
+  const rows = await query(`
+    SELECT COUNT(*) AS unreadCount
+    FROM Notifications
+    WHERE (user_id = @userId OR user_id IS NULL) AND is_read = 0
+  `, { userId });
+  return rows[0].unreadCount;
+}
+
+async function markNotificationsAsRead(userId) {
+  await execute(`
+    UPDATE Notifications
+    SET is_read = 1
+    WHERE user_id = @userId OR (user_id IS NULL AND is_read = 0)
+  `, { userId });
+}
+
+async function fixGarbledStatuses() {
+  await execute(`
+    UPDATE FollowUpBookings
+    SET status = N'Chờ xác nhận'
+    WHERE status LIKE N'Chá»%' OR status LIKE N'Chá»%';
+  `);
+}
+
 module.exports = {
   getInpatients,
   getPatientDetail,
   getPatientPortal,
   updateAdmissionStatus,
   createSupportRequest,
+  createBooking,
+  getBookingHistory,
+  payBilling,
+  getNotifications,
+  getUnreadNotificationCount,
+  markNotificationsAsRead,
+  fixGarbledStatuses,
   createAdmission
 };

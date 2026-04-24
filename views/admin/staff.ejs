@@ -1,0 +1,108 @@
+<section class="module-hero">
+  <div>
+    <h2>Quản lý bác sĩ / nhân viên</h2>
+    <p class="text-muted mb-0">Gom danh bạ bác sĩ từ Doctors và nhân viên hệ thống từ Users/Roles.</p>
+  </div>
+  <div class="module-actions">
+    <a class="btn btn-light" href="/doctors"><i class="bi bi-person-vcard me-2"></i>Bác sĩ</a>
+    <a class="btn btn-primary" href="/users"><i class="bi bi-people me-2"></i>Tài khoản</a>
+  </div>
+</section>
+
+<section class="patient-action-grid compact mt-4">
+  <div class="patient-action-card">
+    <i class="bi bi-person-vcard"></i>
+    <strong><%= summary.doctors %> bác sĩ</strong>
+    <span>Nguồn bảng Doctors.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-people"></i>
+    <strong><%= summary.users %> nhân viên có tài khoản</strong>
+    <span>Nguồn bảng Users/Roles.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-check2-circle"></i>
+    <strong><%= summary.active %> đang hoạt động</strong>
+    <span>Theo trạng thái hiện tại.</span>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar three">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm tên, mã, chuyên môn, khoa, role" data-module-search="adminStaffTable">
+    </div>
+    <select class="form-select" data-module-filter="adminStaffTable" data-filter-key="type">
+      <option value="">Tất cả loại nhân sự</option>
+      <% [...new Set(rows.map(row => row.staffType))].forEach(type => { %>
+        <option><%= type %></option>
+      <% }) %>
+    </select>
+    <select class="form-select" data-module-filter="adminStaffTable" data-filter-key="source">
+      <option value="">Tất cả nguồn</option>
+      <% [...new Set(rows.map(row => row.sourceName))].forEach(source => { %>
+        <option><%= source %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="adminStaffTable">
+      <thead>
+        <tr>
+          <th>Nhân sự</th>
+          <th>Loại</th>
+          <th>Khoa / ca</th>
+          <th>Liên hệ</th>
+          <th>Trạng thái</th>
+          <th>Nguồn</th>
+          <th class="text-end">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr
+            data-search="<%= `${row.staffCode} ${row.fullName} ${row.specialty || ''} ${row.departmentName || ''} ${row.staffType}`.toLowerCase() %>"
+            data-type="<%= row.staffType %>"
+            data-source="<%= row.sourceName %>">
+            <td>
+              <div class="module-primary">
+                <strong><%= row.fullName %></strong>
+                <small><%= row.staffCode %></small>
+              </div>
+            </td>
+            <td><%= row.specialty || row.staffType %></td>
+            <td>
+              <div><%= row.departmentName || '-' %></div>
+              <small class="text-muted"><%= row.shiftName || '-' %></small>
+            </td>
+            <td>
+              <div><%= row.email || '-' %></div>
+              <small class="text-muted"><%= row.phone || '' %></small>
+            </td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td><span class="status-badge status-info"><%= row.sourceName %></span></td>
+            <td class="text-end">
+              <div class="table-actions">
+                <% if (row.sourceName === 'Doctors') { %>
+                  <a href="/doctors" class="btn btn-sm btn-light action-icon" data-bs-toggle="tooltip" data-bs-title="Quản lý bác sĩ">
+                    <i class="bi bi-person-vcard"></i>
+                  </a>
+                <% } else { %>
+                  <a href="/users" class="btn btn-sm btn-light action-icon" data-bs-toggle="tooltip" data-bs-title="Quản lý tài khoản">
+                    <i class="bi bi-shield-lock"></i>
+                  </a>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+<% }) %>
+      </tbody>
+    </table>
+  </div>
+  <div class="empty-inline d-none" data-empty-for="adminStaffTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy nhân sự phù hợp</strong>
+  </div>
+</section>

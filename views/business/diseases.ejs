@@ -1,6 +1,5 @@
 <section class="module-hero">
   <div>
-    <span class="module-code">1.3 Thư viện bệnh</span>
     <h2>Tra cứu bệnh, triệu chứng và thuốc tham khảo</h2>
   </div>
   <div class="module-actions">
@@ -8,7 +7,7 @@
     <button class="btn btn-light" type="button" data-export-table="diseasesTable" data-filename="thu-vien-benh.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
     <% if (['ADMIN', 'DOCTOR'].includes(currentUser.roleCode)) { %>
       <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#diseaseModal">
-        <i class="bi bi-plus-lg me-2"></i>Thêm bệnh
+        Thêm bệnh
       </button>
     <% } %>
   </div>
@@ -60,7 +59,7 @@
         data-severity="<%= row.severityLevel %>"
         data-specialty="<%= row.specialty %>">
         <div class="disease-card-head">
-          <span class="patient-code-pill"><%= row.diseaseCode %></span>
+          <span></span>
           <span class="status-badge <%= severityClass %>"><%= row.severityLevel %></span>
         </div>
         <h3><%= row.diseaseName %></h3>
@@ -115,7 +114,7 @@
           row.commonSymptoms,
           row.recommendedMedicines
         ].join(' ').toLowerCase() %>" data-severity="<%= row.severityLevel %>" data-specialty="<%= row.specialty %>">
-          <td><%= row.diseaseCode %></td>
+          <td></td>
           <td><%= row.icd10Code %></td>
           <td><%= row.diseaseName %></td>
           <td><%= row.specialty %></td>
@@ -139,7 +138,7 @@
       <div class="modal-content app-modal disease-detail-modal">
         <div class="modal-header">
           <div>
-            <span class="module-code"><%= row.diseaseCode %> · ICD-10 <%= row.icd10Code %></span>
+            <span class="module-code">ICD-10 <%= row.icd10Code %></span>
             <h5 class="modal-title"><%= row.diseaseName %></h5>
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>

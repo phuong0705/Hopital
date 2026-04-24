@@ -34,7 +34,7 @@
     <table class="table app-table module-table beds-table" id="bedsTable">
       <thead>
         <tr>
-          <th>Giường</th>
+          <th></th>
           <th>Khoa / phòng</th>
           <th>Trạng thái</th>
           <th>Bệnh nhân</th>
@@ -45,11 +45,10 @@
       <tbody>
         <% rows.forEach(row => { %>
           <tr data-search="<%= `${row.bedCode} ${row.roomCode} ${row.departmentName} ${row.patientName || ''}`.toLowerCase() %>" data-status="<%= row.status %>" data-department="<%= row.departmentName %>">
-            <td><span class="module-code"><%= row.bedCode %></span></td>
+            <td></td>
             <td>
               <div class="module-primary">
                 <strong><%= row.departmentName %></strong>
-                <small>Phòng <%= row.roomCode %></small>
               </div>
             </td>
             <td><%- include('../partials/badge', { text: row.status }) %></td>

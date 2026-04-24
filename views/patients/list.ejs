@@ -26,7 +26,7 @@
       <i class="bi bi-filetype-csv me-2"></i>CSV
     </button>
     <a href="/patients/reception" class="btn btn-primary">
-      <i class="bi bi-person-plus-fill me-2"></i>Tiếp nhận mới
+      Tiếp nhận mới
     </a>
   </div>
 </section>
@@ -67,7 +67,6 @@
       <table class="table app-table patient-table patient-table-compact" id="patientsTable">
         <thead>
           <tr>
-            <th>Mã bệnh nhân</th>
             <th>Bệnh nhân</th>
             <th>Tuổi</th>
             <th>Giới tính</th>
@@ -77,7 +76,6 @@
         <tbody>
           <% patients.forEach(patient => { %>
             <tr class="patient-row">
-              <td><span class="patient-code-pill"><%= patient.patientCode %></span></td>
               <td>
                 <div class="patient-person compact">
                   <span class="patient-avatar"><%= patient.fullName.charAt(0) %></span>

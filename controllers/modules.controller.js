@@ -1,5 +1,7 @@
 ﻿const moduleRepository = require('../repositories/module.repository');
 
+const adminRepository = require('../repositories/admin.repository');
+
 function makeListAction(options) {
   return async (req, res, next) => {
     try {
@@ -53,11 +55,28 @@ async function medicalRecordDetail(req, res, next) {
   }
 }
 
-function settings(req, res) {
-  res.render('settings/index', {
-    title: 'Cài đặt hệ thống',
-    activeMenu: req.query.activeMenu || 'settings'
-  });
+async function settings(req, res, next) {
+  try {
+    const [counts, realtime] = await Promise.all([
+      adminRepository.getSystemCounts(),
+      adminRepository.getRealtimeMetrics()
+    ]);
+
+    return res.render('settings/index', {
+      title: 'Cài đặt hệ thống',
+      activeMenu: req.query.activeMenu || 'settings',
+      counts,
+      realtime,
+      env: {
+        nodeEnv: process.env.NODE_ENV || 'development',
+        reportsFrontendUrl: process.env.REPORTS_FRONTEND_URL || '',
+        reportsApiBaseUrl: process.env.REPORTS_API_BASE_URL || '',
+        sessionSecretConfigured: Boolean(process.env.SESSION_SECRET)
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
 }
 
 async function nursing(req, res, next) {
@@ -364,6 +383,83 @@ async function updateDischargePayment(req, res, next) {
   }
 }
 
+async function createDepartment(req, res, next) {
+  try {
+    await moduleRepository.createDepartment(req.body);
+    req.flash('success', 'Thêm khoa mới thành công.');
+    res.redirect('/departments');
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateDepartment(req, res, next) {
+  try {
+    await moduleRepository.updateDepartment(req.params.id, req.body);
+    req.flash('success', 'Cập nhật khoa thành công.');
+    res.redirect('/departments');
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function deleteDepartment(req, res, next) {
+  try {
+    await moduleRepository.deleteDepartment(req.params.id);
+    req.flash('success', 'Xóa khoa thành công.');
+    res.redirect('/departments');
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function doctors(req, res, next) {
+  try {
+    const [rows, departments] = await Promise.all([
+      moduleRepository.getDoctors(),
+      moduleRepository.getDepartmentsOverview()
+    ]);
+    res.render('doctors/index', {
+      title: 'Quản lý bác sĩ',
+      activeMenu: req.query.activeMenu || 'doctors',
+      rows,
+      departments
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function createDoctor(req, res, next) {
+  try {
+    await moduleRepository.createDoctor(req.body);
+    req.flash('success', 'Thêm bác sĩ thành công.');
+    res.redirect('/doctors');
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateDoctor(req, res, next) {
+  try {
+    await moduleRepository.updateDoctor(req.params.id, req.body);
+    req.flash('success', 'Cập nhật bác sĩ thành công.');
+    res.redirect('/doctors');
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function deleteDoctor(req, res, next) {
+  try {
+    await moduleRepository.deleteDoctor(req.params.id);
+    req.flash('success', 'Xóa bác sĩ thành công.');
+    res.redirect('/doctors');
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   medicalRecords,
   medicalRecordDetail,
@@ -374,6 +470,9 @@ module.exports = {
     title: 'Quản lí khoa phòng',
     activeMenu: 'departments'
   }),
+  createDepartment,
+  updateDepartment,
+  deleteDepartment,
   departmentDetail,
   createRoom,
   updateRoom,
@@ -383,12 +482,10 @@ module.exports = {
   deleteBed,
   beds,
   transferBed,
-  doctors: makeListAction({
-    repositoryMethod: 'getDoctors',
-    view: 'doctors/index',
-    title: 'Quản lý bác sĩ',
-    activeMenu: 'doctors'
-  }),
+  doctors,
+  createDoctor,
+  updateDoctor,
+  deleteDoctor,
   treatments,
   updateTreatmentStatus,
   prescriptions,

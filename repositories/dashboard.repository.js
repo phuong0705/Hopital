@@ -125,10 +125,22 @@ async function getDischargePaymentQueue() {
   `);
 }
 
+async function getDoctorAdmissionTrend(doctorId) {
+  return query(`
+    SELECT FORMAT(CAST(admission_date AS date), 'dd/MM') AS label, COUNT(*) AS total
+    FROM Admissions
+    WHERE doctor_id = @doctorId
+      AND admission_date >= DATEADD(day, -6, CAST(GETDATE() AS date))
+    GROUP BY CAST(admission_date AS date)
+    ORDER BY CAST(admission_date AS date)
+  `, { doctorId: Number(doctorId) });
+}
+
 module.exports = {
   getHighRiskPatients,
   getDelayedLabTests,
   getTodayAdmissionList,
   getPendingPayments,
-  getDischargePaymentQueue
+  getDischargePaymentQueue,
+  getDoctorAdmissionTrend
 };

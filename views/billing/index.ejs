@@ -40,7 +40,12 @@
           const feeSummary = `Khám ${format.currency(row.consultationFee)} · Giường ${format.currency(row.bedFee)} · Thuốc ${format.currency(row.medicineFee)} · XN ${format.currency(row.labFee)}`;
         %>
           <tr data-search="<%= `${row.billCode} ${row.patientName}`.toLowerCase() %>" data-status="<%= row.paymentStatus %>">
-            <td><span class="module-code"><%= row.billCode %></span></td>
+            <td>
+              <div class="module-primary">
+                <strong><%= row.billCode %></strong>
+                <small><%= format.datetime(row.createdAt) %></small>
+              </div>
+            </td>
             <td><%= row.patientName %></td>
             <td class="text-wrap-cell compact"><%= feeSummary %></td>
             <td><%= format.currency(row.insuranceCovered) %></td>
@@ -72,7 +77,7 @@
               <label class="form-label">Bệnh nhân / lượt nhập viện</label>
               <select name="admissionId" class="form-select" required>
                 <% activeAdmissions.forEach(item => { %>
-                  <option value="<%= item.admissionId %>"><%= item.patientCode %> - <%= item.patientName %> · <%= item.departmentName %></option>
+                  <option value="<%= item.admissionId %>"><%= item.patientName %> · <%= item.departmentName %></option>
                 <% }) %>
               </select>
             </div>

@@ -1,0 +1,75 @@
+<section class="module-hero">
+  <div>
+    <h2>In phiếu / Hóa đơn</h2>
+    <p class="text-muted mb-0">Danh sách phiếu thu lấy trực tiếp từ bảng Billing, phục vụ in chứng từ tại quầy.</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In danh sách</button>
+    <a class="btn btn-primary" href="/billing?activeMenu=cashier-billing"><i class="bi bi-receipt me-2"></i>Lập phiếu thu</a>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm mã phiếu, bệnh nhân hoặc khoa" data-module-search="printDocsTable">
+    </div>
+    <select class="form-select" data-module-filter="printDocsTable" data-filter-key="status">
+      <option value="">Tất cả trạng thái</option>
+      <% [...new Set(rows.map(row => row.paymentStatus))].forEach(status => { %>
+        <option><%= status %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table cashier-table" id="printDocsTable">
+      <thead>
+        <tr>
+          <th>Chứng từ</th>
+          <th>Bệnh nhân</th>
+          <th>Khoản thu</th>
+          <th>BHYT</th>
+          <th>Thực thu</th>
+          <th>Trạng thái</th>
+          <th class="text-end">In</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.billCode} ${row.patientCode} ${row.patientName} ${row.departmentName || ''}`.toLowerCase() %>" data-status="<%= row.paymentStatus %>">
+            <td>
+              <div class="module-primary">
+                <strong><%= row.billCode %></strong>
+                <small><%= format.datetime(row.createdAt) %></small>
+              </div>
+            </td>
+            <td>
+              <strong><%= row.patientName %></strong>
+              <small><%= row.patientCode %> · <%= row.departmentName || 'Chưa phân khoa' %></small>
+            </td>
+            <td class="text-wrap-cell compact">
+              Khám <%= format.currency(row.consultationFee) %> · Giường <%= format.currency(row.bedFee) %> · Thuốc <%= format.currency(row.medicineFee) %> · XN <%= format.currency(row.labFee) %>
+            </td>
+            <td class="text-success">- <%= format.currency(row.insuranceCovered) %></td>
+            <td><strong class="module-money"><%= format.currency(row.totalAmount) %></strong></td>
+            <td><%- include('../partials/badge', { text: row.paymentStatus }) %></td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-light action-icon" type="button" data-print-page title="In chứng từ">
+                <i class="bi bi-printer"></i>
+              </button>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr><td colspan="7" class="text-center py-4 text-muted">Chưa có phiếu thu để in.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+  <div class="empty-inline module-empty d-none" data-empty-for="printDocsTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy chứng từ phù hợp</strong>
+  </div>
+</section>

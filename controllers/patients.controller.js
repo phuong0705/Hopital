@@ -126,7 +126,7 @@ async function myProfile(req, res, next) {
 
     return res.render('patients/portal-overview', {
       title: 'Hồ sơ của tôi',
-      activeMenu: 'my-profile',
+      activeMenu: 'patient-profile',
       data
     });
   } catch (error) {
@@ -134,20 +134,20 @@ async function myProfile(req, res, next) {
   }
 }
 
-async function getCurrentPatientPortal(req, res) {
+async function getCurrentPatientPortal(req, res, filters = {}) {
   if (!req.session.user.patientId) {
     res.status(403).render('errors/403', {
       title: 'Chưa liên kết hồ sơ bệnh nhân',
-      activeMenu: 'my-profile'
+      activeMenu: 'patient-profile'
     });
     return null;
   }
 
-  const data = await patientRepository.getPatientPortal(req.session.user.patientId);
+  const data = await patientRepository.getPatientPortal(req.session.user.patientId, filters);
   if (!data.patient) {
     res.status(404).render('errors/404', {
       title: 'Không tìm thấy hồ sơ bệnh nhân',
-      activeMenu: 'my-profile'
+      activeMenu: 'patient-profile'
     });
     return null;
   }
@@ -158,13 +158,15 @@ async function getCurrentPatientPortal(req, res) {
 function patientPortalPage(view, title, activeMenu) {
   return async (req, res, next) => {
     try {
-      const data = await getCurrentPatientPortal(req, res);
+      const { startDate, endDate } = req.query;
+      const data = await getCurrentPatientPortal(req, res, { startDate, endDate });
       if (!data) return null;
 
       return res.render(view, {
         title,
         activeMenu,
-        data
+        data,
+        filters: { startDate, endDate }
       });
     } catch (error) {
       return next(error);
@@ -194,6 +196,41 @@ async function createSupportRequest(req, res, next) {
   }
 }
 
+async function submitBooking(req, res, next) {
+  try {
+    const { patientId } = req.session.user;
+    if (!patientId) {
+      req.flash('error', 'Hồ sơ bệnh nhân chưa được liên kết.');
+      return res.redirect('/patients/me/booking');
+    }
+
+    await patientRepository.createBooking({
+      patientId,
+      requestedDate: req.body.requestedDate,
+      requestedTime: req.body.requestedTime,
+      departmentId: req.body.departmentId,
+      doctorId: req.body.doctorId,
+      reason: req.body.reason
+    });
+
+    req.flash('success', 'Yêu cầu đặt lịch tái khám đã được gửi thành công.');
+    return res.redirect('/patients/me/booking');
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function processPayment(req, res, next) {
+  try {
+    const { id } = req.params;
+    await patientRepository.payBilling(id);
+    req.flash('success', 'Thanh toán thành công. Trạng thái đã được cập nhật.');
+    return res.redirect('/patients/me/billing');
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   receptionForm,
   createAdmission,
@@ -202,11 +239,62 @@ module.exports = {
   detail,
   updateStatus,
   myProfile,
-  treatmentsPage: patientPortalPage('patients/portal-treatments', 'Lịch điều trị', 'patient-care'),
-  medicinesPage: patientPortalPage('patients/portal-medicines', 'Thuốc của tôi', 'patient-medicine'),
-  labTestsPage: patientPortalPage('patients/portal-labtests', 'Xét nghiệm', 'patient-labs'),
-  billingPage: patientPortalPage('patients/portal-billing', 'Viện phí', 'patient-billing'),
+  treatmentsPage: patientPortalPage('patients/portal-treatments', 'Lịch sử khám bệnh', 'patient-history'),
+  medicinesPage: patientPortalPage('patients/portal-medicines', 'Đơn thuốc của tôi', 'patient-medicine'),
+  labTestsPage: patientPortalPage('patients/portal-labtests', 'Kết quả xét nghiệm', 'patient-labs'),
+  billingPage: patientPortalPage('patients/portal-billing', 'Hóa đơn & Thanh toán', 'patient-billing'),
   dischargePage: patientPortalPage('patients/portal-discharge', 'Xuất viện', 'patient-discharge'),
   supportPage: patientPortalPage('patients/portal-support', 'Hỗ trợ', 'patient-support'),
-  createSupportRequest
+  bhytPage: patientPortalPage('patients/portal-bhyt', 'Thẻ BHYT của tôi', 'patient-bhyt'),
+  bookingPage: async (req, res, next) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const data = await getCurrentPatientPortal(req, res, { startDate, endDate });
+      if (!data) return null;
+
+      // Ensure statuses are readable
+      await patientRepository.fixGarbledStatuses();
+
+      const [departments, doctors, history] = await Promise.all([
+        lookupRepository.getDepartments(),
+        lookupRepository.getDoctors(),
+        patientRepository.getBookingHistory(req.session.user.patientId)
+      ]);
+
+      return res.render('patients/portal-booking', {
+        title: 'Đặt lịch tái khám',
+        activeMenu: 'patient-booking',
+        data,
+        departments,
+        doctors,
+        history,
+        filters: { startDate, endDate }
+      });
+    } catch (error) {
+      return next(error);
+    }
+  },
+  notificationsPage: async (req, res, next) => {
+    try {
+      const data = await getCurrentPatientPortal(req, res);
+      if (!data) return null;
+
+      const notifications = await patientRepository.getNotifications(req.session.user.userId);
+      
+      // Mark as read when viewing the page
+      await patientRepository.markNotificationsAsRead(req.session.user.userId);
+
+      return res.render('patients/portal-notifications', {
+        title: 'Thông báo',
+        activeMenu: 'patient-notifications',
+        data,
+        notifications
+      });
+    } catch (error) {
+      return next(error);
+    }
+  },
+  createSupportRequest,
+  submitBooking,
+  processPayment
 };

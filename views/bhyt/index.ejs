@@ -1,7 +1,6 @@
 <section class="module-hero">
   <div>
     <h2>Quản lý Bảo hiểm Y tế (BHYT)</h2>
-    <p class="text-muted">Danh sách bệnh nhân sử dụng thẻ BHYT và tình trạng hỗ trợ chi phí</p>
   </div>
   <div class="module-actions">
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In danh sách</button>
@@ -29,7 +28,7 @@
       <thead>
         <tr>
           <th>Bệnh nhân</th>
-          <th>Mã BN</th>
+          <th></th>
           <th>Số thẻ BHYT</th>
           <th>Khoa điều trị</th>
           <th>Tình trạng</th>
@@ -44,7 +43,7 @@
         %>
           <tr data-search="<%= `${row.patientCode} ${row.fullName} ${row.insuranceNo}`.toLowerCase() %>" data-status="<%= row.admissionStatus || 'Chưa nhập viện' %>">
             <td><strong><%= row.fullName %></strong></td>
-            <td><span class="module-code"><%= row.patientCode %></span></td>
+            <td></td>
             <td><span class="badge bg-info-soft text-info"><i class="bi bi-card-checklist me-1"></i><%= row.insuranceNo || 'Chưa cập nhật' %></span></td>
             <td><%= row.departmentName || '-' %></td>
             <td><%- include('../partials/badge', { text: row.admissionStatus || 'Chưa nhập viện' }) %></td>

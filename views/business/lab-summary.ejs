@@ -1,7 +1,6 @@
 <section class="module-hero">
   <div>
     <h2>Tổng hợp kết quả xét nghiệm</h2>
-    <p class="text-muted">Xem và đánh giá toàn bộ các chỉ định cận lâm sàng trong đợt điều trị</p>
   </div>
   <div class="module-actions">
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In danh sách</button>
@@ -38,8 +37,7 @@
         <% rows.forEach(row => { %>
           <tr data-search="<%= `${row.patientName} ${row.testType}`.toLowerCase() %>" data-status="<%= row.status %>">
             <td>
-              <strong><%= row.patientName %></strong><br>
-              <small class="text-muted"><%= row.patientCode %></small>
+              <strong><%= row.patientName %></strong>
             </td>
             <td><strong><%= row.testType %></strong></td>
             <td><%= format.datetime(row.orderedDate) %></td>
@@ -52,9 +50,14 @@
               <% } %>
             </td>
             <td class="text-end">
-              <a href="/medical-records/<%= row.recordId %>" class="btn btn-sm btn-light" data-bs-toggle="tooltip" title="Xem hồ sơ bệnh án">
-                <i class="bi bi-journal-medical"></i>
-              </a>
+              <div class="d-flex justify-content-end gap-1">
+                <a href="/medical-records/<%= row.recordId %>" class="btn btn-sm btn-light" data-bs-toggle="tooltip" title="Xem hồ sơ bệnh án">
+                  <i class="bi bi-journal-medical"></i>
+                </a>
+                <button class="btn btn-sm btn-primary" onclick="alert('Tính năng nhập kết quả chi tiết đang được phát triển')">
+                  <i class="bi bi-pencil-square"></i>
+                </button>
+              </div>
             </td>
           </tr>
         <% }) %>

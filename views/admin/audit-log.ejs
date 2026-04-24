@@ -1,0 +1,58 @@
+<section class="module-hero">
+  <div>
+    <h2>Nhật ký hệ thống</h2>
+    <p class="text-muted mb-0">Tổng hợp sự kiện thật từ Users, Admissions, LabTests, Billing và Notifications.</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <a class="btn btn-primary" href="/admin/monitoring"><i class="bi bi-activity me-2"></i>Realtime</a>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar three">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm nguồn, tiêu đề, nội dung sự kiện" data-module-search="auditLogTable">
+    </div>
+    <select class="form-select" data-module-filter="auditLogTable" data-filter-key="source">
+      <option value="">Tất cả nguồn</option>
+      <% [...new Set(rows.map(row => row.sourceName))].forEach(source => { %>
+        <option><%= source %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="auditLogTable">
+      <thead>
+        <tr>
+          <th>Thời gian</th>
+          <th>Nguồn</th>
+          <th>Sự kiện</th>
+          <th>Chi tiết</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.sourceName} ${row.eventTitle} ${row.eventDetail}`.toLowerCase() %>" data-source="<%= row.sourceName %>">
+            <td><%= format.datetime(row.eventTime) %></td>
+            <td><span class="status-badge status-info"><%= row.sourceName %></span></td>
+            <td><strong><%= row.eventTitle %></strong></td>
+            <td class="text-wrap-cell"><%= row.eventDetail %></td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr>
+            <td colspan="4" class="text-center py-4 text-muted">Chưa có sự kiện hệ thống.</td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty-inline d-none" data-empty-for="auditLogTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy sự kiện phù hợp</strong>
+  </div>
+</section>

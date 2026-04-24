@@ -1,0 +1,98 @@
+<section class="module-hero">
+  <div>
+    <h2>Báo cáo thu ngân ca</h2>
+    <p class="text-muted mb-0">Số liệu trong ngày lấy trực tiếp từ tiếp nhận, lịch hẹn, viện phí và điều chỉnh.</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In báo cáo</button>
+    <a class="btn btn-primary" href="/reports?tab=revenue"><i class="bi bi-bar-chart me-2"></i>Báo cáo tổng hợp</a>
+  </div>
+</section>
+
+<section class="patient-action-grid compact mt-4">
+  <div class="patient-action-card">
+    <i class="bi bi-person-plus"></i>
+    <strong><%= data.summary.admissionsToday || 0 %> lượt tiếp nhận</strong>
+    <span>Hồ sơ nội trú tạo trong ngày.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-calendar-check"></i>
+    <strong><%= data.summary.appointmentsToday || 0 %> lịch hẹn</strong>
+    <span>Lịch khám phát sinh trong ca.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-receipt"></i>
+    <strong><%= data.summary.billsToday || 0 %> phiếu thu</strong>
+    <span><%= data.summary.unpaidBills || 0 %> phiếu còn chưa thanh toán.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-cash-stack"></i>
+    <strong><%= format.currency(data.summary.revenueToday || 0) %></strong>
+    <span>Doanh thu viện phí trong ngày.</span>
+  </div>
+</section>
+
+<div class="row g-4 mt-1">
+  <div class="col-lg-5">
+    <section class="panel h-100">
+      <div class="module-primary mb-3">
+        <strong>Cơ cấu thanh toán</strong>
+        <small>BHYT hỗ trợ: <%= format.currency(data.summary.insuranceToday || 0) %> · Điều chỉnh: <%= format.currency(data.summary.adjustmentsToday || 0) %></small>
+      </div>
+      <div class="list-stack">
+        <% data.revenueByStatus.forEach(row => { %>
+          <div class="list-item justify-content-between">
+            <div>
+              <strong><%= row.paymentStatus %></strong>
+              <small><%= row.totalBills %> phiếu</small>
+            </div>
+            <strong class="module-money"><%= format.currency(row.totalAmount) %></strong>
+          </div>
+        <% }) %>
+        <% if (!data.revenueByStatus.length) { %>
+          <div class="empty-inline">
+            <i class="bi bi-receipt"></i>
+            <strong>Chưa có phát sinh viện phí trong ngày.</strong>
+          </div>
+        <% } %>
+      </div>
+    </section>
+  </div>
+  <div class="col-lg-7">
+    <section class="panel h-100">
+      <div class="module-toolbar">
+        <div class="module-primary">
+          <strong>Phiếu thu gần nhất</strong>
+          <small>Dùng để đối soát cuối ca.</small>
+        </div>
+      </div>
+      <div class="module-table-wrap">
+        <table class="table app-table module-table">
+          <thead>
+            <tr>
+              <th>Phiếu</th>
+              <th>Bệnh nhân</th>
+              <th>Số tiền</th>
+              <th>Trạng thái</th>
+              <th>Thời gian</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% data.recentBills.forEach(row => { %>
+              <tr>
+                <td><strong><%= row.billCode %></strong></td>
+                <td><%= row.patientName %></td>
+                <td><strong class="module-money"><%= format.currency(row.totalAmount) %></strong></td>
+                <td><%- include('../partials/badge', { text: row.paymentStatus }) %></td>
+                <td><%= format.datetime(row.createdAt) %></td>
+              </tr>
+            <% }) %>
+            <% if (!data.recentBills.length) { %>
+              <tr><td colspan="5" class="text-center py-4 text-muted">Chưa có phiếu thu trong ngày.</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>

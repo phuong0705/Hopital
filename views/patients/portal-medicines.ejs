@@ -1,13 +1,31 @@
-<%- include('../partials/patient-portal-header', { data }) %>
-
-<section class="panel mt-4">
-  <div class="panel-header">
-    <div>
-      <h2>Thuốc của tôi</h2>
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">Đơn thuốc của tôi</h2>
+  <div class="d-flex gap-2">
+    <button class="btn btn-light btn-sm" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <button class="btn btn-light btn-sm" type="button" data-export-table="prescriptionsTable" data-filename="don-thuoc-cua-toi.csv">
+      <i class="bi bi-file-earmark-spreadsheet me-2"></i>Excel
+    </button>
   </div>
+</div>
+
+<section class="panel">
+  <form class="patient-filter-form compact mb-4" method="get">
+    <div class="d-flex align-items-center gap-2">
+      <label class="text-nowrap small fw-bold">Từ ngày:</label>
+      <input type="date" name="startDate" class="form-control" value="<%= filters.startDate || '' %>">
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <label class="text-nowrap small fw-bold">Đến ngày:</label>
+      <input type="date" name="endDate" class="form-control" value="<%= filters.endDate || '' %>">
+    </div>
+    <button class="btn btn-dark" type="submit"><i class="bi bi-funnel me-2"></i>Lọc</button>
+    <% if (filters.startDate || filters.endDate) { %>
+      <a class="btn btn-light" href="/patients/me/medicines"><i class="bi bi-x-circle me-2"></i>Bỏ lọc</a>
+    <% } %>
+  </form>
+
   <div class="table-responsive">
-    <table class="table app-table">
+    <table class="table app-table" id="prescriptionsTable">
       <thead>
         <tr><th>Tên thuốc</th><th>Liều dùng</th><th>Số lần dùng</th><th>Đường dùng</th><th>Thời gian</th><th>Bác sĩ kê</th></tr>
       </thead>
@@ -23,7 +41,7 @@
           </tr>
         <% }) %>
         <% if (!data.prescriptions.length) { %>
-          <tr><td colspan="6" class="text-muted">Chưa có thuốc được kê.</td></tr>
+          <tr><td colspan="6" class="text-center py-4 text-muted">Không tìm thấy dữ liệu trong khoảng thời gian này.</td></tr>
         <% } %>
       </tbody>
     </table>

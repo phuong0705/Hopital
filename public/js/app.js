@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const table = document.getElementById(button.dataset.exportTable);
       if (!table) return;
 
-      const rows = Array.from(table.querySelectorAll('tr')).filter((row) => !row.classList.contains('d-none'));
+      const rows = Array.from(table.querySelectorAll('tr'));
       const csv = rows.map((row) => {
         const cells = Array.from(row.querySelectorAll('th, td')).filter((cell) => !cell.classList.contains('no-export'));
         return cells.map((cell) => {

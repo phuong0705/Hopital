@@ -5,7 +5,7 @@
   <div class="module-actions">
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
     <button class="btn btn-light" type="button" data-export-table="labtestsTable" data-filename="xet-nghiem.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
-    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#labtestModal"><i class="bi bi-plus-lg me-2"></i>Tạo chỉ định</button>
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#labtestModal">Tạo chỉ định</button>
   </div>
 </section>
 
@@ -27,7 +27,6 @@
     <table class="table app-table module-table labtests-table" id="labtestsTable">
       <thead>
         <tr>
-          <th>Chỉ định</th>
           <th>Bệnh nhân</th>
           <th>Loại xét nghiệm</th>
           <th>Ngày chỉ định</th>
@@ -39,7 +38,6 @@
       <tbody>
         <% rows.forEach(row => { %>
           <tr data-search="<%= `${row.testCode} ${row.patientName} ${row.testType} ${row.resultSummary || ''} ${row.doctorName}`.toLowerCase() %>" data-status="<%= row.status %>">
-            <td><span class="module-code"><%= row.testCode %></span></td>
             <td><%= row.patientName %></td>
             <td><%= row.testType %></td>
             <td><%= format.datetime(row.orderedDate) %></td>

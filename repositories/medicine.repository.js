@@ -1,6 +1,6 @@
 const { query, execute } = require('./base.repository');
 
-async function ensureMedicineCatalog() {
+async function ensureMedicineTables() {
   await execute(`
     IF OBJECT_ID(N'MedicineCatalog', N'U') IS NULL
     BEGIN
@@ -36,6 +36,7 @@ async function ensureMedicineCatalog() {
     ['stock_warning_level', 'INT NOT NULL DEFAULT 20'],
     ['usage_note', 'NVARCHAR(1000)'],
     ['contraindications', 'NVARCHAR(1000)'],
+    ['current_stock', 'INT NOT NULL DEFAULT 0'],
     ['updated_at', 'DATETIME2']
   ];
 
@@ -49,25 +50,55 @@ async function ensureMedicineCatalog() {
   }
 
   await execute(`
+    IF OBJECT_ID(N'MedicineInventoryHistory', N'U') IS NULL
+    BEGIN
+      CREATE TABLE MedicineInventoryHistory (
+        history_id INT IDENTITY(1,1) PRIMARY KEY,
+        medicine_id INT NOT NULL,
+        transaction_type NVARCHAR(50) NOT NULL,
+        quantity INT NOT NULL,
+        transaction_date DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        performed_by INT NULL,
+        note NVARCHAR(500),
+        CONSTRAINT FK_Inventory_Medicine FOREIGN KEY (medicine_id) REFERENCES MedicineCatalog(medicine_id),
+        CONSTRAINT FK_Inventory_User FOREIGN KEY (performed_by) REFERENCES Users(user_id)
+      );
+    END;
+  `);
+
+  await execute(`
     IF NOT EXISTS (SELECT 1 FROM MedicineCatalog)
     BEGIN
       INSERT INTO MedicineCatalog (
         medicine_code, medicine_name, active_ingredient, medicine_group,
         dosage_form, strength, route, unit, unit_price, stock_warning_level,
-        usage_note, contraindications, status
+        usage_note, contraindications, status, current_stock
       )
       VALUES
-      ('TH001', N'Ceftriaxone 1g', N'Ceftriaxone', N'Kháng sinh', N'Lọ bột pha tiêm', N'1g', N'Tĩnh mạch', N'lọ', 45000, 30, N'Dùng theo kháng sinh đồ hoặc phác đồ nhiễm khuẩn nặng.', N'Thận trọng tiền sử dị ứng beta-lactam.', N'Đang sử dụng'),
-      ('TH002', N'Paracetamol 500mg', N'Paracetamol', N'Giảm đau - hạ sốt', N'Viên nén', N'500mg', N'Uống', N'viên', 800, 100, N'Dùng khi sốt hoặc đau mức độ nhẹ đến vừa.', N'Thận trọng bệnh gan, nghiện rượu, quá liều.', N'Đang sử dụng'),
-      ('TH003', N'Insulin regular', N'Insulin regular', N'Nội tiết', N'Lọ tiêm', N'100IU/ml', N'Tiêm dưới da/Tĩnh mạch', N'lọ', 185000, 10, N'Kiểm soát đường huyết nội trú, cần theo dõi glucose mao mạch.', N'Nguy cơ hạ đường huyết, cần dùng đúng y lệnh.', N'Đang sử dụng'),
-      ('TH004', N'Amlodipine 5mg', N'Amlodipine', N'Tim mạch', N'Viên nén', N'5mg', N'Uống', N'viên', 1200, 60, N'Điều trị tăng huyết áp, theo dõi phù ngoại biên và huyết áp.', N'Thận trọng hạ huyết áp, suy gan.', N'Đang sử dụng'),
-      ('TH005', N'Omeprazole 20mg', N'Omeprazole', N'Tiêu hóa', N'Viên nang', N'20mg', N'Uống', N'viên', 1800, 50, N'Giảm tiết acid, dự phòng loét stress khi có chỉ định.', N'Thận trọng dùng kéo dài, tương tác thuốc.', N'Đang sử dụng');
+      ('TH001', N'Ceftriaxone 1g', N'Ceftriaxone', N'Kháng sinh', N'Lọ bột pha tiêm', N'1g', N'Tĩnh mạch', N'lọ', 45000, 30, N'Dùng theo kháng sinh đồ hoặc phác đồ nhiễm khuẩn nặng.', N'Thận trọng tiền sử dị ứng beta-lactam.', N'Đang sử dụng', 90),
+      ('TH002', N'Paracetamol 500mg', N'Paracetamol', N'Giảm đau - hạ sốt', N'Viên nén', N'500mg', N'Uống', N'viên', 800, 100, N'Dùng khi sốt hoặc đau mức độ nhẹ đến vừa.', N'Thận trọng bệnh gan, nghiện rượu, quá liều.', N'Đang sử dụng', 500),
+      ('TH003', N'Insulin regular', N'Insulin regular', N'Nội tiết', N'Lọ tiêm', N'100IU/ml', N'Tiêm dưới da/Tĩnh mạch', N'lọ', 185000, 10, N'Kiểm soát đường huyết nội trú, cần theo dõi glucose mao mạch.', N'Nguy cơ hạ đường huyết, cần dùng đúng y lệnh.', N'Đang sử dụng', 50),
+      ('TH004', N'Amlodipine 5mg', N'Amlodipine', N'Tim mạch', N'Viên nén', N'5mg', N'Uống', N'viên', 1200, 60, N'Điều trị tăng huyết áp, theo dõi phù ngoại biên và huyết áp.', N'Thận trọng hạ huyết áp, suy gan.', N'Đang sử dụng', 100),
+      ('TH005', N'Omeprazole 20mg', N'Omeprazole', N'Tiêu hóa', N'Viên nang', N'20mg', N'Uống', N'viên', 1800, 50, N'Giảm tiết acid, dự phòng loét stress khi có chỉ định.', N'Thận trọng dùng kéo dài, tương tác thuốc.', N'Đang sử dụng', 120);
+
+      DECLARE @Med1 INT, @Med2 INT, @Med3 INT, @UserAdmin INT;
+      SELECT @Med1 = medicine_id FROM MedicineCatalog WHERE medicine_code = 'TH001';
+      SELECT @Med2 = medicine_id FROM MedicineCatalog WHERE medicine_code = 'TH002';
+      SELECT @Med3 = medicine_id FROM MedicineCatalog WHERE medicine_code = 'TH003';
+      SELECT TOP 1 @UserAdmin = user_id FROM Users WHERE username = 'admin';
+
+      INSERT INTO MedicineInventoryHistory (medicine_id, transaction_type, quantity, transaction_date, performed_by, note)
+      VALUES
+      (@Med1, N'Nhập kho', 100, DATEADD(day, -5, SYSDATETIME()), @UserAdmin, N'Nhập kho định kỳ đầu tháng'),
+      (@Med1, N'Xuất kho', 10, DATEADD(day, -3, SYSDATETIME()), @UserAdmin, N'Xuất cho khoa Nội'),
+      (@Med2, N'Nhập kho', 500, DATEADD(day, -4, SYSDATETIME()), @UserAdmin, N'Nhập bổ sung'),
+      (@Med3, N'Nhập kho', 50, DATEADD(day, -2, SYSDATETIME()), @UserAdmin, N'Nhập thuốc hiếm');
     END;
   `);
 }
 
 async function getMedicines() {
-  await ensureMedicineCatalog();
+  await ensureMedicineTables();
 
   return query(`
     SELECT
@@ -82,6 +113,7 @@ async function getMedicines() {
       unit,
       unit_price AS unitPrice,
       stock_warning_level AS stockWarningLevel,
+      current_stock AS currentStock,
       usage_note AS usageNote,
       contraindications,
       status
@@ -90,20 +122,64 @@ async function getMedicines() {
   `);
 }
 
+async function getMedicineHistory(medicineId) {
+  await ensureMedicineTables();
+
+  return query(`
+    SELECT
+      h.history_id AS historyId,
+      h.transaction_type AS transactionType,
+      h.quantity,
+      h.transaction_date AS transactionDate,
+      h.note,
+      u.full_name AS performedBy
+    FROM MedicineInventoryHistory h
+    LEFT JOIN Users u ON h.performed_by = u.user_id
+    WHERE h.medicine_id = @medicineId
+    ORDER BY h.transaction_date DESC
+  `, { medicineId });
+}
+
+async function addInventoryTransaction(data) {
+  await ensureMedicineTables();
+
+  const { medicineId, transactionType, quantity, performedBy, note } = data;
+
+  await execute(`
+    BEGIN TRANSACTION;
+    
+    INSERT INTO MedicineInventoryHistory (medicine_id, transaction_type, quantity, transaction_date, performed_by, note)
+    VALUES (@medicineId, @transactionType, @quantity, SYSDATETIME(), @performedBy, @note);
+
+    UPDATE MedicineCatalog
+    SET current_stock = current_stock + (CASE WHEN @transactionType = N'Nhập kho' THEN @quantity ELSE -@quantity END),
+        updated_at = SYSDATETIME()
+    WHERE medicine_id = @medicineId;
+
+    COMMIT TRANSACTION;
+  `, {
+    medicineId,
+    transactionType,
+    quantity,
+    performedBy,
+    note
+  });
+}
+
 async function createMedicine(data) {
-  await ensureMedicineCatalog();
+  await ensureMedicineTables();
 
   await execute(`
     INSERT INTO MedicineCatalog (
       medicine_code, medicine_name, active_ingredient, medicine_group,
       dosage_form, strength, route, unit, unit_price, stock_warning_level,
-      usage_note, contraindications, status
+      usage_note, contraindications, status, current_stock
     )
     VALUES (
       @medicineCode, @medicineName, NULLIF(@activeIngredient, ''), @medicineGroup,
       @dosageForm, NULLIF(@strength, ''), NULLIF(@route, ''), @unit,
       @unitPrice, @stockWarningLevel, NULLIF(@usageNote, ''),
-      NULLIF(@contraindications, ''), @status
+      NULLIF(@contraindications, ''), @status, @currentStock
     )
   `, {
     medicineCode: data.medicineCode,
@@ -116,14 +192,15 @@ async function createMedicine(data) {
     unit: data.unit || 'viên',
     unitPrice: Number(data.unitPrice || 0),
     stockWarningLevel: Number(data.stockWarningLevel || 20),
-    usageNote: data.usageNote || '',
+    currentStock: Number(data.currentStock || 0),
+    usage_note: data.usageNote || '',
     contraindications: data.contraindications || '',
     status: data.status || 'Đang sử dụng'
   });
 }
 
 async function updateMedicineStatus(medicineId, status) {
-  await ensureMedicineCatalog();
+  await ensureMedicineTables();
 
   await execute(`
     UPDATE MedicineCatalog
@@ -139,5 +216,7 @@ async function updateMedicineStatus(medicineId, status) {
 module.exports = {
   getMedicines,
   createMedicine,
-  updateMedicineStatus
+  updateMedicineStatus,
+  getMedicineHistory,
+  addInventoryTransaction
 };

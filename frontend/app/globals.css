@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --primary: 199 89% 37%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 166 76% 94%;
+    --secondary-foreground: 173 80% 24%;
+    --muted: 210 40% 94%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 39 92% 95%;
+    --accent-foreground: 28 83% 32%;
+    --destructive: 350 84% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 88%;
+    --input: 214 32% 88%;
+    --ring: 199 89% 37%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer components {
+  .report-grid-bg {
+    background-image:
+      linear-gradient(rgba(14, 165, 233, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(14, 165, 233, 0.05) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .report-scrollbar::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+
+  .report-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 999px;
+  }
+}

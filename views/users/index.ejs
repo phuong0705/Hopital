@@ -1,13 +1,183 @@
-<section class="panel">
-  <div class="panel-header"><div><h2>Quản lí tài khoản</h2></div><button class="btn btn-primary"><i class="bi bi-person-plus-fill me-2"></i>Tạo mới</button></div>
+<section class="module-hero">
+  <div>
+    <h2>Quản lý tài khoản</h2>
+    <p class="text-muted mb-0">Quản lý tài khoản đăng nhập và phân quyền hệ thống.</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+      <i class="bi bi-person-plus me-2"></i>Tạo mới
+    </button>
+  </div>
+</section>
+
+<section class="panel mt-4">
   <div class="table-responsive">
     <table class="table app-table">
-      <thead><tr><th>Username</th><th>Họ tên</th><th>Email</th><th>Role</th><th>Trạng thái</th><th>Ngày tạo</th><th>Hành động</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Họ tên</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Trạng thái</th>
+          <th>Ngày tạo</th>
+          <th class="text-end">Hành động</th>
+        </tr>
+      </thead>
       <tbody>
         <% rows.forEach(row => { %>
-          <tr><td><strong><%= row.username %></strong></td><td><%= row.fullName %></td><td><%= row.email %></td><td><span class="role-pill"><%= row.roleName %></span></td><td><%- include('../partials/badge', { text: row.status }) %></td><td><%= format.date(row.createdAt) %></td><td><div class="table-actions"><button class="btn btn-sm btn-light">Reset mật khẩu</button><button class="btn btn-sm btn-danger-soft">Khóa</button></div></td></tr>
+          <tr>
+            <td><strong><%= row.username %></strong></td>
+            <td><%= row.fullName %></td>
+            <td><%= row.email %></td>
+            <td><span class="status-badge status-info"><%= row.roleName %></span></td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td><%= format.date(row.createdAt) %></td>
+            <td class="text-end">
+              <div class="table-actions">
+                <button class="btn btn-sm btn-light action-icon" 
+                  data-bs-toggle="modal" 
+                  data-bs-target="#editUserModal"
+                  data-user='<%= JSON.stringify(row) %>'>
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <form action="/users/<%= row.userId %>/delete" method="post" class="d-inline" onsubmit="return confirm('Xóa tài khoản này?')">
+                  <button class="btn btn-sm btn-light text-danger action-icon">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
         <% }) %>
       </tbody>
     </table>
   </div>
 </section>
+
+<!-- Modal Tạo mới -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/users" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Tạo tài khoản mới</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Username</label>
+              <input type="text" name="username" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Mật khẩu</label>
+              <input type="password" name="password" class="form-control" placeholder="Mặc định: 123456">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Họ tên</label>
+              <input type="text" name="fullName" class="form-control" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Vai trò</label>
+              <select name="roleId" class="form-select" required>
+                <% roles.forEach(role => { %>
+                  <option value="<%= role.roleId %>"><%= role.roleName %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Trạng thái</label>
+              <select name="status" class="form-select">
+                <option>Hoạt động</option>
+                <option>Khóa</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button type="submit" class="btn btn-primary">Tạo tài khoản</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Chỉnh sửa -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form id="editUserForm" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Chỉnh sửa tài khoản</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Username</label>
+              <input type="text" name="username" id="edit_username" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Mật khẩu mới</label>
+              <input type="password" name="password" class="form-control" placeholder="Để trống nếu không đổi">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Họ tên</label>
+              <input type="text" name="fullName" id="edit_fullName" class="form-control" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" id="edit_email" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Vai trò</label>
+              <select name="roleId" id="edit_roleId" class="form-select" required>
+                <% roles.forEach(role => { %>
+                  <option value="<%= role.roleId %>"><%= role.roleName %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Trạng thái</label>
+              <select name="status" id="edit_status" class="form-select">
+                <option>Hoạt động</option>
+                <option>Khóa</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const editModal = document.getElementById('editUserModal');
+    if (editModal) {
+      editModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const user = JSON.parse(button.getAttribute('data-user'));
+        
+        const form = document.getElementById('editUserForm');
+        form.action = `/users/${user.userId}/update`;
+        
+        document.getElementById('edit_username').value = user.username;
+        document.getElementById('edit_fullName').value = user.fullName;
+        document.getElementById('edit_email').value = user.email;
+        document.getElementById('edit_roleId').value = user.roleId;
+        document.getElementById('edit_status').value = user.status;
+      });
+    }
+  });
+</script>

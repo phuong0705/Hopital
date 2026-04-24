@@ -1,7 +1,6 @@
 <section class="module-hero">
   <div>
     <h2>Lập phiếu khám bệnh</h2>
-    <p class="text-muted">Đăng ký thông tin khám cho bệnh nhân mới hoặc tái khám</p>
   </div>
   <div class="module-actions">
     <a href="/dashboard" class="btn btn-light"><i class="bi bi-grid me-2"></i>Tổng quan</a>
@@ -16,7 +15,7 @@
         <select name="patientId" class="form-select" required>
           <option value="">-- Chọn bệnh nhân --</option>
           <% patients.forEach(p => { %>
-            <option value="<%= p.patientId %>"><%= p.patientCode %> - <%= p.fullName %></option>
+            <option value="<%= p.patientId %>"><%= p.fullName %></option>
           <% }) %>
         </select>
         <div class="form-text">Bệnh nhân chưa có hồ sơ? <a href="/patients/reception">Tiếp nhận mới tại đây</a></div>

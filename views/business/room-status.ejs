@@ -1,0 +1,60 @@
+<section class="module-hero">
+  <div>
+    <h2>Cập nhật trạng thái phòng</h2>
+    <p class="text-muted mb-0">Quản lý vệ sinh, bảo trì và tình trạng sẵn sàng của giường bệnh.</p>
+  </div>
+  <div class="module-actions">
+    <a href="/beds" class="btn btn-light"><i class="bi bi-grid-3x3-gap me-2"></i>Sơ đồ giường</a>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm mã phòng, mã giường" data-module-search="bedStatusTable">
+    </div>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="bedStatusTable">
+      <thead>
+        <tr>
+          <th>Mã giường</th>
+          <th>Phòng</th>
+          <th>Khoa</th>
+          <th>Loại giường</th>
+          <th>Trạng thái hiện tại</th>
+          <th class="text-end">Cập nhật nhanh</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.bedCode} ${row.roomCode}`.toLowerCase() %>">
+            <td><strong><%= row.bedCode %></strong></td>
+            <td><%= row.roomCode %></td>
+            <td><%= row.departmentName %></td>
+            <td><%= row.roomType %></td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td class="text-end">
+              <div class="d-flex justify-content-end gap-1">
+                <form action="/nghiep-vu/cap-nhat-trang-thai-phong/<%= row.bedId %>/status" method="POST">
+                  <input type="hidden" name="status" value="Trống">
+                  <button type="submit" class="btn btn-sm btn-outline-success">Sẵn sàng</button>
+                </form>
+                <form action="/nghiep-vu/cap-nhat-trang-thai-phong/<%= row.bedId %>/status" method="POST">
+                  <input type="hidden" name="status" value="Chờ vệ sinh">
+                  <button type="submit" class="btn btn-sm btn-outline-warning">Vệ sinh</button>
+                </form>
+                <form action="/nghiep-vu/cap-nhat-trang-thai-phong/<%= row.bedId %>/status" method="POST">
+                  <input type="hidden" name="status" value="Bảo trì">
+                  <button type="submit" class="btn btn-sm btn-outline-danger">Bảo trì</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>

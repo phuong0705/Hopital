@@ -1,6 +1,5 @@
 <section class="module-hero">
   <div>
-    <span class="module-code">1.5 Danh mục dịch vụ</span>
     <h2>Danh mục dịch vụ</h2>
   </div>
   <div class="module-actions">
@@ -8,9 +7,8 @@
     <button class="btn btn-light" type="button" data-export-table="servicesTable" data-filename="danh-muc-dich-vu.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
     <% if (['ADMIN', 'RECEPTIONIST'].includes(currentUser.roleCode)) { %>
       <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#serviceModal">
-        <i class="bi bi-plus-lg me-2"></i>Thêm dịch vụ
-      </button>
-    <% } %>
+        Thêm dịch vụ
+      </button>    <% } %>
   </div>
 </section>
 
@@ -37,7 +35,7 @@
     <table class="table app-table module-table" id="servicesTable">
       <thead>
         <tr>
-          <th>Mã dịch vụ</th>
+          <th></th>
           <th>Dịch vụ</th>
           <th>Nhóm</th>
           <th>Khoa thực hiện</th>
@@ -57,7 +55,7 @@
             data-search="<%= `${row.serviceCode} ${row.serviceName} ${row.serviceGroup} ${row.departmentName || ''} ${row.description || ''}`.toLowerCase() %>"
             data-group="<%= row.serviceGroup %>"
             data-status="<%= row.status %>">
-            <td><span class="patient-code-pill"><%= row.serviceCode %></span></td>
+            <td></td>
             <td>
               <div class="module-primary">
                 <strong><%= row.serviceName %></strong>

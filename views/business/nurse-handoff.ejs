@@ -1,0 +1,92 @@
+<section class="module-hero">
+  <div>
+    <h2>Giao ban điều dưỡng</h2>
+    <p class="text-muted mb-0"><%= currentUser.fullName %> · <%= currentUser.departmentName || 'Khoa Nội tổng hợp' %></p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" onclick="window.location.reload()"><i class="bi bi-arrow-clockwise me-2"></i>Làm mới</button>
+    <button class="btn btn-primary" type="button" data-print-page><i class="bi bi-printer me-2"></i>In sổ giao ban</button>
+  </div>
+</section>
+
+<div class="alert alert-primary-soft border-0 mt-4 mb-4 d-flex align-items-center shadow-sm">
+  <i class="bi bi-megaphone-fill fs-4 me-3"></i>
+  <div class="fw-bold"><%= summaryText %></div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-8">
+    <section class="panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2>Danh sách bệnh nhân bàn giao</h2>
+          <p>Tóm tắt tình trạng và các đầu việc chăm sóc quan trọng.</p>
+        </div>
+      </div>
+      <div class="module-table-wrap">
+        <table class="table app-table module-table">
+          <thead>
+            <tr>
+              <th>Bệnh nhân</th>
+              <th>Vị trí</th>
+              <th>Chăm sóc / Y lệnh</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% patients.forEach(row => { %>
+              <tr>
+                <td>
+                  <div class="module-primary">
+                    <strong><%= row.fullName %></strong>
+                    <small><%= row.patientCode %></small>
+                  </div>
+                </td>
+                <td>
+                  <div class="small fw-bold"><%= row.roomCode || 'Chưa xếp' %></div>
+                  <div class="small text-muted">Giường <%= row.bedCode || '-' %></div>
+                </td>
+                <td class="text-wrap-cell">
+                  <div class="d-flex flex-wrap gap-2 mb-1">
+                    <%- include('../partials/badge', { text: row.priorityLevel }) %>
+                  </div>
+                  <div class="small"><%= row.diagnosis || 'Theo dõi sức khỏe' %></div>
+                </td>
+                <td><%- include('../partials/badge', { text: row.status }) %></td>
+                <td class="text-end">
+                  <% if (row.recordId) { %>
+                    <a class="btn btn-sm btn-primary" href="/medical-records/<%= row.recordId %>">HSBA</a>
+                  <% } %>
+                  <a class="btn btn-sm btn-light" href="/patients/<%= row.patientId %>">Chi tiết</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-xl-4">
+    <section class="panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2>Nhân sự cùng ca</h2>
+          <p>Đội ngũ phối hợp trong ca trực.</p>
+        </div>
+      </div>
+      <div class="business-step-grid">
+        <% departmentTeam.forEach(row => { %>
+          <div class="business-step-card">
+            <i class="bi bi-person-badge"></i>
+            <strong><%= row.fullName %></strong>
+            <span><%= row.specialty || 'Điều dưỡng' %> · <%= row.shiftName || 'Ca trực' %></span>
+          </div>
+        <% }) %>
+        <% if (!departmentTeam.length) { %>
+          <div class="text-center py-4 text-muted">Chưa có thông tin nhân sự.</div>
+        <% } %>
+      </div>
+    </section>
+  </div>
+</div>

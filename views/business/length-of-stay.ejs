@@ -1,7 +1,6 @@
 <section class="module-hero">
   <div>
     <h2>Theo dõi thời gian nằm viện</h2>
-    <p class="text-muted">Quản lý thời gian điều trị của bệnh nhân nội trú để tối ưu hóa công suất giường</p>
   </div>
   <div class="module-actions">
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In danh sách</button>
@@ -44,11 +43,19 @@
         %>
           <tr data-search="<%= `${row.patientCode} ${row.patientName}`.toLowerCase() %>" data-department="<%= row.departmentName %>">
             <td>
-              <strong><%= row.patientName %></strong><br>
-              <small class="text-muted"><%= row.patientCode %></small>
+              <strong><%= row.patientName %></strong>
             </td>
             <td><%= row.departmentName %></td>
-            <td>P. <%= row.roomCode %> / G. <%= row.bedCode %></td>
+            <td>
+              <% if (row.roomCode) { %>
+                <strong><%= row.roomCode %></strong>
+                <% if (row.bedCode) { %>
+                  <span class="text-muted"> / <%= row.bedCode %></span>
+                <% } %>
+              <% } else { %>
+                <span class="text-muted">Chưa xếp giường</span>
+              <% } %>
+            </td>
             <td><%= format.date(row.admissionDate) %></td>
             <td class="<%= alertClass %>"><%= row.daysStayed %> ngày</td>
             <td><%- include('../partials/badge', { text: row.status }) %></td>

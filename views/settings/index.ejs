@@ -1,9 +1,96 @@
-<section class="panel">
-  <div class="panel-header"><div><h2>Cài đặt hệ thống</h2></div></div>
-  <div class="settings-grid">
-    <div class="setting-item"><i class="bi bi-hospital"></i><div><strong>Thông tin bệnh viện</strong></div></div>
-    <div class="setting-item"><i class="bi bi-clock-history"></i><div><strong>Ca trực</strong></div></div>
-    <div class="setting-item"><i class="bi bi-printer"></i><div><strong>Mẫu in</strong></div></div>
-    <div class="setting-item"><i class="bi bi-shield-check"></i><div><strong>Bảo mật</strong></div></div>
+<section class="module-hero">
+  <div>
+    <h2>Cấu hình hệ thống</h2>
+    <p class="text-muted mb-0">Đọc từ biến môi trường, kết nối SQL Server và số liệu vận hành hiện tại.</p>
+  </div>
+  <div class="module-actions">
+    <a class="btn btn-light" href="/admin/integrations"><i class="bi bi-braces me-2"></i>Tích hợp</a>
+    <a class="btn btn-primary" href="/admin/monitoring"><i class="bi bi-activity me-2"></i>Realtime</a>
+  </div>
+</section>
+
+<section class="patient-action-grid compact mt-4">
+  <div class="patient-action-card">
+    <i class="bi bi-server"></i>
+    <strong><%= env.nodeEnv %></strong>
+    <span>Môi trường Node.js.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-database"></i>
+    <strong><%= realtime.databaseName || 'SQL Server' %></strong>
+    <span>Database đang kết nối.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-shield-lock"></i>
+    <strong><%= env.sessionSecretConfigured ? 'Đã cấu hình' : 'Dùng mặc định' %></strong>
+    <span>SESSION_SECRET.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-people"></i>
+    <strong><%= counts.users || 0 %> người dùng</strong>
+    <span>Tổng tài khoản trong hệ thống.</span>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="panel-header">
+    <div>
+      <h2>Biến cấu hình ứng dụng</h2>
+      <p>Không hiển thị password hoặc chuỗi kết nối đầy đủ.</p>
+    </div>
+  </div>
+  <div class="module-table-wrap">
+    <table class="table app-table module-table">
+      <thead>
+        <tr>
+          <th>Khóa</th>
+          <th>Giá trị hiện tại</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>NODE_ENV</code></td>
+          <td><%= env.nodeEnv %></td>
+          <td><span class="status-badge status-info">Đang dùng</span></td>
+        </tr>
+        <tr>
+          <td><code>REPORTS_FRONTEND_URL</code></td>
+          <td><%= env.reportsFrontendUrl || 'Chưa cấu hình' %></td>
+          <td><span class="status-badge <%= env.reportsFrontendUrl ? 'status-success' : 'status-warning' %>"><%= env.reportsFrontendUrl ? 'Có' : 'Thiếu' %></span></td>
+        </tr>
+        <tr>
+          <td><code>REPORTS_API_BASE_URL</code></td>
+          <td><%= env.reportsApiBaseUrl || 'Dùng mặc định' %></td>
+          <td><span class="status-badge status-info">Runtime</span></td>
+        </tr>
+        <tr>
+          <td><code>SESSION_SECRET</code></td>
+          <td><%= env.sessionSecretConfigured ? 'Đã đặt trong môi trường' : 'Chưa đặt riêng' %></td>
+          <td><span class="status-badge <%= env.sessionSecretConfigured ? 'status-success' : 'status-warning' %>"><%= env.sessionSecretConfigured ? 'Tốt' : 'Cần cấu hình' %></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="panel-header">
+    <div>
+      <h2>Kiểm kê dữ liệu chính</h2>
+      <p>Thông tin dùng để kiểm tra nhanh sau triển khai hoặc phục hồi dữ liệu.</p>
+    </div>
+  </div>
+  <div class="module-table-wrap">
+    <table class="table app-table module-table">
+      <tbody>
+        <% Object.entries(counts).forEach(([key, value]) => { %>
+          <tr>
+            <td><strong><%= key %></strong></td>
+            <td><%= value %> bản ghi</td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
   </div>
 </section>

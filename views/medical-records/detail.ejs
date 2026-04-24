@@ -3,9 +3,8 @@
 %>
 <section class="detail-hero">
   <div>
-    <span class="status-badge status-info"><%= record.record_code %></span>
     <h2><%= record.full_name %></h2>
-    <p><%= record.patient_code %> · <%= record.gender %> · <%= format.age(record.date_of_birth) %> tuổi · <%= record.department_name %></p>
+    <p><%= record.gender %> · <%= format.age(record.date_of_birth) %> tuổi · <%= record.department_name %></p>
   </div>
   <a href="/medical-records" class="btn btn-light"><i class="bi bi-arrow-left me-2"></i>Quay lại</a>
 </section>

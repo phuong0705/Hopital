@@ -1,7 +1,6 @@
 <section class="module-hero">
   <div>
     <h2>Tra cứu dữ liệu khám bệnh</h2>
-    <p class="text-muted">Tìm kiếm và xem lại lịch sử khám, hồ sơ bệnh nhân trên toàn hệ thống</p>
   </div>
   <div class="module-actions">
     <a href="/dashboard" class="btn btn-light"><i class="bi bi-grid me-2"></i>Tổng quan</a>
@@ -20,7 +19,7 @@
     <table class="table app-table" id="lookupTable">
       <thead>
         <tr>
-          <th>Mã BN</th>
+          <th></th>
           <th>Họ tên</th>
           <th>Ngày sinh</th>
           <th>Giới tính</th>
@@ -32,7 +31,7 @@
       <tbody>
         <% patients.forEach(p => { %>
           <tr data-search="<%= `${p.patientCode} ${p.fullName} ${p.identityNumber} ${p.phone}`.toLowerCase() %>">
-            <td><span class="patient-code-pill"><%= p.patientCode %></span></td>
+            <td></td>
             <td><strong><%= p.fullName %></strong></td>
             <td><%= format.date(p.dateOfBirth) %></td>
             <td><%= p.gender %></td>

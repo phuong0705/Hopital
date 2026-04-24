@@ -5,6 +5,9 @@ const { requireRole } = require('../middlewares/role.middleware');
 const router = express.Router();
 
 router.get('/', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), modulesController.departments);
+router.post('/', requireRole(['ADMIN']), modulesController.createDepartment);
+router.post('/:id/update', requireRole(['ADMIN']), modulesController.updateDepartment);
+router.post('/:id/delete', requireRole(['ADMIN']), modulesController.deleteDepartment);
 router.get('/:id', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), modulesController.departmentDetail);
 
 // Room & Bed Management

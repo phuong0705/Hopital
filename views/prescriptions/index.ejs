@@ -10,7 +10,7 @@
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
     <button class="btn btn-light" type="button" data-export-table="prescriptionsTable" data-filename="don-thuoc.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
     <% if (canPrescribe) { %>
-      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#prescriptionModal"><i class="bi bi-plus-lg me-2"></i>Kê đơn</button>
+      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#prescriptionModal">Kê đơn</button>
     <% } %>
   </div>
 </section>
@@ -45,7 +45,7 @@
       <tbody>
         <% rows.forEach(row => { %>
           <tr data-search="<%= `${row.prescriptionCode} ${row.patientName} ${row.medicineName} ${row.doctorName}`.toLowerCase() %>" data-route="<%= row.route %>">
-            <td><span class="module-code"><%= row.prescriptionCode %></span></td>
+            <td></td>
             <td><%= row.patientName %></td>
             <td>
               <div class="module-primary">
@@ -84,7 +84,7 @@
               <label class="form-label">Bệnh nhân / hồ sơ</label>
               <select name="recordId" class="form-select" required>
                 <% activeRecords.forEach(item => { %>
-                  <option value="<%= item.recordId %>"><%= item.patientCode %> - <%= item.patientName %> - <%= item.departmentName %> - <%= item.recordCode %></option>
+                  <option value="<%= item.recordId %>"><%= item.patientName %> - <%= item.departmentName %></option>
                 <% }) %>
               </select>
             </div>

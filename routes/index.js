@@ -1,5 +1,6 @@
 const express = require('express');
 const { requireAuth } = require('../middlewares/auth.middleware');
+const dashboardController = require('../controllers/dashboard.controller');
 
 const router = express.Router();
 
@@ -12,6 +13,16 @@ router.get('/', (req, res) => {
 });
 
 router.use('/', require('./auth.routes'));
+router.use('/api/reports', require('./reports-api.routes'));
+router.get('/api/dashboard/doctor', requireAuth, dashboardController.doctorSummary);
+router.get('/reports', requireAuth, (req, res) => {
+  const target = new URL(process.env.REPORTS_FRONTEND_URL || 'http://localhost:3011/reports');
+  if (req.query.tab) {
+    target.searchParams.set('tab', req.query.tab);
+  }
+
+  return res.redirect(target.toString());
+});
 router.use('/dashboard', requireAuth, require('./dashboard.routes'));
 router.use('/patients', requireAuth, require('./patients.routes'));
 router.use('/medical-records', requireAuth, require('./medicalRecords.routes'));
@@ -27,6 +38,8 @@ router.use('/bhyt', requireAuth, require('./bhyt.routes'));
 router.use('/discharges', requireAuth, require('./discharges.routes'));
 router.use('/users', requireAuth, require('./users.routes'));
 router.use('/settings', requireAuth, require('./settings.routes'));
+router.use('/admin', requireAuth, require('./admin.routes'));
+router.use('/thu-ngan', requireAuth, require('./cashier.routes'));
 router.use('/nghiep-vu', requireAuth, require('./business.routes'));
 
 module.exports = router;

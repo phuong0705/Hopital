@@ -1,0 +1,111 @@
+<section class="module-hero">
+  <div>
+    <h2>Hoàn tiền / Điều chỉnh</h2>
+    <p class="text-muted mb-0">Ghi nhận hoàn tiền hoặc điều chỉnh viện phí có lưu vết theo phiếu thu.</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#adjustmentModal"><i class="bi bi-arrow-counterclockwise me-2"></i>Tạo điều chỉnh</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm mã điều chỉnh, phiếu thu hoặc bệnh nhân" data-module-search="adjustmentsTable">
+    </div>
+    <select class="form-select" data-module-filter="adjustmentsTable" data-filter-key="type">
+      <option value="">Tất cả loại</option>
+      <% [...new Set(rows.map(row => row.adjustmentType))].forEach(type => { %>
+        <option><%= type %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="adjustmentsTable">
+      <thead>
+        <tr>
+          <th>Điều chỉnh</th>
+          <th>Phiếu thu</th>
+          <th>Bệnh nhân</th>
+          <th>Số tiền</th>
+          <th>Lý do</th>
+          <th>Người ghi nhận</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.adjustmentCode} ${row.billCode} ${row.patientName} ${row.reason}`.toLowerCase() %>" data-type="<%= row.adjustmentType %>">
+            <td>
+              <div class="module-primary">
+                <strong><%= row.adjustmentCode %></strong>
+                <small><%= row.adjustmentType %> · <%= format.datetime(row.createdAt) %></small>
+              </div>
+            </td>
+            <td><%= row.billCode %></td>
+            <td><%= row.patientName %></td>
+            <td>
+              <strong class="<%= Number(row.amount) < 0 ? 'text-danger' : 'text-success' %>"><%= format.currency(row.amount) %></strong>
+            </td>
+            <td class="text-wrap-cell compact"><%= row.reason %></td>
+            <td><%= row.createdBy || 'Hệ thống' %></td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr><td colspan="6" class="text-center py-4 text-muted">Chưa có điều chỉnh viện phí.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+  <div class="empty-inline module-empty d-none" data-empty-for="adjustmentsTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy điều chỉnh phù hợp</strong>
+  </div>
+</section>
+
+<div class="modal fade" id="adjustmentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/thu-ngan/hoan-tien-dieu-chinh" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Tạo hoàn tiền / điều chỉnh viện phí</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Phiếu thu</label>
+              <select name="billingId" class="form-select" required>
+                <% bills.forEach(bill => { %>
+                  <option value="<%= bill.billingId %>"><%= bill.billCode %> · <%= bill.patientName %> · <%= format.currency(bill.totalAmount) %> · <%= bill.paymentStatus %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Loại nghiệp vụ</label>
+              <select name="adjustmentType" class="form-select" required>
+                <option>Hoàn tiền</option>
+                <option>Điều chỉnh giảm</option>
+                <option>Điều chỉnh tăng</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Số tiền</label>
+              <input name="amount" type="number" min="0" class="form-control" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Lý do</label>
+              <textarea name="reason" class="form-control" rows="3" required placeholder="Nêu rõ lý do hoàn tiền hoặc điều chỉnh"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button class="btn btn-primary"><i class="bi bi-save me-2"></i>Lưu điều chỉnh</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

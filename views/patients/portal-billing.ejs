@@ -1,5 +1,3 @@
-<%- include('../partials/patient-portal-header', { data }) %>
-
 <section class="dashboard-grid mt-4">
   <div class="panel">
     <div class="panel-header">
@@ -11,16 +9,41 @@
       <% } %>
     </div>
     <% if (data.billing) { %>
-      <dl class="info-list">
-        <dt>Mã phiếu</dt><dd><%= data.billing.billCode %></dd>
-        <dt>Chi phí khám</dt><dd><%= format.currency(data.billing.consultationFee) %></dd>
-        <dt>Chi phí giường</dt><dd><%= format.currency(data.billing.bedFee) %></dd>
-        <dt>Chi phí thuốc</dt><dd><%= format.currency(data.billing.medicineFee) %></dd>
-        <dt>Chi phí xét nghiệm</dt><dd><%= format.currency(data.billing.labFee) %></dd>
-        <dt>BHYT hỗ trợ</dt><dd><%= format.currency(data.billing.insuranceCovered) %></dd>
-        <dt>Tổng thanh toán</dt><dd><strong><%= format.currency(data.billing.totalAmount) %></strong></dd>
-      </dl>
+      <div class="p-3">
+        <dl class="info-list">
+          <dt>Chi phí khám</dt><dd><%= format.currency(data.billing.consultationFee) %></dd>
+          <dt>Chi phí giường</dt><dd><%= format.currency(data.billing.bedFee) %></dd>
+          <dt>Chi phí thuốc</dt><dd><%= format.currency(data.billing.medicineFee) %></dd>
+          <dt>Chi phí xét nghiệm</dt><dd><%= format.currency(data.billing.labFee) %></dd>
+          <dt>BHYT hỗ trợ</dt><dd><%= format.currency(data.billing.insuranceCovered) %></dd>
+          <dt>Tổng thanh toán</dt><dd><strong class="fs-4 text-primary"><%= format.currency(data.billing.totalAmount) %></strong></dd>
+        </dl>
+        
+        <% if (data.billing.paymentStatus !== 'Đã thanh toán') { %>
+          <div class="mt-4 p-3 bg-light rounded-3 border">
+            <div class="d-flex align-items-center mb-3">
+              <i class="bi bi-wallet2 text-primary fs-3 me-3"></i>
+              <div>
+                <h6 class="mb-0 fw-bold">Thanh toán trực tuyến</h6>
+                <small class="text-muted">An toàn, nhanh chóng qua thẻ hoặc ví điện tử</small>
+              </div>
+            </div>
+            <form action="/patients/me/billing/<%= data.billing.billingId %>/pay" method="post">
+              <button class="btn btn-primary w-100 py-2 fw-bold">
+                <i class="bi bi-credit-card me-2"></i>THANH TOÁN NGAY
+              </button>
+            </form>
+          </div>
+        <% } else { %>
+          <div class="mt-4 p-3 bg-success bg-opacity-10 rounded-3 border border-success border-opacity-25 text-center">
+            <i class="bi bi-check-circle-fill text-success fs-1 mb-2 d-block"></i>
+            <h6 class="text-success fw-bold mb-0">HÓA ĐƠN ĐÃ ĐƯỢC THANH TOÁN</h6>
+            <small class="text-success opacity-75">Cảm ơn bạn đã sử dụng dịch vụ</small>
+          </div>
+        <% } %>
+      </div>
     <% } else { %>
+      <div class="p-5 text-center text-muted">Chưa phát sinh hóa đơn viện phí.</div>
     <% } %>
   </div>
 

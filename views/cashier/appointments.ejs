@@ -1,0 +1,143 @@
+<section class="module-hero">
+  <div>
+    <h2>Đặt lịch hẹn khám</h2>
+    <p class="text-muted mb-0">Tạo lịch hẹn thật cho bệnh nhân mới hoặc bệnh nhân đã có hồ sơ trong HIS.</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#appointmentModal"><i class="bi bi-calendar-plus me-2"></i>Tạo lịch hẹn</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm mã hẹn, bệnh nhân, khoa hoặc bác sĩ" data-module-search="appointmentsTable">
+    </div>
+    <select class="form-select" data-module-filter="appointmentsTable" data-filter-key="status">
+      <option value="">Tất cả trạng thái</option>
+      <% [...new Set(rows.map(row => row.status))].forEach(status => { %>
+        <option><%= status %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="appointmentsTable">
+      <thead>
+        <tr>
+          <th>Lịch hẹn</th>
+          <th>Bệnh nhân</th>
+          <th>Khoa / bác sĩ</th>
+          <th>Lý do</th>
+          <th>Trạng thái</th>
+          <th class="text-end">Cập nhật</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.appointmentCode} ${row.patientCode} ${row.patientName} ${row.departmentName || ''} ${row.doctorName || ''}`.toLowerCase() %>" data-status="<%= row.status %>">
+            <td>
+              <div class="module-primary">
+                <strong><%= row.appointmentCode %></strong>
+                <small><%= format.datetime(row.appointmentTime) %></small>
+              </div>
+            </td>
+            <td>
+              <strong><%= row.patientName %></strong>
+              <small><%= row.patientCode %> · <%= row.phone || 'Chưa có SĐT' %></small>
+            </td>
+            <td>
+              <%= row.departmentName || 'Chưa chọn khoa' %>
+              <small><%= row.doctorName || 'Chưa chỉ định bác sĩ' %></small>
+            </td>
+            <td class="text-wrap-cell compact"><%= row.reason || 'Khám theo lịch hẹn' %></td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td class="text-end">
+              <form action="/thu-ngan/dat-lich-hen-kham/<%= row.appointmentId %>/status" method="post" class="d-inline-flex gap-2">
+                <select name="status" class="form-select form-select-sm">
+                  <option <%= row.status === 'Đã đặt' ? 'selected' : '' %>>Đã đặt</option>
+                  <option <%= row.status === 'Đã tiếp nhận' ? 'selected' : '' %>>Đã tiếp nhận</option>
+                  <option <%= row.status === 'Đã hủy' ? 'selected' : '' %>>Đã hủy</option>
+                </select>
+                <button class="btn btn-sm btn-light">Lưu</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr><td colspan="6" class="text-center py-4 text-muted">Chưa có lịch hẹn nào.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+  <div class="empty-inline module-empty d-none" data-empty-for="appointmentsTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy lịch hẹn phù hợp</strong>
+  </div>
+</section>
+
+<div class="modal fade" id="appointmentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/thu-ngan/dat-lich-hen-kham" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Tạo lịch hẹn khám</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Bệnh nhân đã có hồ sơ</label>
+              <select name="patientId" class="form-select">
+                <option value="">Bệnh nhân mới / nhập thủ công</option>
+                <% patients.forEach(patient => { %>
+                  <option value="<%= patient.patientId %>"><%= patient.patientCode %> · <%= patient.fullName %> · <%= patient.phone || 'Chưa có SĐT' %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tên bệnh nhân mới</label>
+              <input name="patientName" class="form-control" placeholder="Bỏ trống nếu đã chọn hồ sơ">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Số điện thoại</label>
+              <input name="phone" class="form-control" placeholder="SĐT liên hệ">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Khoa khám</label>
+              <select name="departmentId" class="form-select">
+                <option value="">Chọn khoa</option>
+                <% departments.forEach(department => { %>
+                  <option value="<%= department.departmentId %>"><%= department.departmentName %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Bác sĩ</label>
+              <select name="doctorId" class="form-select">
+                <option value="">Chưa chỉ định</option>
+                <% doctors.forEach(doctor => { %>
+                  <option value="<%= doctor.doctorId %>"><%= doctor.fullName %> · <%= doctor.specialty %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Thời gian hẹn</label>
+              <input name="appointmentTime" type="datetime-local" class="form-control" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Lý do khám</label>
+              <textarea name="reason" class="form-control" rows="3" placeholder="Triệu chứng, nhu cầu khám hoặc ghi chú tiếp nhận"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button class="btn btn-primary"><i class="bi bi-save me-2"></i>Lưu lịch hẹn</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

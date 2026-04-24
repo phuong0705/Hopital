@@ -1,0 +1,116 @@
+<section class="module-hero">
+  <div>
+    <h2>Theo dõi sinh hiệu</h2>
+    <p class="text-muted mb-0">Nhập và theo dõi Mạch, Nhiệt độ, Huyết áp, Nhịp thở của bệnh nhân.</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#vitalsModal"><i class="bi bi-plus-lg me-2"></i>Nhập sinh hiệu mới</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm bệnh nhân hoặc phòng" data-module-search="vitalsTable">
+    </div>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="vitalsTable">
+      <thead>
+        <tr>
+          <th>Bệnh nhân</th>
+          <th>Vị trí</th>
+          <th>Mạch (l/p)</th>
+          <th>Nhiệt độ (°C)</th>
+          <th>Huyết áp (mmHg)</th>
+          <th>Nhịp thở (l/p)</th>
+          <th>Lần cuối cập nhật</th>
+          <th class="text-end">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.fullName} ${row.patientCode} ${row.roomCode}`.toLowerCase() %>">
+            <td>
+              <div class="module-primary">
+                <strong><%= row.fullName %></strong>
+                <small><%= row.patientCode %></small>
+              </div>
+            </td>
+            <td><%= row.roomCode || '-' %> / <%= row.bedCode || '-' %></td>
+            <td class="text-center fw-bold"><%= (row.vitalSigns || '').match(/Mạch: ([\d\s]+) l\/p/) ? row.vitalSigns.match(/Mạch: ([\d\s]+) l\/p/)[1] : '-' %></td>
+            <td class="text-center fw-bold text-danger"><%= (row.vitalSigns || '').match(/T°: ([\d\.]+) °C/) ? row.vitalSigns.match(/T°: ([\d\.]+) °C/)[1] : '-' %></td>
+            <td class="text-center fw-bold"><%= (row.vitalSigns || '').match(/HA: ([^\s,]+) mmHg/) ? row.vitalSigns.match(/HA: ([^\s,]+) mmHg/)[1] : '-' %></td>
+            <td class="text-center fw-bold"><%= (row.vitalSigns || '').match(/NT: ([\d\s]+) l\/p/) ? row.vitalSigns.match(/NT: ([\d\s]+) l\/p/)[1] : '-' %></td>
+            <td class="text-muted"><%= row.vitalSigns ? 'Đã cập nhật' : 'Chưa có dữ liệu' %></td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#vitalsModal" data-admission-id="<%= row.admissionId %>">Nhập</button>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="modal fade" id="vitalsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/nghiep-vu/theo-doi-sinh-hieu" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title">Cập nhật dấu hiệu sinh tồn</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Chọn bệnh nhân</label>
+              <select name="admissionId" class="form-select" id="vitalsPatientSelect" required>
+                <% rows.forEach(row => { %>
+                  <option value="<%= row.admissionId %>"><%= row.fullName %> (<%= row.patientCode %>)</option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Mạch (lần/phút)</label>
+              <input name="pulse" type="number" class="form-control" placeholder="80" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Nhiệt độ (°C)</label>
+              <input name="temperature" type="number" step="0.1" class="form-control" placeholder="37.0" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Huyết áp (mmHg)</label>
+              <input name="bp" type="text" class="form-control" placeholder="120/80" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Nhịp thở (lần/phút)</label>
+              <input name="respiratory" type="number" class="form-control" placeholder="20" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu sinh hiệu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const vitalsModal = document.getElementById('vitalsModal');
+    if (vitalsModal) {
+      vitalsModal.addEventListener('show.bs.modal', (event) => {
+        const button = event.relatedTarget;
+        const admissionId = button.getAttribute('data-admission-id');
+        if (admissionId) {
+          document.getElementById('vitalsPatientSelect').value = admissionId;
+        }
+      });
+    }
+  });
+</script>

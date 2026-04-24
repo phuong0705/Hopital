@@ -1,0 +1,73 @@
+<section class="module-hero">
+  <div>
+    <h2>Giám sát hệ thống realtime</h2>
+    <p class="text-muted mb-0">Số liệu lấy trực tiếp tại thời điểm tải trang từ DB và tiến trình Node.js.</p>
+  </div>
+  <div class="module-actions">
+    <a class="btn btn-light" href="/admin/audit-log"><i class="bi bi-file-earmark me-2"></i>Audit log</a>
+    <a class="btn btn-primary" href="/admin/monitoring"><i class="bi bi-arrow-clockwise me-2"></i>Làm mới</a>
+  </div>
+</section>
+
+<section class="patient-action-grid compact mt-4">
+  <div class="patient-action-card">
+    <i class="bi bi-person-check"></i>
+    <strong><%= metrics.activeUsers || 0 %> user hoạt động</strong>
+    <span>Tài khoản trạng thái Hoạt động.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-hospital"></i>
+    <strong><%= metrics.activeAdmissions || 0 %> ca nội trú</strong>
+    <span>Admissions chưa kết thúc.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-clipboard2-pulse"></i>
+    <strong><%= metrics.pendingLabs || 0 %> CLS chờ</strong>
+    <span>LabTests chưa có kết quả.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-layout-sidebar-inset"></i>
+    <strong><%= metrics.usedBeds || 0 %>/<%= metrics.totalBeds || 0 %> giường</strong>
+    <span>Công suất hiện tại.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-receipt"></i>
+    <strong><%= metrics.unpaidBills || 0 %> viện phí mở</strong>
+    <span>Billing chưa thanh toán.</span>
+  </div>
+</section>
+
+<section class="row g-4 mt-1">
+  <div class="col-lg-6">
+    <section class="panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2>Database</h2>
+          <p>Trạng thái kết nối SQL Server hiện tại.</p>
+        </div>
+      </div>
+      <dl class="info-list compact">
+        <dt>Database</dt><dd><%= metrics.databaseName || '-' %></dd>
+        <dt>Thời gian DB</dt><dd><%= metrics.databaseTime ? format.datetime(metrics.databaseTime) : '-' %></dd>
+        <dt>Giường đang dùng</dt><dd><%= metrics.usedBeds || 0 %> / <%= metrics.totalBeds || 0 %></dd>
+      </dl>
+    </section>
+  </div>
+  <div class="col-lg-6">
+    <section class="panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2>Runtime</h2>
+          <p>Thông tin tiến trình backend Express đang phục vụ hệ thống.</p>
+        </div>
+      </div>
+      <dl class="info-list compact">
+        <dt>Host</dt><dd><%= runtime.hostName %></dd>
+        <dt>Node.js</dt><dd><%= runtime.nodeVersion %></dd>
+        <dt>Nền tảng</dt><dd><%= runtime.platform %></dd>
+        <dt>Uptime</dt><dd><%= runtime.uptimeSeconds %> giây</dd>
+        <dt>RAM tiến trình</dt><dd><%= runtime.memoryMb %> MB</dd>
+      </dl>
+    </section>
+  </div>
+</section>

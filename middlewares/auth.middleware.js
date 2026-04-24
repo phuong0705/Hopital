@@ -1,4 +1,6 @@
 const { businessGroups } = require('../config/business-processes');
+const patientRepository = require('../repositories/patient.repository');
+const cashierRepository = require('../repositories/cashier.repository');
 
 function requireAuth(req, res, next) {
   if (!req.session.user) {
@@ -15,7 +17,7 @@ function redirectIfAuthenticated(req, res, next) {
   return next();
 }
 
-function exposeUser(req, res, next) {
+async function exposeUser(req, res, next) {
   res.locals.currentUser = req.session.user || null;
   res.locals.businessGroups = businessGroups;
   res.locals.flash = {
@@ -23,6 +25,25 @@ function exposeUser(req, res, next) {
     error: req.flash('error'),
     warning: req.flash('warning')
   };
+
+  res.locals.unreadCount = 0;
+  res.locals.cashierCounts = {
+    appointmentsToday: 0,
+    adjustmentsToday: 0,
+    unpaidBills: 0,
+    queueCount: 0
+  };
+  if (req.session.user) {
+    try {
+      res.locals.unreadCount = await patientRepository.getUnreadNotificationCount(req.session.user.userId);
+      if (['ADMIN', 'RECEPTIONIST'].includes(req.session.user.roleCode)) {
+        res.locals.cashierCounts = await cashierRepository.getCashierSidebarCounts();
+      }
+    } catch (err) {
+      console.error('Error fetching layout counters:', err);
+    }
+  }
+
   return next();
 }
 

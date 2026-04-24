@@ -1,0 +1,33 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">Thông báo</h2>
+</div>
+
+<section class="panel">
+  <div class="list-stack">
+    <% notifications.forEach(item => { 
+      let icon = 'bi-info-circle';
+      let colorClass = 'info';
+      if (item.type === 'payment-success') { icon = 'bi-check-circle'; colorClass = 'success'; }
+      if (item.type === 'booking-new') { icon = 'bi-calendar-event'; colorClass = 'primary'; }
+      if (item.type === 'warning') { icon = 'bi-exclamation-triangle'; colorClass = 'warning'; }
+    %>
+      <div class="list-item <%= item.isRead ? '' : 'bg-primary bg-opacity-10' %>">
+        <span class="list-icon <%= colorClass %>"><i class="bi <%= icon %>"></i></span>
+        <div>
+          <strong><%= item.title %></strong>
+          <div class="small mb-1"><%= item.message %></div>
+          <small class="text-muted"><%= format.datetime(item.createdAt) %></small>
+        </div>
+        <% if (!item.isRead) { %>
+          <span class="badge bg-primary rounded-pill" style="font-size: 8px;">&nbsp;</span>
+        <% } %>
+      </div>
+    <% }) %>
+    <% if (!notifications.length) { %>
+      <div class="p-5 text-center text-muted">
+        <i class="bi bi-bell-slash display-1 mb-3"></i>
+        <p>Bạn hiện không có thông báo nào.</p>
+      </div>
+    <% } %>
+  </div>
+</section>

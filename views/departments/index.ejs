@@ -1,10 +1,13 @@
 <section class="module-hero">
   <div>
     <h2>Quản lí khoa phòng</h2>
+    <p class="text-muted mb-0">Thiết lập cơ cấu khoa, phòng và giường bệnh toàn viện.</p>
   </div>
   <div class="module-actions">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createDeptModal">
+      <i class="bi bi-plus-circle me-2"></i>Thêm khoa mới
+    </button>
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
-    <button class="btn btn-light" type="button" data-export-table="departmentsTable" data-filename="khoa-phong.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
   </div>
 </section>
 
@@ -60,18 +63,139 @@
               </div>
             </td>
             <td class="text-end">
-              <a href="/departments/<%= row.departmentId %>" class="btn btn-sm btn-light action-icon" data-bs-toggle="tooltip" data-bs-title="Xem chi tiết">
-                <i class="bi bi-eye"></i>
-              </a>
+              <div class="table-actions">
+                <a href="/departments/<%= row.departmentId %>" class="btn btn-sm btn-light action-icon" data-bs-toggle="tooltip" data-bs-title="Xem chi tiết">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <button class="btn btn-sm btn-light action-icon" 
+                  data-bs-toggle="modal" 
+                  data-bs-target="#editDeptModal"
+                  data-dept='<%= JSON.stringify(row) %>'>
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <form action="/departments/<%= row.departmentId %>/delete" method="post" class="d-inline" onsubmit="return confirm('Xóa khoa này? (Cần xóa hết phòng/giường trước)')">
+                  <button class="btn btn-sm btn-light text-danger action-icon">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
             </td>
           </tr>
         <% }) %>
       </tbody>
     </table>
   </div>
-
-  <div class="empty-inline module-empty d-none" data-empty-for="departmentsTable">
-    <i class="bi bi-search"></i>
-    <strong>Không tìm thấy khoa phù hợp</strong>
-  </div>
 </section>
+
+<!-- Modal Tạo mới -->
+<div class="modal fade" id="createDeptModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/departments" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Thêm khoa mới</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Mã khoa</label>
+              <input type="text" name="departmentCode" class="form-control" required placeholder="Ví dụ: NOI, TIM...">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tên khoa</label>
+              <input type="text" name="departmentName" class="form-control" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Trưởng khoa</label>
+              <input type="text" name="headDoctor" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Số điện thoại</label>
+              <input type="text" name="phone" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Vị trí</label>
+              <input type="text" name="location" class="form-control" placeholder="Ví dụ: Tầng 4 - Khối A">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button type="submit" class="btn btn-primary">Lưu thông tin</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Chỉnh sửa -->
+<div class="modal fade" id="editDeptModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form id="editDeptForm" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Chỉnh sửa khoa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Mã khoa</label>
+              <input type="text" name="departmentCode" id="edit_deptCode" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tên khoa</label>
+              <input type="text" name="departmentName" id="edit_deptName" class="form-control" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Trưởng khoa</label>
+              <input type="text" name="headDoctor" id="edit_headDoctor" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Số điện thoại</label>
+              <input type="text" name="phone" id="edit_phone" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Vị trí</label>
+              <input type="text" name="location" id="edit_location" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Trạng thái</label>
+              <select name="status" id="edit_status" class="form-select">
+                <option>Hoạt động</option>
+                <option>Khóa</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const editModal = document.getElementById('editDeptModal');
+    if (editModal) {
+      editModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const dept = JSON.parse(button.getAttribute('data-dept'));
+        
+        const form = document.getElementById('editDeptForm');
+        form.action = `/departments/${dept.departmentId}/update`;
+        
+        document.getElementById('edit_deptCode').value = dept.departmentCode;
+        document.getElementById('edit_deptName').value = dept.departmentName;
+        document.getElementById('edit_headDoctor').value = dept.headDoctor || '';
+        document.getElementById('edit_phone').value = dept.phone || '';
+        document.getElementById('edit_location').value = dept.location || '';
+        document.getElementById('edit_status').value = dept.status || 'Hoạt động';
+      });
+    }
+  });
+</script>

@@ -1,0 +1,91 @@
+<section class="module-hero">
+  <div>
+    <h2>Quản lý vật tư tiêu hao</h2>
+    <p class="text-muted mb-0">Theo dõi bông, băng, cồn, gạc, bơm kim tiêm... sử dụng cho bệnh nhân.</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#requestSupplyModal"><i class="bi bi-cart-plus me-2"></i>Lĩnh vật tư</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm tên vật tư">
+    </div>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table">
+      <thead>
+        <tr>
+          <th>Tên vật tư</th>
+          <th>Đơn vị</th>
+          <th>Tồn kho khoa</th>
+          <th>Định mức</th>
+          <th>Cảnh báo</th>
+          <th class="text-end">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Bơm kim tiêm 5ml</strong></td>
+          <td>Cái</td>
+          <td>450</td>
+          <td>500</td>
+          <td><span class="badge bg-success">Ổn định</span></td>
+          <td class="text-end"><button class="btn btn-sm btn-light" onclick="alert('Đã xuất 1 đơn vị sử dụng')">Xuất sử dụng</button></td>
+        </tr>
+        <tr>
+          <td><strong>Găng tay y tế (Size M)</strong></td>
+          <td>Đôi</td>
+          <td>12</td>
+          <td>100</td>
+          <td><span class="badge bg-danger">Sắp hết</span></td>
+          <td class="text-end"><button class="btn btn-sm btn-light" onclick="alert('Đã xuất 1 đơn vị sử dụng')">Xuất sử dụng</button></td>
+        </tr>
+        <tr>
+          <td><strong>Bông hút nước</strong></td>
+          <td>Gói</td>
+          <td>25</td>
+          <td>30</td>
+          <td><span class="badge bg-warning text-dark">Dưới định mức</span></td>
+          <td class="text-end"><button class="btn btn-sm btn-light" onclick="alert('Đã xuất 1 đơn vị sử dụng')">Xuất sử dụng</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="modal fade" id="requestSupplyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Lĩnh vật tư y tế</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="mb-3">
+            <label class="form-label">Vật tư cần lĩnh</label>
+            <select class="form-select">
+              <option>Bơm kim tiêm 5ml</option>
+              <option>Găng tay y tế (Size M)</option>
+              <option>Bông hút nước</option>
+              <option>Cồn 70 độ</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Số lượng yêu cầu</label>
+            <input type="number" class="form-control" value="100">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+        <button type="button" class="btn btn-primary" onclick="bootstrap.Modal.getInstance(document.getElementById('requestSupplyModal')).hide(); alert('Đã gửi phiếu lĩnh vật tư')">Gửi yêu cầu</button>
+      </div>
+    </div>
+  </div>
+</div>

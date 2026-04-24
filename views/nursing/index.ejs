@@ -10,7 +10,6 @@
     <table class="table app-table">
       <thead>
         <tr>
-          <th>Mã BN</th>
           <th>Bệnh nhân</th>
           <th>Khoa</th>
           <th>Phòng / giường</th>
@@ -23,7 +22,6 @@
       <tbody>
         <% rows.forEach(row => { %>
           <tr>
-            <td><strong><%= row.patientCode %></strong></td>
             <td><%= row.patientName %></td>
             <td><%= row.departmentName %></td>
             <td><%= row.roomCode || 'Chưa xếp' %> / <%= row.bedCode || 'Chưa xếp' %></td>

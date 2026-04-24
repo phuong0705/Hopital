@@ -1,12 +1,71 @@
-<section class="dashboard-welcome">
-  <div class="dashboard-welcome-content">
-    <div class="login-brand dashboard-brand">
-      <span class="brand-mark"><i class="bi bi-heart-pulse-fill"></i></span>
-      <span>
-        <strong>Bệnh viện Đa khoa Việt Nam</strong>
-        <small>Tiếp nhận nội trú - viện phí - xuất viện</small>
-      </span>
+<section class="module-hero">
+  <div>
+    <h2>Tổng quan thu ngân</h2>
+    <p class="text-muted mb-0">Điểm vào nhanh cho tiếp nhận, BHYT, hàng chờ và thanh toán viện phí.</p>
+  </div>
+  <div class="module-actions">
+    <a class="btn btn-light" href="/thu-ngan/bao-cao-ca"><i class="bi bi-bar-chart me-2"></i>Báo cáo ca</a>
+    <a class="btn btn-primary" href="/patients/reception?activeMenu=cashier-reception"><i class="bi bi-person-plus me-2"></i>Tiếp nhận mới</a>
+  </div>
+</section>
+
+<section class="patient-action-grid compact mt-4">
+  <a class="patient-action-card text-decoration-none" href="/patients/reception?activeMenu=cashier-reception">
+    <i class="bi bi-person-plus"></i>
+    <strong>Tiếp nhận bệnh nhân</strong>
+    <span>Tạo hồ sơ nội trú, chọn khoa, bác sĩ và giường.</span>
+  </a>
+  <a class="patient-action-card text-decoration-none" href="/bhyt?activeMenu=cashier-bhyt">
+    <i class="bi bi-check2-square"></i>
+    <strong>Kiểm tra BHYT</strong>
+    <span>Đối chiếu thẻ BHYT và phần bảo hiểm hỗ trợ.</span>
+  </a>
+  <a class="patient-action-card text-decoration-none" href="/thu-ngan/hang-cho">
+    <i class="bi bi-list-ul"></i>
+    <strong><%= (locals.cashierCounts && locals.cashierCounts.queueCount) || 0 %> việc hàng chờ</strong>
+    <span>Lịch hẹn, tiếp nhận hôm nay và viện phí chưa thanh toán.</span>
+  </a>
+  <a class="patient-action-card text-decoration-none" href="/billing?activeMenu=cashier-billing">
+    <i class="bi bi-credit-card"></i>
+    <strong><%= (locals.cashierCounts && locals.cashierCounts.unpaidBills) || 0 %> phiếu chưa thu</strong>
+    <span>Lập phiếu thu hoặc đối soát trạng thái thanh toán.</span>
+  </a>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-primary">
+      <strong>Lối tắt nghiệp vụ</strong>
+      <small>Các chức năng thu ngân dùng dữ liệu thật trong HIS.</small>
     </div>
-    <h1>Quản lý quy trình tiếp nhận, thanh toán viện phí và hoàn tất hồ sơ ra viện.</h1>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-4">
+      <a class="list-item text-decoration-none" href="/thu-ngan/dat-lich-hen-kham">
+        <i class="bi bi-calendar-plus"></i>
+        <div>
+          <strong>Đặt lịch hẹn khám</strong>
+          <small>Tạo và cập nhật lịch hẹn.</small>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a class="list-item text-decoration-none" href="/thu-ngan/in-phieu-hoa-don">
+        <i class="bi bi-printer"></i>
+        <div>
+          <strong>In phiếu / Hóa đơn</strong>
+          <small>In chứng từ từ phiếu thu.</small>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a class="list-item text-decoration-none" href="/thu-ngan/hoan-tien-dieu-chinh">
+        <i class="bi bi-arrow-counterclockwise"></i>
+        <div>
+          <strong>Hoàn tiền / Điều chỉnh</strong>
+          <small>Lưu vết điều chỉnh theo hóa đơn.</small>
+        </div>
+      </a>
+    </div>
   </div>
 </section>

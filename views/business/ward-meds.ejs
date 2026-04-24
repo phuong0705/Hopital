@@ -1,0 +1,205 @@
+<section class="module-hero">
+  <div>
+    <h2>Quản lý thuốc tại khoa</h2>
+    <p class="text-muted mb-0">Theo dõi cơ số thuốc dự trù và tủ trực thuốc tại khoa điều trị.</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-bs-toggle="modal" data-bs-target="#provisionModal"><i class="bi bi-file-earmark-arrow-down me-2"></i>Dự trù thuốc</button>
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#cabinetEntryModal"><i class="bi bi-plus-lg me-2"></i>Nhập tủ trực</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm tên thuốc, mã thuốc" data-module-search="wardMedsTable">
+    </div>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="wardMedsTable">
+      <thead>
+        <tr>
+          <th>Tên thuốc / Hàm lượng</th>
+          <th>Dạng bào chế</th>
+          <th>Đơn vị</th>
+          <th>Tồn kho tại khoa</th>
+          <th>Hạn dùng</th>
+          <th>Trạng thái</th>
+          <th class="text-end">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.medicineName} ${row.medicineCode}`.toLowerCase() %>">
+            <td>
+              <div class="module-primary">
+                <strong><%= row.medicineName %></strong>
+                <small><%= row.medicineCode %></small>
+              </div>
+            </td>
+            <td><%= row.dosageForm %></td>
+            <td><%= row.unit || 'Viên' %></td>
+            <td><strong class="<%= row.currentStock <= row.stockWarningLevel ? 'text-danger' : 'text-primary' %>"><%= row.currentStock %></strong></td>
+            <td>31/12/2026</td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-light" onclick="showHistoryModal('<%= row.medicineId %>', '<%= row.medicineName %>')">
+                <i class="bi bi-clock-history me-1"></i> Lịch sử xuất/nhập
+              </button>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- History Modal -->
+<div class="modal fade" id="medicineHistoryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Lịch sử xuất/nhập: <span id="historyMedicineName"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Ngày thực hiện</th>
+                <th>Loại giao dịch</th>
+                <th>Số lượng</th>
+                <th>Người thực hiện</th>
+                <th>Ghi chú</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <!-- Content loaded via JS -->
+            </tbody>
+          </table>
+        </div>
+        <div id="historyEmptyState" class="text-center py-4 d-none">
+          <i class="bi bi-info-circle fs-2 text-muted"></i>
+          <p class="mt-2">Chưa có lịch sử giao dịch nào cho thuốc này.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Provision Modal -->
+<div class="modal fade" id="provisionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Lập phiếu dự trù thuốc</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Chọn các loại thuốc cần dự trù cho tủ trực trong tuần tới.</p>
+        <div class="mb-3">
+          <label class="form-label">Khoa yêu cầu</label>
+          <input class="form-control" value="<%= currentUser.departmentName || 'Khoa Nội tổng hợp' %>" disabled>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Ghi chú</label>
+          <textarea class="form-control" rows="2" placeholder="Ví dụ: Dự trù bổ sung cho tuần 4 tháng 4"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+        <button type="button" class="btn btn-primary" onclick="bootstrap.Modal.getInstance(document.getElementById('provisionModal')).hide(); alert('Đã gửi yêu cầu dự trù')">Gửi dự trù</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cabinet Entry Modal -->
+<div class="modal fade" id="cabinetEntryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/nghiep-vu/quan-ly-thuoc-tai-khoa/transaction" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title">Nhập thuốc vào tủ trực</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Chọn thuốc</label>
+            <select class="form-select" name="medicineId" required>
+              <option value="" disabled selected>-- Chọn thuốc --</option>
+              <% rows.forEach(row => { %>
+                <option value="<%= row.medicineId %>"><%= row.medicineName %> (<%= row.medicineCode %>)</option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Loại giao dịch</label>
+            <select class="form-select" name="transactionType">
+              <option value="Nhập kho">Nhập kho</option>
+              <option value="Xuất kho">Xuất kho</option>
+              <option value="Điều chỉnh">Điều chỉnh</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Số lượng</label>
+            <input type="number" class="form-control" name="quantity" value="50" min="1" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ghi chú</label>
+            <textarea class="form-control" name="note" rows="2" placeholder="Lý do nhập/xuất..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button type="submit" class="btn btn-primary">Xác nhận</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showHistoryModal(medicineId, medicineName) {
+    document.getElementById('historyMedicineName').innerText = medicineName;
+    const tableBody = document.getElementById('historyTableBody');
+    const emptyState = document.getElementById('historyEmptyState');
+    
+    tableBody.innerHTML = '<tr><td colspan="5" class="text-center"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Đang tải...</td></tr>';
+    emptyState.classList.add('d-none');
+    
+    const modal = new bootstrap.Modal(document.getElementById('medicineHistoryModal'));
+    modal.show();
+
+    fetch(`/nghiep-vu/quan-ly-thuoc-tai-khoa/${medicineId}/history`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.length === 0) {
+          tableBody.innerHTML = '';
+          emptyState.classList.remove('d-none');
+          return;
+        }
+
+        tableBody.innerHTML = data.map(item => `
+          <tr>
+            <td>${new Date(item.transactionDate).toLocaleString('vi-VN')}</td>
+            <td>
+              <span class="badge ${item.transactionType === 'Nhập kho' ? 'bg-success' : (item.transactionType === 'Xuất kho' ? 'bg-danger' : 'bg-warning')}">
+                ${item.transactionType}
+              </span>
+            </td>
+            <td><strong>${item.quantity}</strong></td>
+            <td>${item.performedBy || 'Hệ thống'}</td>
+            <td><small>${item.note || '-'}</small></td>
+          </tr>
+        `).join('');
+      })
+      .catch(error => {
+        console.error('Error fetching history:', error);
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Không thể tải lịch sử. Vui lòng thử lại sau.</td></tr>';
+      });
+  }
+</script>

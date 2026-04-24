@@ -3,12 +3,12 @@
     <a href="/departments" class="btn btn-light action-icon"><i class="bi bi-arrow-left"></i></a>
     <div>
       <h2 class="mb-0">Khoa <%= department.departmentName %></h2>
-      <small class="text-muted"><%= department.departmentCode %> · <%= department.location %></small>
+      <small class="text-muted"><%= department.location %></small>
     </div>
   </div>
   <div class="module-actions">
     <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#roomModal">
-      <i class="bi bi-plus-circle me-2"></i>Thêm phòng mới
+      Thêm phòng mới
     </button>
   </div>
 </section>
@@ -95,7 +95,7 @@
             <table class="table app-table module-table">
               <thead>
                 <tr>
-                  <th>Mã phòng</th>
+                  <th></th>
                   <th>Tên phòng / Loại</th>
                   <th>Tầng</th>
                   <th>Công suất giường</th>
@@ -107,7 +107,7 @@
                    const percent = room.totalBeds ? Math.round(room.usedBeds / room.totalBeds * 100) : 0;
                 %>
                   <tr>
-                    <td><span class="module-code"><%= room.roomCode %></span></td>
+                    <td></td>
                     <td>
                       <div class="module-primary">
                         <strong><%= room.roomName || 'Phòng bệnh' %></strong>
@@ -150,14 +150,14 @@
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h6 class="mb-0 font-800">Danh sách tất cả giường</h6>
             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#bedModal">
-              <i class="bi bi-plus-lg me-1"></i>Thêm giường
+              Thêm giường
             </button>
           </div>
           <div class="table-responsive">
             <table class="table app-table module-table">
               <thead>
                 <tr>
-                  <th>Mã giường</th>
+                  <th></th>
                   <th>Phòng</th>
                   <th>Bệnh nhân hiện tại</th>
                   <th>Trạng thái</th>
@@ -167,7 +167,7 @@
               <tbody>
                 <% beds.forEach(bed => { %>
                   <tr>
-                    <td><span class="module-code"><%= bed.bedCode %></span></td>
+                    <td></td>
                     <td>
                       <div class="module-primary">
                         <strong><%= bed.roomCode %></strong>
@@ -225,13 +225,12 @@
                         <div class="doctor-avatar mini"><%= p.fullName.charAt(0) %></div>
                         <div>
                           <strong><%= p.fullName %></strong>
-                          <small><%= p.patientCode %></small>
                         </div>
                       </div>
                     </td>
                     <td class="text-wrap-cell" style="max-width: 250px;"><%= p.diagnosis %></td>
                     <td>
-                      <span class="patient-location"><i class="bi bi-hospital me-1"></i><%= p.roomCode %> / <%= p.bedCode %></span>
+                      <span class="patient-location"><i class="bi bi-hospital me-1"></i><%= p.roomName || 'Đang điều trị' %></span>
                     </td>
                     <td><%= format.date(p.admissionDate) %></td>
                     <td class="text-end">
@@ -314,7 +313,7 @@
               <label class="form-label">Phòng</label>
               <select name="roomId" class="form-select" required>
                 <% rooms.forEach(room => { %>
-                  <option value="<%= room.roomId %>"><%= room.roomCode %> - <%= room.roomName %> (<%= room.roomType %>)</option>
+                  <option value="<%= room.roomId %>"><%= room.roomName %> (<%= room.roomType %>)</option>
                 <% }) %>
               </select>
             </div>

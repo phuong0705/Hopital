@@ -1,0 +1,136 @@
+<section class="module-hero">
+  <div>
+    <h2>Chỉ định CĐHA / Thủ thuật</h2>
+    <p class="text-muted mb-0">Tập trung danh mục dịch vụ hình ảnh, thủ thuật và các chỉ định gần đây của bác sĩ.</p>
+  </div>
+  <div class="module-actions">
+    <a class="btn btn-light" href="/nghiep-vu/lap-phieu-kham?activeMenu=doctor-exam-ticket"><i class="bi bi-file-earmark-plus me-2"></i>Lập phiếu khám</a>
+    <a class="btn btn-primary" href="/labtests?activeMenu=doctor-lab-orders"><i class="bi bi-clipboard2-pulse me-2"></i>Mở danh sách chỉ định</a>
+  </div>
+</section>
+
+<section class="patient-action-grid compact mt-4">
+  <a class="patient-action-card" href="/medical-records?activeMenu=doctor-medical-records">
+    <i class="bi bi-journal-text"></i>
+    <strong><%= activeRecords.length %> HSBA đang điều trị</strong>
+    <span>Mở hồ sơ để ghi y lệnh và theo dõi chi tiết.</span>
+  </a>
+  <a class="patient-action-card" href="/nghiep-vu/tong-hop-ket-qua-xet-nghiem?activeMenu=doctor-diagnostic-results">
+    <i class="bi bi-clipboard2-data"></i>
+    <strong><%= orderRows.length %> chỉ định CĐHA gần đây</strong>
+    <span>Xem ngay các kết quả đã có hoặc đang chờ trả.</span>
+  </a>
+  <a class="patient-action-card" href="/discharges?activeMenu=doctor-discharge">
+    <i class="bi bi-box-arrow-right"></i>
+    <strong>Hồ sơ thủ thuật liên quan xuất viện</strong>
+    <span>Rà soát chỉ định trước khi hoàn tất hồ sơ ra viện.</span>
+  </a>
+</section>
+
+<section class="panel mt-4">
+  <div class="panel-header">
+    <div>
+      <h2>Dịch vụ có thể chỉ định</h2>
+      <p>Danh mục này lấy từ Service Catalog hiện có trong hệ thống.</p>
+    </div>
+  </div>
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="doctorImagingServicesTable">
+      <thead>
+        <tr>
+          <th>Dịch vụ</th>
+          <th>Nhóm</th>
+          <th>Khoa thực hiện</th>
+          <th>Đơn giá</th>
+          <th>BHYT</th>
+          <th>Thời gian trả</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% serviceRows.forEach(row => { %>
+          <tr>
+            <td>
+              <div class="module-primary">
+                <strong><%= row.serviceName %></strong>
+                <small><%= row.description || 'Chưa có mô tả chi tiết.' %></small>
+              </div>
+            </td>
+            <td><%= row.serviceGroup %></td>
+            <td><%= row.departmentName || '-' %></td>
+            <td><strong><%= Number(row.unitPrice || 0).toLocaleString('vi-VN') %> đ</strong></td>
+            <td><%= row.insuranceRate %>%</td>
+            <td><%= row.turnaroundTime || '-' %></td>
+          </tr>
+        <% }) %>
+        <% if (!serviceRows.length) { %>
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">Chưa có danh mục CĐHA / thủ thuật phù hợp trong Service Catalog.</td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="panel-header">
+    <div>
+      <h2>Hồ sơ đang phụ trách</h2>
+      <p>Chọn nhanh hồ sơ để ghi nhận chỉ định hoặc theo dõi sau thủ thuật.</p>
+    </div>
+  </div>
+  <div class="business-step-grid">
+    <% activeRecords.forEach(row => { %>
+      <a class="business-step-card" href="/medical-records/<%= row.recordId %>?activeMenu=doctor-medical-records">
+        <i class="bi bi-person-vcard"></i>
+        <strong><%= row.patientName %></strong>
+        <span><%= row.recordCode %> · <%= row.departmentName %></span>
+      </a>
+    <% }) %>
+    <% if (!activeRecords.length) { %>
+      <div class="empty-inline">
+        <i class="bi bi-journal-x"></i>
+        <strong>Không có HSBA đang điều trị</strong>
+        <span>Bác sĩ hiện chưa được gán hồ sơ phù hợp để chỉ định.</span>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="panel-header">
+    <div>
+      <h2>Chỉ định CĐHA gần đây</h2>
+      <p>Dữ liệu lấy từ bảng LabTests hiện có, lọc các test mang tính hình ảnh/can thiệp.</p>
+    </div>
+  </div>
+  <div class="module-table-wrap">
+    <table class="table app-table module-table">
+      <thead>
+        <tr>
+          <th>Bệnh nhân</th>
+          <th>Chỉ định</th>
+          <th>Thời gian</th>
+          <th>Trạng thái</th>
+          <th>Kết quả</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% orderRows.forEach(row => { %>
+          <tr>
+            <td><strong><%= row.patientName %></strong></td>
+            <td><%= row.testType %></td>
+            <td><%= format.datetime(row.orderedDate) %></td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td class="text-wrap-cell"><%= row.resultSummary || 'Chưa có kết quả' %></td>
+          </tr>
+        <% }) %>
+        <% if (!orderRows.length) { %>
+          <tr>
+            <td colspan="5" class="text-center py-4 text-muted">Chưa có chỉ định CĐHA / thủ thuật nào phù hợp.</td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>

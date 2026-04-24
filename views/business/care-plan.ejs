@@ -1,7 +1,6 @@
 <section class="module-hero">
   <div>
     <h2>Lập phác đồ điều trị nội trú</h2>
-    <p class="text-muted">Xây dựng kế hoạch điều trị chi tiết cho bệnh nhân đang lưu viện</p>
   </div>
   <div class="module-actions">
     <a href="/dashboard" class="btn btn-light"><i class="bi bi-grid me-2"></i>Tổng quan</a>
@@ -21,7 +20,7 @@
       <thead>
         <tr>
           <th>Bệnh nhân</th>
-          <th>Mã HSBA</th>
+          <th></th>
           <th>Chẩn đoán xác định</th>
           <th>Khoa điều trị</th>
           <th>Ngày nhập viện</th>
@@ -32,10 +31,9 @@
         <% rows.forEach(row => { %>
           <tr data-search="<%= `${row.patientName} ${row.recordCode}`.toLowerCase() %>">
             <td>
-              <strong><%= row.patientName %></strong><br>
-              <small class="text-muted"><%= row.patientCode %></small>
+              <strong><%= row.patientName %></strong>
             </td>
-            <td><span class="patient-code-pill"><%= row.recordCode %></span></td>
+            <td></td>
             <td class="text-wrap-cell"><%= row.diagnosis || 'Chưa cập nhật' %></td>
             <td><%= row.departmentName %></td>
             <td><%= format.date(row.createdAt) %></td>

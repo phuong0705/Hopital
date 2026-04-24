@@ -1,0 +1,103 @@
+<section class="module-hero">
+  <div>
+    <h2>Ghi chú điều dưỡng</h2>
+    <p class="text-muted mb-0">Theo dõi diễn biến chăm sóc và thực hiện các đầu việc hàng ngày.</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#noteModal"><i class="bi bi-pencil-square me-2"></i>Tạo ghi chú mới</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm bệnh nhân" data-module-search="notesTable">
+    </div>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="notesTable">
+      <thead>
+        <tr>
+          <th>Bệnh nhân</th>
+          <th>Vị trí</th>
+          <th>Nội dung ghi chú gần nhất</th>
+          <th>Thời gian</th>
+          <th>Người thực hiện</th>
+          <th class="text-end">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.fullName} ${row.patientCode}`.toLowerCase() %>">
+            <td>
+              <div class="module-primary">
+                <strong><%= row.fullName %></strong>
+                <small><%= row.patientCode %></small>
+              </div>
+            </td>
+            <td><%= row.roomCode || '-' %> / <%= row.bedCode || '-' %></td>
+            <td class="text-wrap-cell text-muted italic">Chưa có ghi chú trong ca hiện tại.</td>
+            <td>-</td>
+            <td>-</td>
+            <td class="text-end">
+              <% if (row.recordId) { %>
+                <a class="btn btn-sm btn-light" href="/medical-records/<%= row.recordId %>">Xem sổ y lệnh</a>
+              <% } else { %>
+                <button class="btn btn-sm btn-light disabled">Xem sổ y lệnh</button>
+              <% } %>
+              <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#noteModal" data-admission-id="<%= row.admissionId %>">Viết chú</button>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="modal fade" id="noteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/nghiep-vu/ghi-chu-dieu-duong" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title">Ghi chú diễn biến chăm sóc</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Bệnh nhân</label>
+            <select name="admissionId" class="form-select" id="noteAdmissionSelect" required>
+              <% rows.forEach(row => { %>
+                <option value="<%= row.admissionId %>"><%= row.fullName %> (<%= row.patientCode %>)</option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Nội dung theo dõi / Chăm sóc</label>
+            <textarea name="note" class="form-control" rows="4" placeholder="Nhập diễn biến sức khỏe, thực hiện y lệnh, phản ứng thuốc..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu ghi chú</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const noteModal = document.getElementById('noteModal');
+    if (noteModal) {
+      noteModal.addEventListener('show.bs.modal', (event) => {
+        const button = event.relatedTarget;
+        const admissionId = button.getAttribute('data-admission-id');
+        if (admissionId) {
+          document.getElementById('noteAdmissionSelect').value = admissionId;
+        }
+      });
+    }
+  });
+</script>

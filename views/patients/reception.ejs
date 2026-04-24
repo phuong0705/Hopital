@@ -15,10 +15,7 @@
       </div>
 
       <div class="form-grid">
-        <div>
-          <label class="form-label">Mã bệnh nhân</label>
-          <input name="patientCode" class="form-control" value="BN<%= Date.now().toString().slice(-6) %>" required>
-        </div>
+        <input type="hidden" name="patientCode" value="BN<%= Date.now().toString().slice(-6) %>">
         <div class="span-2">
           <label class="form-label">Họ tên</label>
           <input name="fullName" class="form-control" placeholder="Nguyễn Văn A" required>
@@ -48,7 +45,7 @@
 
     <section class="panel">
       <div class="section-heading">
-        <span><i class="bi bi-shield-plus"></i></span>
+        <span><i class="bi bi-shield-check"></i></span>
         <div>
           <h3>Bảo hiểm & liên hệ</h3>
         </div>

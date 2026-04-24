@@ -1,33 +1,52 @@
 <section class="module-hero">
   <div>
     <h2>Báo cáo xuất viện tổng hợp</h2>
-    <p class="text-muted">Danh sách lưu trữ các hồ sơ bệnh nhân đã hoàn tất đợt điều trị nội trú</p>
   </div>
   <div class="module-actions">
-    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In báo cáo</button>
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <button class="btn btn-light" type="button" data-export-table="dischargesTable" data-filename="bao-cao-xuat-vien.csv">
+      <i class="bi bi-file-earmark-spreadsheet me-2"></i>Excel
+    </button>
   </div>
 </section>
 
 <section class="panel mt-4">
+  <form class="patient-filter-form compact mb-4" method="get">
+    <div class="d-flex align-items-center gap-2">
+      <label class="text-nowrap small fw-bold">Từ ngày:</label>
+      <input type="date" name="startDate" class="form-control" value="<%= filters.startDate || '' %>">
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <label class="text-nowrap small fw-bold">Đến ngày:</label>
+      <input type="date" name="endDate" class="form-control" value="<%= filters.endDate || '' %>">
+    </div>
+    <button class="btn btn-dark" type="submit"><i class="bi bi-funnel me-2"></i>Lọc</button>
+    <% if (filters.startDate || filters.endDate) { %>
+      <a class="btn btn-light" href="/nghiep-vu/bao-cao-xuat-vien"><i class="bi bi-x-circle me-2"></i>Bỏ lọc</a>
+    <% } %>
+  </form>
+
   <div class="table-responsive">
-    <table class="table app-table">
+    <table class="table app-table" id="dischargesTable">
       <thead>
         <tr>
           <th>Bệnh nhân</th>
-          <th>Mã BN</th>
           <th>Ngày xuất viện</th>
           <th>Điều kiện ra viện</th>
           <th>Thanh toán</th>
+          <th class="no-export"></th>
         </tr>
       </thead>
       <tbody>
         <% rows.forEach(row => { %>
           <tr>
             <td><strong><%= row.patientName %></strong></td>
-            <td><span class="patient-code-pill"><%= row.patientCode %></span></td>
             <td><%= format.date(row.dischargeDate) %></td>
             <td class="text-wrap-cell"><%= row.dischargeCondition %></td>
             <td><%- include('../partials/badge', { text: row.paymentStatus }) %></td>
+            <td class="no-export text-end">
+              <a href="/medical-records/<%= row.recordId %>" class="btn btn-sm btn-light">Xem HSBA</a>
+            </td>
           </tr>
         <% }) %>
         <% if (!rows.length) { %>

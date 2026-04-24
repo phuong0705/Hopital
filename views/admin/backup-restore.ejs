@@ -1,0 +1,74 @@
+<section class="module-hero">
+  <div>
+    <h2>Sao lưu & Phục hồi dữ liệu</h2>
+    <p class="text-muted mb-0">Kiểm kê dữ liệu hiện tại trước khi chạy backup/restore ở tầng SQL Server.</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In kiểm kê</button>
+    <a class="btn btn-primary" href="/admin/audit-log"><i class="bi bi-file-earmark me-2"></i>Audit log</a>
+  </div>
+</section>
+
+<section class="patient-action-grid compact mt-4">
+  <div class="patient-action-card">
+    <i class="bi bi-database"></i>
+    <strong><%= realtime.databaseName || 'SQL Server' %></strong>
+    <span>Database đang kết nối.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-people"></i>
+    <strong><%= counts.users || 0 %> users</strong>
+    <span>Tài khoản sẽ nằm trong phạm vi sao lưu.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-journal-medical"></i>
+    <strong><%= counts.medicalRecords || 0 %> HSBA</strong>
+    <span>Hồ sơ bệnh án cần bảo toàn.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-clock-history"></i>
+    <strong><%= realtime.databaseTime ? format.datetime(realtime.databaseTime) : '-' %></strong>
+    <span>Thời gian máy chủ DB.</span>
+  </div>
+</section>
+
+<section class="row g-4 mt-1">
+  <div class="col-lg-6">
+    <section class="panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2>Phạm vi sao lưu</h2>
+          <p>Các bảng nghiệp vụ chính đang có dữ liệu.</p>
+        </div>
+      </div>
+      <div class="module-table-wrap">
+        <table class="table app-table module-table">
+          <tbody>
+            <% Object.entries(counts).forEach(([key, value]) => { %>
+              <tr>
+                <td><strong><%= key %></strong></td>
+                <td><%= value %> bản ghi</td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  <div class="col-lg-6">
+    <section class="panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2>Quy trình phục hồi</h2>
+          <p>Các bước vận hành thật cần thực hiện ngoài giờ hoặc khi hệ thống đã dừng nhận giao dịch.</p>
+        </div>
+      </div>
+      <div class="checklist">
+        <div class="check-item"><i class="bi bi-check2-circle"></i><span>Khóa đăng nhập người dùng trước khi phục hồi.</span></div>
+        <div class="check-item"><i class="bi bi-check2-circle"></i><span>Xác nhận bản backup cùng phiên bản schema.</span></div>
+        <div class="check-item"><i class="bi bi-check2-circle"></i><span>Kiểm tra lại số lượng Users, Admissions, MedicalRecords sau phục hồi.</span></div>
+        <div class="check-item"><i class="bi bi-check2-circle"></i><span>Mở lại hệ thống và theo dõi audit log trong 30 phút đầu.</span></div>
+      </div>
+    </section>
+  </div>
+</section>

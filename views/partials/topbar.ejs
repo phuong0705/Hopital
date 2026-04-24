@@ -5,20 +5,26 @@
     username: 'guest',
     roleCode: ''
   };
-  const canQuickReception = ['ADMIN', 'RECEPTIONIST'].includes(user.roleCode);
+  const canQuickReception = ['ADMIN', 'DOCTOR', 'RECEPTIONIST'].includes(user.roleCode);
   const isPatient = user.roleCode === 'PATIENT';
 %>
 <header class="topbar">
-  <div class="topbar-actions">
+  <div class="topbar-actions <%= isPatient ? 'justify-content-end' : '' %>">
     <% if (!isPatient) { %>
       <form class="search-box d-none d-xl-flex" action="/patients" method="get">
         <i class="bi bi-search"></i>
         <input name="keyword" type="search" placeholder="Tìm bệnh nhân, CCCD, mã hồ sơ">
       </form>
     <% } %>
-    <button class="icon-btn" data-bs-toggle="tooltip" data-bs-title="Thông báo">
+    <button class="icon-btn position-relative" data-bs-toggle="tooltip" data-bs-title="Thông báo" onclick="window.location.href='/patients/me/notifications'">
       <i class="bi bi-bell-fill"></i>
-      <span class="notification-dot"></span>
+      <% if (locals.unreadCount > 0) { %>
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 10px; padding: 4px 6px;">
+          <%= unreadCount %>
+        </span>
+      <% } else { %>
+        <span class="notification-dot"></span>
+      <% } %>
     </button>
     <% if (canQuickReception) { %>
       <a class="btn btn-primary btn-soft" href="/patients/reception">

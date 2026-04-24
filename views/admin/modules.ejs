@@ -1,0 +1,77 @@
+<section class="module-hero">
+  <div>
+    <h2>Quản lý Module</h2>
+    <p class="text-muted mb-0">Registry module lấy trực tiếp từ cấu hình nghiệp vụ đang được router sử dụng.</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <a class="btn btn-primary" href="/admin/roles-permissions"><i class="bi bi-shield-check me-2"></i>Quyền truy cập</a>
+  </div>
+</section>
+
+<section class="patient-action-grid compact mt-4">
+  <div class="patient-action-card">
+    <i class="bi bi-grid"></i>
+    <strong><%= modules.length %> module đang khai báo</strong>
+    <span>Được nạp từ config/business-processes.js.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-shield-lock"></i>
+    <strong><%= roles.length %> role kiểm soát</strong>
+    <span>Đối chiếu với bảng Roles.</span>
+  </div>
+  <div class="patient-action-card">
+    <i class="bi bi-database"></i>
+    <strong><%= counts.medicalRecords || 0 %> HSBA</strong>
+    <span>Dữ liệu vận hành đang kết nối.</span>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm module, route, nhóm quyền" data-module-search="adminModulesTable">
+    </div>
+    <select class="form-select" data-module-filter="adminModulesTable" data-filter-key="group">
+      <option value="">Tất cả nhóm</option>
+      <% [...new Set(modules.map(item => item.groupTitle))].forEach(group => { %>
+        <option><%= group %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="adminModulesTable">
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>Nhóm</th>
+          <th>Route</th>
+          <th>Role được phép</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% modules.forEach(item => { %>
+          <tr data-search="<%= `${item.title} ${item.key} ${item.href} ${item.groupTitle} ${item.roles.join(' ')}`.toLowerCase() %>" data-group="<%= item.groupTitle %>">
+            <td>
+              <div class="module-primary">
+                <strong><%= item.title %></strong>
+                <small><%= item.key %></small>
+              </div>
+            </td>
+            <td><%= item.groupCode %>. <%= item.groupTitle %></td>
+            <td><code><%= item.href %></code></td>
+            <td><%= item.roles.join(', ') %></td>
+            <td><span class="status-badge status-success">Đang dùng</span></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <div class="empty-inline d-none" data-empty-for="adminModulesTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy module phù hợp</strong>
+  </div>
+</section>

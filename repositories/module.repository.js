@@ -79,7 +79,7 @@ async function getDepartmentsOverview() {
 async function getDepartmentDetail(departmentId) {
   const rows = await query(`
     SELECT d.department_id AS departmentId, d.department_code AS departmentCode, d.department_name AS departmentName,
-      d.head_doctor AS headDoctor, d.phone, d.location,
+      d.head_doctor AS headDoctor, d.phone, d.location, d.status,
       (SELECT COUNT(*) FROM Rooms WHERE department_id = d.department_id) AS roomCount,
       (SELECT COUNT(*) FROM Beds b INNER JOIN Rooms r ON r.room_id = b.room_id WHERE r.department_id = d.department_id) AS totalBeds,
       (SELECT COUNT(*) FROM Beds b INNER JOIN Rooms r ON r.room_id = b.room_id WHERE r.department_id = d.department_id AND b.status = N'Đang sử dụng') AS usedBeds,
@@ -88,6 +88,47 @@ async function getDepartmentDetail(departmentId) {
     WHERE d.department_id = @departmentId
   `, { departmentId: Number(departmentId) });
   return rows[0];
+}
+
+async function createDepartment(data) {
+  await execute(`
+    INSERT INTO Departments (department_code, department_name, head_doctor, phone, location, status)
+    VALUES (@departmentCode, @departmentName, @headDoctor, @phone, @location, @status)
+  `, {
+    departmentCode: data.departmentCode,
+    departmentName: data.departmentName,
+    headDoctor: data.headDoctor || '',
+    phone: data.phone || '',
+    location: data.location || '',
+    status: data.status || 'Hoạt động'
+  });
+}
+
+async function updateDepartment(departmentId, data) {
+  await execute(`
+    UPDATE Departments
+    SET department_code = @departmentCode,
+        department_name = @departmentName,
+        head_doctor = @headDoctor,
+        phone = @phone,
+        location = @location,
+        status = @status
+    WHERE department_id = @departmentId
+  `, {
+    departmentId: Number(departmentId),
+    departmentCode: data.departmentCode,
+    departmentName: data.departmentName,
+    headDoctor: data.headDoctor,
+    phone: data.phone,
+    location: data.location,
+    status: data.status
+  });
+}
+
+async function deleteDepartment(departmentId) {
+  // Should check for dependencies (rooms, doctors) before deleting, 
+  // but for now I'll just do a simple delete.
+  await execute(`DELETE FROM Departments WHERE department_id = @departmentId`, { departmentId: Number(departmentId) });
 }
 
 async function getDepartmentRooms(departmentId) {
@@ -205,7 +246,7 @@ async function deleteBed(bedId) {
 async function getBeds() {
   return query(`
     SELECT b.bed_id AS bedId, b.bed_code AS bedCode, r.room_code AS roomCode, d.department_name AS departmentName,
-      b.status, p.full_name AS patientName, a.admission_date AS startDate
+      r.room_type AS roomType, b.status, p.full_name AS patientName, a.admission_date AS startDate
     FROM Beds b
     INNER JOIN Rooms r ON r.room_id = b.room_id
     INNER JOIN Departments d ON d.department_id = r.department_id
@@ -276,13 +317,65 @@ async function transferBed(data) {
 async function getDoctors() {
   return query(`
     SELECT doc.doctor_id AS doctorId, doc.doctor_code AS doctorCode, doc.full_name AS fullName,
-      doc.specialty, doc.phone, doc.email, doc.shift_name AS shiftName,
+      doc.specialty, doc.phone, doc.email, doc.shift_name AS shiftName, doc.department_id AS departmentId,
+      dept.department_name AS departmentName, doc.status,
       COUNT(CASE WHEN a.status = N'Đang điều trị' THEN 1 END) AS patientCount
     FROM Doctors doc
+    LEFT JOIN Departments dept ON dept.department_id = doc.department_id
     LEFT JOIN Admissions a ON a.doctor_id = doc.doctor_id
-    GROUP BY doc.doctor_id, doc.doctor_code, doc.full_name, doc.specialty, doc.phone, doc.email, doc.shift_name
+    GROUP BY doc.doctor_id, doc.doctor_code, doc.full_name, doc.specialty, doc.phone, doc.email, doc.shift_name, doc.department_id, dept.department_name, doc.status
     ORDER BY doc.full_name
   `);
+}
+
+async function createDoctor(data) {
+  await execute(`
+    INSERT INTO Doctors (department_id, doctor_code, full_name, specialty, phone, email, shift_name, status)
+    VALUES (@departmentId, @doctorCode, @fullName, @specialty, @phone, @email, @shiftName, @status)
+  `, {
+    departmentId: Number(data.departmentId),
+    doctorCode: data.doctorCode,
+    fullName: data.fullName,
+    specialty: data.specialty,
+    phone: data.phone || '',
+    email: data.email || '',
+    shiftName: data.shiftName || '',
+    status: data.status || 'Đang làm việc'
+  });
+}
+
+async function updateDoctor(doctorId, data) {
+  await execute(`
+    UPDATE Doctors
+    SET department_id = @departmentId,
+        doctor_code = @doctorCode,
+        full_name = @fullName,
+        specialty = @specialty,
+        phone = @phone,
+        email = @email,
+        shift_name = @shiftName,
+        status = @status
+    WHERE doctor_id = @doctorId
+  `, {
+    doctorId: Number(doctorId),
+    departmentId: Number(data.departmentId),
+    doctorCode: data.doctorCode,
+    fullName: data.fullName,
+    specialty: data.specialty,
+    phone: data.phone,
+    email: data.email,
+    shiftName: data.shiftName,
+    status: data.status
+  });
+}
+
+async function deleteDoctor(doctorId) {
+  // Check for dependencies (admissions)
+  const admissions = await query(`SELECT COUNT(*) as count FROM Admissions WHERE doctor_id = @doctorId`, { doctorId: Number(doctorId) });
+  if (admissions[0].count > 0) {
+    throw new Error('Không thể xóa bác sĩ đang có hồ sơ điều trị.');
+  }
+  await execute(`DELETE FROM Doctors WHERE doctor_id = @doctorId`, { doctorId: Number(doctorId) });
 }
 
 async function getTreatmentDoctorsOverview() {
@@ -313,11 +406,12 @@ async function getTreatmentDoctorsOverview() {
 
 async function getDoctorByUser(fullName) {
   const rows = await query(`
-    SELECT TOP 1 doctor_id AS doctorId, doctor_code AS doctorCode, full_name AS fullName,
-      specialty, shift_name AS shiftName
-    FROM Doctors
-    WHERE full_name = @fullName
-    ORDER BY doctor_id
+    SELECT TOP 1 doc.doctor_id AS doctorId, doc.doctor_code AS doctorCode, doc.full_name AS fullName,
+      doc.specialty, doc.shift_name AS shiftName, doc.department_id AS departmentId, dept.department_name AS departmentName
+    FROM Doctors doc
+    LEFT JOIN Departments dept ON dept.department_id = doc.department_id
+    WHERE doc.full_name = @fullName
+    ORDER BY doc.doctor_id
   `, { fullName });
 
   return rows[0];
@@ -340,6 +434,7 @@ async function getTreatments(doctorId) {
     );
 
     SELECT ts.schedule_id AS scheduleId, ts.scheduled_time AS scheduledTime,
+      mr.record_id AS recordId,
       p.patient_code AS patientCode, p.full_name AS patientName, p.gender,
       a.priority_level AS priorityLevel, a.initial_diagnosis AS diagnosis,
       d.department_name AS departmentName, r.room_code AS roomCode, b.bed_code AS bedCode,
@@ -491,7 +586,8 @@ async function getLabTests(doctorId = null) {
   const whereDoctor = doctorId ? 'WHERE lt.doctor_id = @doctorId' : '';
 
   return query(`
-    SELECT lt.test_code AS testCode, p.full_name AS patientName, lt.test_type AS testType,
+    SELECT lt.test_code AS testCode, mr.record_id AS recordId, p.patient_code AS patientCode,
+      p.full_name AS patientName, lt.test_type AS testType,
       lt.ordered_date AS orderedDate, lt.status, lt.result_summary AS resultSummary,
       doc.full_name AS doctorName
     FROM LabTests lt
@@ -546,8 +642,18 @@ async function createBilling(data) {
   });
 }
 
-async function getDischarges(doctorId = null) {
-  const whereDoctor = doctorId ? 'WHERE a.doctor_id = @doctorId' : '';
+async function getDischarges(doctorId = null, filters = {}) {
+  let whereClause = doctorId ? 'WHERE a.doctor_id = @doctorId' : 'WHERE 1=1';
+  const params = doctorId ? { doctorId: Number(doctorId) } : {};
+
+  if (filters.startDate) {
+    whereClause += " AND d.discharge_date >= @startDate";
+    params.startDate = filters.startDate;
+  }
+  if (filters.endDate) {
+    whereClause += " AND d.discharge_date <= @endDate";
+    params.endDate = filters.endDate + ' 23:59:59';
+  }
 
   return query(`
     SELECT d.discharge_id AS dischargeId, p.patient_code AS patientCode, p.full_name AS patientName, 
@@ -557,9 +663,9 @@ async function getDischarges(doctorId = null) {
     FROM Discharges d
     INNER JOIN Admissions a ON a.admission_id = d.admission_id
     INNER JOIN Patients p ON p.patient_id = a.patient_id
-    ${whereDoctor}
+    ${whereClause}
     ORDER BY d.discharge_date DESC
-  `, doctorId ? { doctorId: Number(doctorId) } : {});
+  `, params);
 }
 
 async function createDischarge(data, doctorId = null) {
@@ -629,7 +735,9 @@ async function getBHYTList() {
   `);
 }
 
-async function getLengthOfStay() {
+async function getLengthOfStay(doctorId = null) {
+  const whereDoctor = doctorId ? 'AND a.doctor_id = @doctorId' : '';
+
   return query(`
     SELECT p.patient_code AS patientCode, p.full_name AS patientName,
       a.admission_date AS admissionDate, d.department_name AS departmentName,
@@ -642,8 +750,9 @@ async function getLengthOfStay() {
     LEFT JOIN Rooms r ON r.room_id = a.room_id
     LEFT JOIN Beds b ON b.bed_id = a.bed_id
     WHERE a.status NOT IN (N'Đã xuất viện', N'Đã hủy')
+    ${whereDoctor}
     ORDER BY daysStayed DESC
-  `);
+  `, doctorId ? { doctorId: Number(doctorId) } : {});
 }
 
 async function updateDischargePayment(dischargeId, paymentStatus) {
@@ -652,6 +761,32 @@ async function updateDischargePayment(dischargeId, paymentStatus) {
     SET payment_status = @paymentStatus
     WHERE discharge_id = @dischargeId
   `, { dischargeId: Number(dischargeId), paymentStatus });
+}
+
+async function updateNurseVitals(admissionId, vitals) {
+  return execute(`
+    UPDATE MedicalRecords
+    SET vital_signs = @vitals,
+        updated_at = SYSDATETIME()
+    WHERE admission_id = @admissionId
+  `, { admissionId: Number(admissionId), vitals });
+}
+
+async function updateNurseNotes(admissionId, notes) {
+  return execute(`
+    UPDATE MedicalRecords
+    SET doctor_notes = CONCAT(ISNULL(doctor_notes, ''), CHAR(13), CHAR(10), @notes),
+        updated_at = SYSDATETIME()
+    WHERE admission_id = @admissionId
+  `, { admissionId: Number(admissionId), notes: `${new Date().toLocaleString()}: ${notes}` });
+}
+
+async function updateBedStatus(bedId, status) {
+  return execute(`
+    UPDATE Beds
+    SET status = @status
+    WHERE bed_id = @bedId
+  `, { bedId: Number(bedId), status });
 }
 
 async function getDoctorDuties() {
@@ -733,14 +868,29 @@ async function getRevenueStats() {
   `);
 }
 
-async function getVisitStats() {
+async function getVisitStats(filters = {}) {
+  let whereClause = "WHERE admission_date >= DATEADD(DAY, -30, GETDATE())";
+  const params = {};
+
+  if (filters.startDate || filters.endDate) {
+    whereClause = "WHERE 1=1";
+    if (filters.startDate) {
+      whereClause += " AND admission_date >= @startDate";
+      params.startDate = filters.startDate;
+    }
+    if (filters.endDate) {
+      whereClause += " AND admission_date <= @endDate";
+      params.endDate = filters.endDate + ' 23:59:59';
+    }
+  }
+
   return query(`
     SELECT CAST(admission_date AS date) AS date, COUNT(*) AS visitCount
     FROM Admissions
-    WHERE admission_date >= DATEADD(DAY, -30, GETDATE())
+    ${whereClause}
     GROUP BY CAST(admission_date AS date)
     ORDER BY date DESC
-  `);
+  `, params);
 }
 
 async function getMedicineUsageStats() {
@@ -790,6 +940,9 @@ module.exports = {
   getBHYTList,
   getLengthOfStay,
   updateDischargePayment,
+  updateNurseVitals,
+  updateNurseNotes,
+  updateBedStatus,
   getDoctorDuties,
   getStaffPerformance,
   updateDoctorDuty,

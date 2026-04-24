@@ -1,6 +1,5 @@
 <section class="module-hero business-hero">
   <div>
-    <span class="module-code"><%= group.code %>. <%= group.title %></span>
     <h1><%= item.title %></h1>
   </div>
   <div class="module-actions">
@@ -17,7 +16,6 @@
       <i class="bi <%= item.icon %>"></i>
     </div>
     <div>
-      <span class="business-step"><%= item.code %></span>
       <h2><%= item.title %></h2>
       <p>
         Nghiệp vụ này thuộc nhóm <strong><%= group.title %></strong>. Trang được chuẩn hóa để bổ sung xử lý chi tiết,
@@ -36,7 +34,6 @@
     <div class="business-step-grid">
       <% relatedItems.forEach(related => { %>
         <a class="business-step-card" href="<%= related.href %>">
-          <span><%= related.code %></span>
           <i class="bi <%= related.icon %>"></i>
           <strong><%= related.title %></strong>
         </a>

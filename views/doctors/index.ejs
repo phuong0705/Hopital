@@ -3,9 +3,15 @@
   const shifts = [...new Set(rows.map(item => item.shiftName).filter(Boolean))];
 %>
 
-<section class="staff-hero">
+<section class="module-hero">
   <div>
-    <h2>Nhân sự y tế</h2>
+    <h2>Danh mục bác sĩ</h2>
+    <p class="text-muted mb-0">Quản lý danh sách bác sĩ, chuyên khoa và ca trực toàn viện.</p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createDoctorModal">
+      <i class="bi bi-person-plus me-2"></i>Thêm bác sĩ
+    </button>
   </div>
 </section>
 
@@ -39,29 +45,46 @@
           <div class="doctor-avatar"><%= row.fullName.charAt(0) %></div>
           <div>
             <h3><%= row.fullName %></h3>
-            <p><%= row.doctorCode %> · <%= row.specialty %></p>
+            <p><%= row.specialty %></p>
             <div class="doctor-inline-tags">
               <span><i class="bi bi-people"></i><%= row.patientCount %> bệnh nhân</span>
+              <span class="ms-2"><i class="bi bi-hospital"></i><%= row.departmentName %></span>
             </div>
           </div>
-          <span class="status-badge status-info"><%= row.shiftName %></span>
+          <div class="ms-auto d-flex flex-column align-items-end">
+            <span class="status-badge status-info mb-1"><%= row.shiftName %></span>
+            <%- include('../partials/badge', { text: row.status }) %>
+          </div>
         </div>
 
         <div class="doctor-meta-grid">
           <div>
+            <small>Mã BS</small>
+            <strong><%= row.doctorCode %></strong>
+          </div>
+          <div>
             <small>SĐT</small>
             <strong><%= row.phone %></strong>
           </div>
-          <div>
+          <div class="col-span-2">
             <small>Email</small>
             <strong><%= row.email %></strong>
           </div>
         </div>
 
         <div class="doctor-actions">
-          <a class="btn btn-sm btn-light icon-action" href="/patients?doctorId=<%= row.doctorId %>" data-bs-toggle="tooltip" data-bs-title="Bệnh nhân phụ trách" aria-label="Bệnh nhân phụ trách"><i class="bi bi-people"></i></a>
-          <a class="btn btn-sm btn-light icon-action" href="tel:<%= row.phone %>" data-bs-toggle="tooltip" data-bs-title="Gọi điện" aria-label="Gọi điện"><i class="bi bi-telephone"></i></a>
-          <a class="btn btn-sm btn-primary icon-action" href="mailto:<%= row.email %>" data-bs-toggle="tooltip" data-bs-title="Gửi email" aria-label="Gửi email"><i class="bi bi-envelope"></i></a>
+          <button class="btn btn-sm btn-light icon-action" 
+            data-bs-toggle="modal" 
+            data-bs-target="#editDoctorModal"
+            data-doctor='<%= JSON.stringify(row) %>'>
+            <i class="bi bi-pencil"></i>
+          </button>
+          <form action="/doctors/<%= row.doctorId %>/delete" method="post" class="d-inline" onsubmit="return confirm('Xóa bác sĩ này?')">
+            <button class="btn btn-sm btn-light text-danger icon-action" <%= row.patientCount > 0 ? 'disabled' : '' %>>
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+          <a class="btn btn-sm btn-light icon-action ms-auto" href="/patients?doctorId=<%= row.doctorId %>" data-bs-toggle="tooltip" data-bs-title="Bệnh nhân phụ trách"><i class="bi bi-people"></i></a>
         </div>
       </article>
     <% }) %>
@@ -72,3 +95,192 @@
     <strong>Không tìm thấy nhân sự phù hợp</strong>
   </div>
 </section>
+
+<!-- Modal Tạo mới -->
+<div class="modal fade" id="createDoctorModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/doctors" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Thêm bác sĩ mới</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Mã bác sĩ</label>
+              <input type="text" name="doctorCode" class="form-control" required placeholder="BS001">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Họ và tên</label>
+              <input type="text" name="fullName" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Chuyên khoa</label>
+              <input type="text" name="specialty" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Khoa công tác</label>
+              <select name="departmentId" class="form-select" required>
+                <% departments.forEach(dept => { %>
+                  <option value="<%= dept.departmentId %>"><%= dept.departmentName %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Số điện thoại</label>
+              <input type="text" name="phone" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Ca trực</label>
+              <select name="shiftName" class="form-select">
+                <option>Ca sáng</option>
+                <option>Ca chiều</option>
+                <option>Ca đêm</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Trạng thái</label>
+              <select name="status" class="form-select">
+                <option>Đang làm việc</option>
+                <option>Nghỉ phép</option>
+                <option>Đã nghỉ việc</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button type="submit" class="btn btn-primary">Lưu bác sĩ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Chỉnh sửa -->
+<div class="modal fade" id="editDoctorModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form id="editDoctorForm" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Chỉnh sửa thông tin bác sĩ</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Mã bác sĩ</label>
+              <input type="text" name="doctorCode" id="edit_docCode" class="form-control" required>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Họ và tên</label>
+              <input type="text" name="fullName" id="edit_docName" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Chuyên khoa</label>
+              <input type="text" name="specialty" id="edit_specialty" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Khoa công tác</label>
+              <select name="departmentId" id="edit_departmentId" class="form-select" required>
+                <% departments.forEach(dept => { %>
+                  <option value="<%= dept.departmentId %>"><%= dept.departmentName %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Số điện thoại</label>
+              <input type="text" name="phone" id="edit_docPhone" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" id="edit_docEmail" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Ca trực</label>
+              <select name="shiftName" id="edit_shiftName" class="form-select">
+                <option>Ca sáng</option>
+                <option>Ca chiều</option>
+                <option>Ca đêm</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Trạng thái</label>
+              <select name="status" id="edit_docStatus" class="form-select">
+                <option>Đang làm việc</option>
+                <option>Nghỉ phép</option>
+                <option>Đã nghỉ việc</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+          <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('doctorSearch');
+    const specialtyFilter = document.getElementById('specialtyFilter');
+    const shiftFilter = document.getElementById('shiftFilter');
+    const doctorCards = document.querySelectorAll('.doctor-card');
+    const emptyState = document.getElementById('doctorEmptyState');
+
+    function filterDoctors() {
+      const searchTerm = searchInput.value.toLowerCase();
+      const specialty = specialtyFilter.value;
+      const shift = shiftFilter.value;
+      let visibleCount = 0;
+
+      doctorCards.forEach(card => {
+        const matchesSearch = card.getAttribute('data-search').includes(searchTerm);
+        const matchesSpecialty = !specialty || card.getAttribute('data-specialty') === specialty;
+        const matchesShift = !shift || card.getAttribute('data-shift') === shift;
+
+        if (matchesSearch && matchesSpecialty && matchesShift) {
+          card.classList.remove('d-none');
+          visibleCount++;
+        } else {
+          card.classList.add('d-none');
+        }
+      });
+
+      emptyState.classList.toggle('d-none', visibleCount > 0);
+    }
+
+    searchInput.addEventListener('input', filterDoctors);
+    specialtyFilter.addEventListener('change', filterDoctors);
+    shiftFilter.addEventListener('change', filterDoctors);
+
+    // Edit Modal logic
+    const editModal = document.getElementById('editDoctorModal');
+    if (editModal) {
+      editModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const doctor = JSON.parse(button.getAttribute('data-doctor'));
+        
+        const form = document.getElementById('editDoctorForm');
+        form.action = `/doctors/${doctor.doctorId}/update`;
+        
+        document.getElementById('edit_docCode').value = doctor.doctorCode;
+        document.getElementById('edit_docName').value = doctor.fullName;
+        document.getElementById('edit_specialty').value = doctor.specialty;
+        document.getElementById('edit_departmentId').value = doctor.departmentId;
+        document.getElementById('edit_docPhone').value = doctor.phone || '';
+        document.getElementById('edit_docEmail').value = doctor.email || '';
+        document.getElementById('edit_shiftName').value = doctor.shiftName || 'Ca sáng';
+        document.getElementById('edit_docStatus').value = doctor.status || 'Đang làm việc';
+      });
+    }
+  });
+</script>

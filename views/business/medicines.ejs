@@ -1,6 +1,5 @@
 <section class="module-hero">
   <div>
-    <span class="module-code">1.4 Danh mục thuốc</span>
     <h2>Danh mục thuốc</h2>
   </div>
   <div class="module-actions">
@@ -8,9 +7,8 @@
     <button class="btn btn-light" type="button" data-export-table="medicinesTable" data-filename="danh-muc-thuoc.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
     <% if (['ADMIN', 'DOCTOR'].includes(currentUser.roleCode)) { %>
       <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#medicineModal">
-        <i class="bi bi-plus-lg me-2"></i>Thêm thuốc
-      </button>
-    <% } %>
+        Thêm thuốc
+      </button>    <% } %>
   </div>
 </section>
 
@@ -37,7 +35,7 @@
     <table class="table app-table module-table" id="medicinesTable">
       <thead>
         <tr>
-          <th>Mã thuốc</th>
+          <th></th>
           <th>Thuốc</th>
           <th>Nhóm</th>
           <th>Dạng / hàm lượng</th>
@@ -56,7 +54,7 @@
             data-search="<%= `${row.medicineCode} ${row.medicineName} ${row.activeIngredient || ''} ${row.medicineGroup} ${row.usageNote || ''}`.toLowerCase() %>"
             data-group="<%= row.medicineGroup %>"
             data-status="<%= row.status %>">
-            <td><span class="patient-code-pill"><%= row.medicineCode %></span></td>
+            <td></td>
             <td>
               <div class="module-primary">
                 <strong><%= row.medicineName %></strong>
@@ -100,7 +98,7 @@
       <div class="modal-content app-modal">
         <div class="modal-header">
           <div>
-            <span class="module-code"><%= row.medicineCode %> · <%= row.medicineGroup %></span>
+            <span class="module-code"><%= row.medicineGroup %></span>
             <h5 class="modal-title"><%= row.medicineName %></h5>
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>

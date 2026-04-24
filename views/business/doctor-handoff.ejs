@@ -1,0 +1,263 @@
+<section class="module-hero">
+  <div>
+    <h2>Giao ban điện tử</h2>
+    <p class="text-muted mb-0">
+      <%= doctor.fullName %>
+      <% if (doctor.specialty) { %> · <%= doctor.specialty %><% } %>
+      <% if (doctor.departmentName) { %> · <%= doctor.departmentName %><% } %>
+      <% if (doctor.shiftName) { %> · <%= doctor.shiftName %><% } %>
+    </p>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" onclick="window.location.reload()"><i class="bi bi-arrow-clockwise me-2"></i>Làm mới</button>
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In giao ban</button>
+    <a class="btn btn-light" href="/medical-records?activeMenu=doctor-medical-records"><i class="bi bi-journal-text me-2"></i>Mở HSBA</a>
+    <a class="btn btn-primary" href="/treatments?activeMenu=treatments"><i class="bi bi-calendar2-week me-2"></i>Lịch điều trị</a>
+  </div>
+</section>
+
+
+
+<div class="alert alert-primary-soft border-0 mt-4 mb-2 d-flex align-items-center shadow-sm">
+  <i class="bi bi-megaphone-fill fs-4 me-3"></i>
+  <div class="fw-bold"><%= summaryText %></div>
+</div>
+
+<section class="row g-4 mt-1">
+  <div class="col-12">
+    <section class="panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2>Danh sách bệnh nhân cần bàn giao</h2>
+          <p>Mỗi dòng gom trạng thái điều trị, đầu việc còn tồn và đường dẫn mở hồ sơ ngay.</p>
+        </div>
+      </div>
+
+      <div class="module-toolbar">
+        <div class="module-search">
+          <i class="bi bi-search"></i>
+          <input class="form-control" type="search" placeholder="Tìm bệnh nhân, chẩn đoán, công việc cần bàn giao" data-module-search="doctorHandoffTable">
+        </div>
+        <select class="form-select" data-module-filter="doctorHandoffTable" data-filter-key="state">
+          <option value="">Tất cả mức độ</option>
+          <% [...new Set(handoffRows.map(row => row.handoffState))].forEach(state => { %>
+            <option><%= state %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="module-table-wrap">
+        <table class="table app-table module-table" id="doctorHandoffTable">
+          <thead>
+            <tr>
+              <th>Bệnh nhân</th>
+              <th>Chẩn đoán / vị trí</th>
+              <th>Tồn đọng</th>
+              <th>Mức bàn giao</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% handoffRows.forEach(row => { %>
+              <tr
+                data-search="<%= `${row.patientCode} ${row.fullName} ${row.diagnosis || ''} ${row.flags.join(' ')} ${row.nextTask || ''}`.toLowerCase() %>"
+                data-state="<%= row.handoffState %>">
+                <td>
+                  <div class="module-primary">
+                    <strong><%= row.fullName %></strong>
+                    <small><%= row.patientCode %> · Nhập viện <%= format.datetime(row.admissionDate) %></small>
+                  </div>
+                </td>
+                <td class="text-wrap-cell">
+                  <div><strong><%= row.diagnosis || 'Chưa cập nhật chẩn đoán' %></strong></div>
+                  <small class="text-muted"><%= [row.departmentName, row.roomCode, row.bedCode].filter(Boolean).join(' · ') || 'Chưa xếp giường' %></small>
+                </td>
+                <td class="text-wrap-cell">
+                  <div class="d-flex flex-wrap gap-2 mb-2">
+                    <%- include('../partials/badge', { text: row.priorityLevel }) %>
+                    <%- include('../partials/badge', { text: row.status }) %>
+                  </div>
+                  <% if (row.flags.length) { %>
+                    <div class="d-flex flex-wrap gap-2">
+                      <% row.flags.forEach(flag => { %>
+                        <span class="badge bg-light text-dark border"><%= flag %></span>
+                      <% }) %>
+                    </div>
+                  <% } else { %>
+                    <span class="text-muted">Không có tồn đọng nổi bật.</span>
+                  <% } %>
+                  <% if (row.nextTask) { %>
+                    <div class="small text-muted mt-2">Y lệnh tiếp theo: <%= row.nextTask %></div>
+                  <% } %>
+                </td>
+                <td><%- include('../partials/badge', { text: row.handoffState }) %></td>
+                <td>
+                  <div class="d-flex flex-column gap-2">
+                    <% if (row.recordId) { %>
+                      <a class="btn btn-sm btn-primary" href="/medical-records/<%= row.recordId %>?activeMenu=doctor-medical-records">Mở HSBA</a>
+                    <% } %>
+                    <a class="btn btn-sm btn-light" href="/patients/<%= row.patientId %>?activeMenu=doctor-handoff">Xem bệnh nhân</a>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+            <% if (!handoffRows.length) { %>
+              <tr>
+                <td colspan="5" class="text-center py-4 text-muted">Chưa có bệnh nhân nào cần giao ban trong ca hiện tại.</td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="empty-inline d-none" data-empty-for="doctorHandoffTable">
+        <i class="bi bi-search"></i>
+        <strong>Không tìm thấy bệnh nhân phù hợp</strong>
+      </div>
+    </section>
+  </div>
+</section>
+
+<section class="row g-4 mt-1">
+  <div class="col-lg-6">
+    <section class="panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2>Cận lâm sàng còn chờ</h2>
+          <p>Những phiếu ca sau cần tiếp tục đọc kết quả hoặc đôn đốc trả kết quả.</p>
+        </div>
+      </div>
+      <div class="module-table-wrap">
+        <table class="table app-table module-table">
+          <thead>
+            <tr>
+              <th>Bệnh nhân</th>
+              <th>Chỉ định</th>
+              <th>Thời gian</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% pendingLabs.slice(0, 8).forEach(row => { %>
+              <tr>
+                <td>
+                  <div class="module-primary">
+                    <strong><%= row.patientName %></strong>
+                    <small><%= row.patientCode || '-' %></small>
+                  </div>
+                </td>
+                <td class="text-wrap-cell"><%= row.testType %></td>
+                <td><%= format.datetime(row.orderedDate) %></td>
+                <td><%- include('../partials/badge', { text: row.status }) %></td>
+              </tr>
+            <% }) %>
+            <% if (!pendingLabs.length) { %>
+              <tr>
+                <td colspan="4" class="text-center py-4 text-muted">Không còn chỉ định cận lâm sàng nào đang chờ.</td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-lg-6">
+    <section class="panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2>Thủ thuật / y lệnh chưa hoàn tất</h2>
+          <p>Danh sách đầu việc còn tồn trong ngày để ca sau tiếp tục theo dõi và phối hợp điều dưỡng.</p>
+        </div>
+      </div>
+      <div class="module-table-wrap">
+        <table class="table app-table module-table">
+          <thead>
+            <tr>
+              <th>Bệnh nhân</th>
+              <th>Nội dung</th>
+              <th>Thời gian</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% pendingTreatments.slice(0, 8).forEach(row => { %>
+              <tr>
+                <td>
+                  <div class="module-primary">
+                    <strong><%= row.patientName %></strong>
+                    <small><%= row.patientCode %></small>
+                  </div>
+                </td>
+                <td class="text-wrap-cell"><%= row.treatmentContent %></td>
+                <td><%= format.datetime(row.scheduledTime) %></td>
+                <td><%- include('../partials/badge', { text: row.status }) %></td>
+              </tr>
+            <% }) %>
+            <% if (!pendingTreatments.length) { %>
+              <tr>
+                <td colspan="4" class="text-center py-4 text-muted">Không có y lệnh tồn nào cần bàn giao.</td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</section>
+
+<section class="row g-4 mt-1">
+  <div class="col-lg-6">
+    <section class="panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2>Nhân sự cùng ca trong khoa</h2>
+          <p>Danh sách hỗ trợ phối hợp ngay trong ca đang trực.</p>
+        </div>
+      </div>
+      <div class="business-step-grid">
+        <% sameShiftTeam.forEach(row => { %>
+          <div class="business-step-card">
+            <i class="bi bi-person-badge"></i>
+            <strong><%= row.fullName %></strong>
+            <span><%= row.specialty || 'Bác sĩ điều trị' %> · <%= row.shiftName || 'Chưa gán ca' %></span>
+          </div>
+        <% }) %>
+        <% if (!sameShiftTeam.length) { %>
+          <div class="empty-inline">
+            <i class="bi bi-people"></i>
+            <strong>Chưa có nhân sự cùng ca</strong>
+            <span>Kiểm tra lại phân công ca trực của khoa.</span>
+          </div>
+        <% } %>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-lg-6">
+    <section class="panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2>Nhân sự ca tiếp nhận</h2>
+          <p>Nhóm cùng khoa nhưng khác ca để bàn giao đầu việc tồn đọng.</p>
+        </div>
+      </div>
+      <div class="business-step-grid">
+        <% crossShiftTeam.forEach(row => { %>
+          <div class="business-step-card">
+            <i class="bi bi-arrow-left-right"></i>
+            <strong><%= row.fullName %></strong>
+            <span><%= row.specialty || 'Bác sĩ điều trị' %> · <%= row.shiftName || 'Chưa gán ca' %></span>
+          </div>
+        <% }) %>
+        <% if (!crossShiftTeam.length) { %>
+          <div class="empty-inline">
+            <i class="bi bi-calendar-check"></i>
+            <strong>Chưa có danh sách ca sau</strong>
+            <span>Nếu khoa chưa phân tách ca trực, hệ thống sẽ chỉ hiển thị đội cùng ca.</span>
+          </div>
+        <% } %>
+      </div>
+    </section>
+  </div>
+</section>

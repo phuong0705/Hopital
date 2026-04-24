@@ -10,6 +10,42 @@ const patientRepository = require('../repositories/patient.repository');
 const moduleRepository = require('../repositories/module.repository');
 const lookupRepository = require('../repositories/lookup.repository');
 
+function containsKeyword(value, keywords) {
+  const normalized = normalizeText(value);
+  return keywords.some((keyword) => normalized.includes(normalizeText(keyword)));
+}
+
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase();
+}
+
+function statusEquals(value, expected) {
+  return normalizeText(value) === normalizeText(expected);
+}
+
+function priorityRank(value) {
+  const normalized = normalizeText(value);
+  if (normalized === 'nguy cap') return 0;
+  if (normalized === 'cao') return 1;
+  if (normalized === 'trung binh') return 2;
+  return 3;
+}
+
+async function getSessionDoctor(req) {
+  if (!req.session.user || req.session.user.roleCode !== 'DOCTOR') return null;
+  return moduleRepository.getDoctorByUser(req.session.user.fullName);
+}
+
+async function getSessionDoctorId(req) {
+  const doctor = await getSessionDoctor(req);
+  return doctor ? doctor.doctorId : -1;
+}
+
 function showBusiness(req, res) {
   const item = businessItems.find(entry => entry.slug === req.params.slug);
 
@@ -180,9 +216,22 @@ async function examTicket(req, res, next) {
   }
 }
 
+async function createExamTicket(req, res, next) {
+  try {
+    // Logic to create exam ticket placeholder
+    req.flash('success', 'Lập phiếu khám thành công. Đang chuyển hướng in phiếu...');
+    res.redirect('/nghiep-vu/lap-phieu-kham');
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function diagnosis(req, res, next) {
   try {
-    const rows = await moduleRepository.getMedicalRecords();
+    const doctorId = await getSessionDoctorId(req);
+    // If it's a doctor, only show their patients. If ADMIN/others (doctorId -1), show all (pass null).
+    const rows = await moduleRepository.getMedicalRecords(doctorId === -1 ? null : doctorId);
+    
     res.render('business/diagnosis', {
       title: 'Chẩn bệnh',
       activeMenu: req.query.activeMenu || 'diagnosis',
@@ -190,6 +239,149 @@ async function diagnosis(req, res, next) {
     });
   } catch (error) {
     next(error);
+  }
+}
+
+async function doctorHandoff(req, res, next) {
+  try {
+    const doctor = await getSessionDoctor(req);
+    if (!doctor) {
+      return res.status(404).render('errors/404', {
+        title: 'Không tìm thấy phiên bác sĩ',
+        activeMenu: req.query.activeMenu || 'doctor-handoff'
+      });
+    }
+
+    const [patients, activeRecords, labs, treatments, dutyRows] = await Promise.all([
+      patientRepository.getInpatients({ doctorId: doctor.doctorId }),
+      moduleRepository.getActiveMedicalRecords(doctor.doctorId),
+      moduleRepository.getLabTests(doctor.doctorId),
+      moduleRepository.getTreatments(doctor.doctorId),
+      moduleRepository.getDoctorDuties()
+    ]);
+
+    const pendingLabs = labs.filter((row) => !statusEquals(row.status, 'Đã có kết quả'));
+    const pendingTreatments = treatments.filter((row) => !statusEquals(row.status, 'Hoàn thành'));
+    const procedureKeywords = ['thủ thuật', 'mổ', 'phẫu thuật', 'can thiệp', 'nội soi', 'đặt', 'rút', 'chọc', 'dẫn lưu'];
+    const pendingProcedures = pendingTreatments.filter((row) => containsKeyword(row.treatmentContent, procedureKeywords));
+    const urgentPatients = patients.filter((row) => priorityRank(row.priorityLevel) <= 1);
+    const dischargeQueue = patients.filter((row) => statusEquals(row.status, 'Chờ xuất viện'));
+    const recordByPatientCode = new Map(activeRecords.map((row) => [row.patientCode, row]));
+
+    const labCountByPatient = pendingLabs.reduce((map, row) => {
+      const key = row.patientCode || row.patientName;
+      map.set(key, (map.get(key) || 0) + 1);
+      return map;
+    }, new Map());
+
+    const treatmentCountByPatient = pendingTreatments.reduce((map, row) => {
+      const key = row.patientCode || row.patientName;
+      map.set(key, (map.get(key) || 0) + 1);
+      return map;
+    }, new Map());
+
+    const nextTaskByPatient = pendingTreatments.reduce((map, row) => {
+      const key = row.patientCode || row.patientName;
+      if (!map.has(key)) map.set(key, row);
+      return map;
+    }, new Map());
+
+    const handoffRows = patients
+      .map((patient) => {
+        const record = recordByPatientCode.get(patient.patientCode);
+        const nextTask = nextTaskByPatient.get(patient.patientCode || patient.fullName);
+        const pendingLabCount = labCountByPatient.get(patient.patientCode || patient.fullName) || 0;
+        const pendingTreatmentCount = treatmentCountByPatient.get(patient.patientCode || patient.fullName) || 0;
+        const flags = [];
+
+        if (priorityRank(patient.priorityLevel) <= 1) flags.push('Theo dõi sát');
+        if (statusEquals(patient.status, 'Chờ xuất viện')) flags.push('Chuẩn bị hoàn tất hồ sơ');
+        if (pendingLabCount) flags.push(`${pendingLabCount} CLS chờ kết quả`);
+        if (pendingTreatmentCount) flags.push(`${pendingTreatmentCount} y lệnh chưa xong`);
+
+        return {
+          ...patient,
+          recordId: record ? record.recordId : null,
+          recordCode: record ? record.recordCode : null,
+          pendingLabCount,
+          pendingTreatmentCount,
+          nextTask: nextTask ? nextTask.treatmentContent : '',
+          flags,
+          handoffState: statusEquals(patient.status, 'Chờ xuất viện')
+            ? 'Chờ chốt xuất viện'
+            : priorityRank(patient.priorityLevel) <= 1
+              ? 'Ưu tiên cao'
+              : pendingLabCount || pendingTreatmentCount
+                ? 'Còn việc cần theo dõi'
+                : 'Ổn định'
+        };
+      })
+      .sort((left, right) => {
+        const byPriority = priorityRank(left.priorityLevel) - priorityRank(right.priorityLevel);
+        if (byPriority !== 0) return byPriority;
+        if (left.pendingLabCount !== right.pendingLabCount) return right.pendingLabCount - left.pendingLabCount;
+        if (left.pendingTreatmentCount !== right.pendingTreatmentCount) return right.pendingTreatmentCount - left.pendingTreatmentCount;
+        return new Date(right.admissionDate).getTime() - new Date(left.admissionDate).getTime();
+      });
+
+    const departmentTeam = dutyRows.filter((row) => row.departmentName === doctor.departmentName);
+    const sameShiftTeam = departmentTeam.filter((row) => row.shiftName === doctor.shiftName);
+    const crossShiftTeam = departmentTeam.filter((row) => row.shiftName !== doctor.shiftName);
+    const summaryText = [
+      `Ca trực tại ${doctor.departmentName || 'khoa'} (${doctor.shiftName || 'ca hiện tại'}) hiện có ${patients.length} bệnh nhân bàn giao.`,
+      urgentPatients.length > 0 ? `Trong đó có ${urgentPatients.length} ca cần theo dõi sát.` : 'Tình trạng chung các bệnh nhân ổn định.',
+      pendingLabs.length > 0 ? `Còn ${pendingLabs.length} kết quả cận lâm sàng đang chờ.` : 'Các chỉ định cận lâm sàng đã hoàn tất.',
+      pendingTreatments.length > 0 ? `Đang thực hiện ${pendingTreatments.length} y lệnh/thủ thuật tồn.` : 'Không có y lệnh tồn đọng.',
+      dischargeQueue.length > 0 ? `Có ${dischargeQueue.length} hồ sơ đang làm thủ tục xuất viện.` : ''
+    ].filter(Boolean).join(' ');
+
+    return res.render('business/doctor-handoff', {
+      title: 'Giao ban điện tử',
+      activeMenu: req.query.activeMenu || 'doctor-handoff',
+      doctor,
+      summaryText,
+      handoffRows,
+      urgentPatients,
+      pendingLabs,
+      pendingTreatments,
+      pendingProcedures,
+      dischargeQueue,
+      sameShiftTeam,
+      crossShiftTeam
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function imagingProcedureOrders(req, res, next) {
+  try {
+    const doctorId = await getSessionDoctorId(req);
+    const [services, activeRecords, orders] = await Promise.all([
+      serviceRepository.getServices(),
+      moduleRepository.getActiveMedicalRecords(doctorId),
+      moduleRepository.getLabTests(doctorId)
+    ]);
+
+    const serviceKeywords = ['chẩn đoán hình ảnh', 'cdha', 'thủ thuật', 'x-quang', 'siêu âm', 'ct', 'mri', 'nội soi'];
+    const orderKeywords = ['x-quang', 'siêu âm', 'ct', 'mri', 'nội soi', 'can thiệp', 'thủ thuật'];
+
+    const serviceRows = services.filter((row) =>
+      containsKeyword([row.serviceGroup, row.serviceName, row.departmentName].join(' '), serviceKeywords)
+    );
+    const orderRows = orders.filter((row) =>
+      containsKeyword(row.testType, orderKeywords)
+    );
+
+    return res.render('business/imaging-procedure-orders', {
+      title: 'Chỉ định CĐHA / Thủ thuật',
+      activeMenu: req.query.activeMenu || 'doctor-imaging-procedure-order',
+      serviceRows,
+      activeRecords,
+      orderRows
+    });
+  } catch (error) {
+    return next(error);
   }
 }
 
@@ -208,7 +400,8 @@ async function clinicalLookup(req, res, next) {
 
 async function examResults(req, res, next) {
   try {
-    const rows = await moduleRepository.getLabTests();
+    const doctorId = await getSessionDoctorId(req);
+    const rows = await moduleRepository.getLabTests(doctorId === -1 ? null : doctorId);
     res.render('business/exam-results', {
       title: 'Theo dõi kết quả khám',
       activeMenu: req.query.activeMenu || 'exam-results',
@@ -221,7 +414,8 @@ async function examResults(req, res, next) {
 
 async function lengthOfStay(req, res, next) {
   try {
-    const rows = await moduleRepository.getLengthOfStay();
+    const doctorId = await getSessionDoctorId(req);
+    const rows = await moduleRepository.getLengthOfStay(doctorId === -1 ? null : doctorId);
     res.render('business/length-of-stay', {
       title: 'Theo dõi thời gian nằm viện',
       activeMenu: req.query.activeMenu || 'length-of-stay',
@@ -234,9 +428,10 @@ async function lengthOfStay(req, res, next) {
 
 async function carePlan(req, res, next) {
   try {
-    const rows = await moduleRepository.getActiveMedicalRecords();
+    const doctorId = await getSessionDoctorId(req);
+    const rows = await moduleRepository.getMedicalRecords(doctorId === -1 ? null : doctorId);
     res.render('business/care-plan', {
-      title: 'Lập phác đồ điều trị',
+      title: 'Lập phác đồ',
       activeMenu: req.query.activeMenu || 'care-plan',
       rows
     });
@@ -245,9 +440,32 @@ async function carePlan(req, res, next) {
   }
 }
 
+
+async function procedureSchedule(req, res, next) {
+  try {
+    const doctorId = await getSessionDoctorId(req);
+    const selectedDoctor = doctorId ? await moduleRepository.getDoctorByUser(req.session.user.fullName) : null;
+    const rows = doctorId ? await moduleRepository.getTreatments(doctorId) : [];
+    const procedureKeywords = ['thủ thuật', 'mổ', 'phẫu thuật', 'can thiệp', 'nội soi', 'đặt', 'rút', 'chọc', 'dẫn lưu'];
+
+    const procedureRows = rows.filter((row) => containsKeyword(row.treatmentContent, procedureKeywords));
+
+    return res.render('business/procedure-schedule', {
+      title: 'Lịch mổ / Thủ thuật',
+      activeMenu: req.query.activeMenu || 'doctor-procedure-schedule',
+      selectedDoctor,
+      procedureRows,
+      supportRows: procedureRows.length ? rows : rows.slice(0, 6)
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function labSummary(req, res, next) {
   try {
-    const rows = await moduleRepository.getLabTests();
+    const doctorId = await getSessionDoctorId(req);
+    const rows = await moduleRepository.getLabTests(doctorId === -1 ? null : doctorId);
     res.render('business/lab-summary', {
       title: 'Tổng hợp kết quả xét nghiệm',
       activeMenu: req.query.activeMenu || 'lab-summary',
@@ -388,16 +606,19 @@ async function reportRevenue(req, res, next) {
 
 async function reportVisits(req, res, next) {
   try {
-    const rows = await moduleRepository.getVisitStats();
+    const { startDate, endDate } = req.query;
+    const rows = await moduleRepository.getVisitStats({ startDate, endDate });
     res.render('business/report-visits', {
       title: 'Thống kê lượt khám',
       activeMenu: req.query.activeMenu || 'report-visits',
-      rows
+      rows,
+      filters: { startDate, endDate }
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 }
+
 
 async function reportMedicines(req, res, next) {
   try {
@@ -414,16 +635,19 @@ async function reportMedicines(req, res, next) {
 
 async function reportDischarges(req, res, next) {
   try {
-    const rows = await moduleRepository.getDischarges();
+    const { startDate, endDate } = req.query;
+    const rows = await moduleRepository.getDischarges(null, { startDate, endDate });
     res.render('business/report-discharges', {
       title: 'Báo cáo xuất viện',
       activeMenu: req.query.activeMenu || 'report-discharges',
-      rows
+      rows,
+      filters: { startDate, endDate }
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 }
+
 
 async function backupData(req, res, next) {
   try {
@@ -447,6 +671,148 @@ async function restoreData(req, res, next) {
   }
 }
 
+// Nursing Module Logic
+async function nurseHandoff(req, res, next) {
+  try {
+    const patients = await patientRepository.getInpatients();
+    const dutyRows = await moduleRepository.getDoctorDuties();
+    const departmentTeam = dutyRows.filter((row) => row.departmentName === (req.session.user.departmentName || 'Khoa Nội tổng hợp'));
+    
+    res.render('business/nurse-handoff', {
+      title: 'Giao ban điều dưỡng',
+      activeMenu: req.query.activeMenu || 'nurse-handoff',
+      patients,
+      departmentTeam,
+      summaryText: `Ca trực hiện có ${patients.length} bệnh nhân nội trú cần theo dõi và chăm sóc.`
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function nurseVitals(req, res, next) {
+  try {
+    const rows = await patientRepository.getInpatients();
+    res.render('business/nurse-vitals', {
+      title: 'Theo dõi sinh hiệu',
+      activeMenu: req.query.activeMenu || 'nurse-vitals',
+      rows
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function saveNurseVitals(req, res, next) {
+  try {
+    const { admissionId, pulse, temperature, bp, respiratory } = req.body;
+    const vitalsString = `Mạch: ${pulse} l/p, T°: ${temperature} °C, HA: ${bp} mmHg, NT: ${respiratory} l/p`;
+    await moduleRepository.updateNurseVitals(admissionId, vitalsString);
+    req.flash('success', 'Cập nhật sinh hiệu bệnh nhân thành công.');
+    res.redirect('/nghiep-vu/theo-doi-sinh-hieu');
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function nurseNotes(req, res, next) {
+  try {
+    const rows = await patientRepository.getInpatients();
+    res.render('business/nurse-notes', {
+      title: 'Ghi chú điều dưỡng',
+      activeMenu: req.query.activeMenu || 'nurse-notes',
+      rows
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function saveNurseNote(req, res, next) {
+  try {
+    const { admissionId, note } = req.body;
+    await moduleRepository.updateNurseNotes(admissionId, note);
+    req.flash('success', 'Đã lưu ghi chú diễn biến chăm sóc.');
+    res.redirect('/nghiep-vu/ghi-chu-dieu-duong');
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function roomStatusUpdate(req, res, next) {
+  try {
+    const rows = await moduleRepository.getBeds();
+    res.render('business/room-status', {
+      title: 'Cập nhật trạng thái phòng',
+      activeMenu: req.query.activeMenu || 'nurse-room-status',
+      rows
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateBedStatus(req, res, next) {
+  try {
+    await moduleRepository.updateBedStatus(req.params.id, req.body.status);
+    req.flash('success', 'Cập nhật trạng thái giường thành công.');
+    res.redirect('/nghiep-vu/cap-nhat-trang-thai-phong');
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function wardMeds(req, res, next) {
+  try {
+    const rows = await medicineRepository.getMedicines();
+    res.render('business/ward-meds', {
+      title: 'Quản lý thuốc tại khoa',
+      activeMenu: req.query.activeMenu || 'nurse-meds',
+      rows
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function medicineHistory(req, res, next) {
+  try {
+    const history = await medicineRepository.getMedicineHistory(req.params.id);
+    res.json(history);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function addMedicineTransaction(req, res, next) {
+  try {
+    const { medicineId, transactionType, quantity, note } = req.body;
+    await medicineRepository.addInventoryTransaction({
+      medicineId: Number(medicineId),
+      transactionType,
+      quantity: Number(quantity),
+      performedBy: req.session.user.userId,
+      note
+    });
+    req.flash('success', `${transactionType} thành công.`);
+    res.redirect('/nghiep-vu/quan-ly-thuoc-tai-khoa');
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function supplies(req, res, next) {
+  try {
+    res.render('business/supplies', {
+      title: 'Vật tư tiêu hao',
+      activeMenu: req.query.activeMenu || 'nurse-supplies',
+      rows: [] // Placeholder for supplies inventory
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   showBusiness,
   diseaseCatalog,
@@ -459,11 +825,15 @@ module.exports = {
   createService,
   updateServiceStatus,
   examTicket,
+  createExamTicket,
   diagnosis,
+  doctorHandoff,
+  imagingProcedureOrders,
   clinicalLookup,
   examResults,
   lengthOfStay,
   carePlan,
+  procedureSchedule,
   labSummary,
   feeExam,
   invoiceList,
@@ -479,5 +849,16 @@ module.exports = {
   reportMedicines,
   reportDischarges,
   backupData,
-  restoreData
+  restoreData,
+  nurseHandoff,
+  nurseVitals,
+  saveNurseVitals,
+  nurseNotes,
+  saveNurseNote,
+  roomStatusUpdate,
+  updateBedStatus,
+  wardMeds,
+  medicineHistory,
+  addMedicineTransaction,
+  supplies
 };
