@@ -160,7 +160,7 @@ async function resetPassword(req, res, next) {
 
 function logout(req, res) {
   req.session.destroy(() => {
-    res.redirect('/login');
+    res.redirect('/');
   });
 }
 

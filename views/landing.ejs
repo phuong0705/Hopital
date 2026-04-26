@@ -1,0 +1,496 @@
+<!-- Navbar -->
+<nav id="main-nav" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-5 bg-transparent">
+  <div class="container mx-auto px-6 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
+        <i class="bi bi-heart-pulse-fill text-white text-xl"></i>
+      </div>
+      <div class="flex flex-col leading-tight">
+        <span class="text-xl font-extrabold tracking-tight text-slate-800">Nội trú <span class="text-primary">HIS</span></span>
+        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Bệnh viện Đa khoa Việt Nam</span>
+      </div>
+    </div>
+    
+    <div class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
+      <a href="#services" class="hover:text-primary transition-colors">Dịch vụ</a>
+      <a href="#about" class="hover:text-primary transition-colors">Về chúng tôi</a>
+      <a href="#doctors" class="hover:text-primary transition-colors">Đội ngũ</a>
+      <a href="#contact" class="hover:text-primary transition-colors">Liên hệ</a>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <a href="/login" class="text-sm font-bold text-slate-700 hover:text-primary transition-colors px-4 py-2">Đăng nhập</a>
+      <a href="/register" class="bg-primary text-white text-sm font-bold px-6 py-2.5 rounded-full shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all hover:-translate-y-0.5">Đăng ký ngay</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="relative min-h-screen flex items-center pt-20 overflow-hidden bg-white">
+  <!-- Decoration -->
+  <div class="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl"></div>
+  <div class="absolute bottom-0 left-0 translate-y-1/4 -translate-x-1/4 w-[600px] h-[600px] bg-secondary/5 rounded-full blur-3xl"></div>
+
+  <div class="container mx-auto px-6 relative z-10">
+    <div class="grid lg:grid-cols-2 gap-16 items-center">
+      <div class="animate__animated animate__fadeInLeft">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold uppercase tracking-wider mb-6">
+          <span class="flex h-2 w-2 rounded-full bg-primary animate-pulse"></span>
+          Chuẩn mực Y khoa Quốc tế
+        </div>
+        <h1 class="text-5xl lg:text-7xl font-extrabold text-slate-900 leading-[1.1] mb-8">
+          Chăm sóc Sức khỏe <br> <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Tận tâm & Hiện đại</span>
+        </h1>
+        <p class="text-lg text-slate-600 mb-10 leading-relaxed max-w-xl">
+          Hệ thống quản lý y tế thông minh giúp tối ưu hóa quy trình khám chữa bệnh, mang lại trải nghiệm chăm sóc sức khỏe tốt nhất cho bệnh nhân và sự thuận tiện cho đội ngũ y bác sĩ.
+        </p>
+        <div class="flex flex-wrap gap-4">
+          <a href="/register" class="px-8 py-4 bg-primary text-white font-bold rounded-2xl shadow-xl shadow-primary/30 hover:bg-primary/90 transition-all hover:-translate-y-1 flex items-center gap-2">
+            Đặt lịch khám ngay <i class="bi bi-arrow-right"></i>
+          </a>
+          <a href="#services" class="px-8 py-4 bg-white text-slate-700 font-bold rounded-2xl border border-slate-200 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center gap-2">
+            Tìm hiểu thêm
+          </a>
+        </div>
+        
+        <div class="mt-12 flex items-center gap-6">
+          <div class="flex -space-x-4">
+            <img src="https://i.pravatar.cc/150?u=1" class="w-12 h-12 rounded-full border-4 border-white object-cover" alt="Doctor">
+            <img src="https://i.pravatar.cc/150?u=2" class="w-12 h-12 rounded-full border-4 border-white object-cover" alt="Doctor">
+            <img src="https://i.pravatar.cc/150?u=3" class="w-12 h-12 rounded-full border-4 border-white object-cover" alt="Doctor">
+            <div class="w-12 h-12 rounded-full border-4 border-white bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">+50</div>
+          </div>
+          <div class="text-sm">
+            <div class="flex text-accent gap-0.5 mb-1">
+              <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i>
+            </div>
+            <p class="text-slate-600 font-medium">Hơn <strong>10,000+</strong> bệnh nhân tin tưởng</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative animate__animated animate__fadeInRight">
+        <div class="relative z-10 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-200">
+          <img src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1000&q=80" alt="Modern Hospital" class="w-full h-auto">
+        </div>
+        
+        <!-- Floating Cards -->
+        <div class="absolute -bottom-10 -left-10 glass p-6 rounded-3xl shadow-xl z-20 animate-float max-w-xs">
+          <div class="flex items-start gap-4">
+            <div class="w-12 h-12 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center shrink-0">
+              <i class="bi bi-shield-check text-2xl"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-800">Dịch vụ 24/7</h4>
+              <p class="text-xs text-slate-500 mt-1">Luôn sẵn sàng hỗ trợ bạn trong mọi tình huống khẩn cấp.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="absolute -top-10 -right-10 glass p-6 rounded-3xl shadow-xl z-20 animate-float [animation-delay:1s] max-w-xs">
+          <div class="flex items-start gap-4">
+            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center shrink-0">
+              <i class="bi bi-award text-2xl"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-800">Đội ngũ Chuyên gia</h4>
+              <p class="text-xs text-slate-500 mt-1">Các bác sĩ đầu ngành với hơn 15 năm kinh nghiệm.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats Section -->
+<section class="py-20 bg-slate-900 relative overflow-hidden">
+  <div class="absolute inset-0 opacity-10">
+    <div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px]"></div>
+  </div>
+  <div class="container mx-auto px-6 relative z-10">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-12">
+      <div class="text-center">
+        <div class="text-4xl lg:text-5xl font-extrabold text-white mb-2">50+</div>
+        <p class="text-slate-400 font-medium">Bác sĩ chuyên khoa</p>
+      </div>
+      <div class="text-center">
+        <div class="text-4xl lg:text-5xl font-extrabold text-white mb-2">20+</div>
+        <p class="text-slate-400 font-medium">Phòng khoa nội trú</p>
+      </div>
+      <div class="text-center">
+        <div class="text-4xl lg:text-5xl font-extrabold text-white mb-2">10k+</div>
+        <p class="text-slate-400 font-medium">Bệnh nhân mỗi năm</p>
+      </div>
+      <div class="text-center">
+        <div class="text-4xl lg:text-5xl font-extrabold text-white mb-2">99%</div>
+        <p class="text-slate-400 font-medium">Tỉ lệ hài lòng</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Services Section -->
+<section id="services" class="py-24 bg-slate-50">
+  <div class="container mx-auto px-6">
+    <div class="text-center max-w-2xl mx-auto mb-16">
+      <h2 class="text-primary font-bold text-sm uppercase tracking-widest mb-3">Dịch vụ của chúng tôi</h2>
+      <h3 class="text-4xl font-extrabold text-slate-900 mb-6">Giải pháp Chăm sóc Sức khỏe Toàn diện</h3>
+      <p class="text-slate-600">Chúng tôi cung cấp đầy đủ các dịch vụ y tế kỹ thuật cao với quy trình khép kín và trang thiết bị hiện đại nhất.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <!-- Service 1 -->
+      <div class="group bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-primary/10 transition-all hover:-translate-y-2">
+        <div class="w-14 h-14 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
+          <i class="bi bi-heart-pulse text-2xl"></i>
+        </div>
+        <h4 class="text-xl font-bold text-slate-900 mb-4 text-primary">Khoa Nội tổng quát</h4>
+        <p class="text-slate-600 mb-6 leading-relaxed">Khám và điều trị các bệnh lý nội khoa đa dạng với đội ngũ bác sĩ giàu kinh nghiệm.</p>
+        <a href="#" class="text-primary font-bold inline-flex items-center gap-2 group-hover:translate-x-2 transition-transform">Xem chi tiết <i class="bi bi-chevron-right"></i></a>
+      </div>
+
+      <!-- Service 2 -->
+      <div class="group bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-primary/10 transition-all hover:-translate-y-2">
+        <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+          <i class="bi bi-hospital text-2xl"></i>
+        </div>
+        <h4 class="text-xl font-bold text-slate-900 mb-4 text-primary">Khoa Ngoại & Phẫu thuật</h4>
+        <p class="text-slate-600 mb-6 leading-relaxed">Hệ thống phòng mổ vô khuẩn hiện đại cùng kỹ thuật can thiệp tối thiểu an toàn.</p>
+        <a href="#" class="text-primary font-bold inline-flex items-center gap-2 group-hover:translate-x-2 transition-transform">Xem chi tiết <i class="bi bi-chevron-right"></i></a>
+      </div>
+
+      <!-- Service 3 -->
+      <div class="group bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-primary/10 transition-all hover:-translate-y-2">
+        <div class="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+          <i class="bi bi-activity text-2xl"></i>
+        </div>
+        <h4 class="text-xl font-bold text-slate-900 mb-4 text-primary">Xét nghiệm & Chẩn đoán</h4>
+        <p class="text-slate-600 mb-6 leading-relaxed">Kết quả chính xác, nhanh chóng với trang thiết bị tự động hóa hoàn toàn.</p>
+        <a href="#" class="text-primary font-bold inline-flex items-center gap-2 group-hover:translate-x-2 transition-transform">Xem chi tiết <i class="bi bi-chevron-right"></i></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Why Choose Us -->
+<section id="about" class="py-24 bg-white overflow-hidden">
+  <div class="container mx-auto px-6">
+    <div class="grid lg:grid-cols-2 gap-16 items-center">
+      <div class="relative order-2 lg:order-1">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-4">
+            <img src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=500&q=80" class="rounded-3xl shadow-lg" alt="Care">
+            <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=500&q=80" class="rounded-3xl shadow-lg" alt="Tech">
+          </div>
+          <div class="pt-12 space-y-4">
+            <img src="https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=500&q=80" class="rounded-3xl shadow-lg" alt="Hospital">
+            <img src="https://images.unsplash.com/photo-1505751172107-573225a46320?auto=format&fit=crop&w=500&q=80" class="rounded-3xl shadow-lg" alt="Doctor">
+          </div>
+        </div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-primary rounded-full flex items-center justify-center border-8 border-white shadow-2xl">
+          <i class="bi bi-play-fill text-white text-5xl translate-x-1"></i>
+        </div>
+      </div>
+
+      <div class="order-1 lg:order-2">
+        <h2 class="text-primary font-bold text-sm uppercase tracking-widest mb-3">Tại sao chọn Nội trú HIS?</h2>
+        <h3 class="text-4xl font-extrabold text-slate-900 mb-8">Nâng tầm Trải nghiệm Chăm sóc Sức khỏe</h3>
+        
+        <div class="space-y-8">
+          <div class="flex gap-6">
+            <div class="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
+              <i class="bi bi-check-lg text-2xl"></i>
+            </div>
+            <div>
+              <h4 class="text-xl font-bold text-slate-900 mb-2">Hệ thống Thông minh</h4>
+              <p class="text-slate-600">Quản lý hồ sơ điện tử, kết quả xét nghiệm trực tuyến giúp bạn theo dõi sức khỏe mọi lúc mọi nơi.</p>
+            </div>
+          </div>
+          
+          <div class="flex gap-6">
+            <div class="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
+              <i class="bi bi-people-fill text-2xl"></i>
+            </div>
+            <div>
+              <h4 class="text-xl font-bold text-slate-900 mb-2">Tận tâm phục vụ</h4>
+              <p class="text-slate-600">Đội ngũ điều dưỡng, nhân viên hỗ trợ được đào tạo chuyên nghiệp, coi bệnh nhân như người thân.</p>
+            </div>
+          </div>
+
+          <div class="flex gap-6">
+            <div class="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
+              <i class="bi bi-building-check text-2xl"></i>
+            </div>
+            <div>
+              <h4 class="text-xl font-bold text-slate-900 mb-2">Cơ sở vật chất 5 sao</h4>
+              <p class="text-slate-600">Không gian khám chữa bệnh hiện đại, sạch sẽ, đảm bảo sự riêng tư và thoải mái tối đa.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-12">
+          <a href="#" class="px-8 py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-all inline-block">Xem thêm về chúng tôi</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Doctors Section -->
+<section id="doctors" class="py-24 bg-slate-50">
+  <div class="container mx-auto px-6">
+    <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+      <div class="max-w-xl">
+        <h2 class="text-primary font-bold text-sm uppercase tracking-widest mb-3">Đội ngũ Bác sĩ</h2>
+        <h3 class="text-4xl font-extrabold text-slate-900">Những Chuyên gia Đầu ngành</h3>
+      </div>
+      <a href="#" class="px-6 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all">Xem tất cả bác sĩ</a>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <!-- Doctor 1 -->
+      <div class="group">
+        <div class="relative rounded-[2.5rem] overflow-hidden mb-6 aspect-[3/4]">
+          <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=600&q=80" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Doctor">
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+            <div class="flex gap-3">
+              <a href="#" class="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-primary transition-colors"><i class="bi bi-facebook"></i></a>
+              <a href="#" class="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-primary transition-colors"><i class="bi bi-linkedin"></i></a>
+            </div>
+          </div>
+        </div>
+        <h4 class="text-xl font-bold text-slate-900 mb-1">TS. BS. Nguyễn Văn A</h4>
+        <p class="text-primary font-semibold text-sm">Trưởng khoa Nội tim mạch</p>
+      </div>
+
+      <!-- Doctor 2 -->
+      <div class="group">
+        <div class="relative rounded-[2.5rem] overflow-hidden mb-6 aspect-[3/4]">
+          <img src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=600&q=80" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Doctor">
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+            <div class="flex gap-3">
+              <a href="#" class="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-primary transition-colors"><i class="bi bi-facebook"></i></a>
+              <a href="#" class="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-primary transition-colors"><i class="bi bi-linkedin"></i></a>
+            </div>
+          </div>
+        </div>
+        <h4 class="text-xl font-bold text-slate-900 mb-1">ThS. BS. Trần Thị B</h4>
+        <p class="text-primary font-semibold text-sm">Chuyên gia Nhi khoa</p>
+      </div>
+
+      <!-- Doctor 3 -->
+      <div class="group">
+        <div class="relative rounded-[2.5rem] overflow-hidden mb-6 aspect-[3/4]">
+          <img src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=600&q=80" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Doctor">
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+            <div class="flex gap-3">
+              <a href="#" class="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-primary transition-colors"><i class="bi bi-facebook"></i></a>
+              <a href="#" class="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-primary transition-colors"><i class="bi bi-linkedin"></i></a>
+            </div>
+          </div>
+        </div>
+        <h4 class="text-xl font-bold text-slate-900 mb-1">BS CKII. Lê Văn C</h4>
+        <p class="text-primary font-semibold text-sm">Khoa Ngoại Thần kinh</p>
+      </div>
+
+      <!-- Doctor 4 -->
+      <div class="group">
+        <div class="relative rounded-[2.5rem] overflow-hidden mb-6 aspect-[3/4]">
+          <img src="https://images.unsplash.com/photo-1559839734-2b71f1536783?auto=format&fit=crop&w=600&q=80" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Doctor">
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+            <div class="flex gap-3">
+              <a href="#" class="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-primary transition-colors"><i class="bi bi-facebook"></i></a>
+              <a href="#" class="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-primary transition-colors"><i class="bi bi-linkedin"></i></a>
+            </div>
+          </div>
+        </div>
+        <h4 class="text-xl font-bold text-slate-900 mb-1">ThS. BS. Phạm Thị D</h4>
+        <p class="text-primary font-semibold text-sm">Trưởng khoa Sản phụ khoa</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-24 bg-white">
+  <div class="container mx-auto px-6">
+    <div class="bg-primary rounded-[3rem] p-12 lg:p-20 relative overflow-hidden shadow-2xl shadow-primary/40">
+      <!-- Decoration -->
+      <div class="absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 w-96 h-96 bg-white/10 rounded-full"></div>
+      <div class="absolute bottom-0 left-0 -translate-x-1/4 translate-y-1/4 w-96 h-96 bg-secondary/10 rounded-full"></div>
+      
+      <div class="relative z-10 max-w-3xl mx-auto text-center">
+        <h2 class="text-4xl lg:text-5xl font-extrabold text-white mb-8 leading-tight">Sẵn sàng để được Chăm sóc Sức khỏe Tốt nhất?</h2>
+        <p class="text-primary-soft text-lg mb-12 opacity-90">Đặt lịch khám trực tuyến chỉ trong vài phút. Chúng tôi luôn sẵn sàng lắng nghe và đồng hành cùng bạn trên hành trình hồi phục sức khỏe.</p>
+        <div class="flex flex-wrap justify-center gap-4">
+          <a href="/register" class="px-10 py-5 bg-white text-primary font-extrabold rounded-2xl shadow-xl hover:bg-slate-50 transition-all hover:-translate-y-1">Đăng ký ngay bây giờ</a>
+          <a href="tel:19001234" class="px-10 py-5 bg-primary-600 border border-white/20 text-white font-extrabold rounded-2xl hover:bg-primary-700 transition-all flex items-center gap-3">
+            <i class="bi bi-telephone-fill"></i> Hotline: 1900 1234
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Contact Section -->
+<section id="contact" class="py-24 bg-slate-50">
+  <div class="container mx-auto px-6">
+    <div class="grid lg:grid-cols-2 gap-16">
+      <div>
+        <h2 class="text-primary font-bold text-sm uppercase tracking-widest mb-3">Liên hệ với chúng tôi</h2>
+        <h3 class="text-4xl font-extrabold text-slate-900 mb-8">Thông tin Liên lạc & Bản đồ</h3>
+        
+        <div class="space-y-8 mb-12">
+          <div class="flex gap-6">
+            <div class="w-12 h-12 bg-white text-primary rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-slate-100">
+              <i class="bi bi-geo-alt-fill text-xl"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-900 mb-1">Địa chỉ</h4>
+              <p class="text-slate-600">123 Đường Y Học, Phường Sức Khỏe, Quận Trung Tâm, TP. Hồ Chí Minh</p>
+            </div>
+          </div>
+
+          <div class="flex gap-6">
+            <div class="w-12 h-12 bg-white text-primary rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-slate-100">
+              <i class="bi bi-envelope-fill text-xl"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-900 mb-1">Email</h4>
+              <p class="text-slate-600">contact@bvdkvietnam.vn</p>
+            </div>
+          </div>
+
+          <div class="flex gap-6">
+            <div class="w-12 h-12 bg-white text-primary rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-slate-100">
+              <i class="bi bi-clock-fill text-xl"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-900 mb-1">Giờ làm việc</h4>
+              <p class="text-slate-600">Thứ 2 - Chủ Nhật: 07:00 - 21:00 <br> Cấp cứu: 24/7</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Placeholder for Map -->
+        <div class="h-64 bg-slate-200 rounded-3xl overflow-hidden grayscale relative border border-slate-200">
+          <img src="https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?auto=format&fit=crop&w=1000&q=80" alt="Map" class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-primary/10 flex items-center justify-center">
+            <div class="bg-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3">
+              <i class="bi bi-geo-alt-fill text-primary"></i>
+              <span class="font-bold text-slate-800">Bản đồ bệnh viện</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-10 lg:p-12 rounded-[3rem] shadow-xl shadow-slate-200/60 border border-slate-100">
+        <h4 class="text-2xl font-bold text-slate-900 mb-8">Gửi tin nhắn cho chúng tôi</h4>
+        <form class="space-y-6">
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-2">Họ và tên</label>
+              <input type="text" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" placeholder="Nguyễn Văn A">
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-2">Số điện thoại</label>
+              <input type="tel" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" placeholder="0901 234 567">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-2">Email</label>
+            <input type="email" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" placeholder="email@example.com">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-2">Vấn đề cần tư vấn</label>
+            <select class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all appearance-none">
+              <option>Chọn dịch vụ</option>
+              <option>Khám tổng quát</option>
+              <option>Xét nghiệm</option>
+              <option>Tư vấn phẫu thuật</option>
+              <option>Dịch vụ nội trú</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-2">Nội dung tin nhắn</label>
+            <textarea rows="4" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" placeholder="Nhập nội dung tin nhắn của bạn..."></textarea>
+          </div>
+          <button type="submit" class="w-full py-5 bg-primary text-white font-extrabold rounded-2xl shadow-xl shadow-primary/25 hover:bg-primary/90 transition-all hover:-translate-y-1">Gửi lời nhắn</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="bg-slate-900 text-white pt-24 pb-12">
+  <div class="container mx-auto px-6">
+    <div class="grid lg:grid-cols-4 gap-12 mb-20">
+      <div class="lg:col-span-1">
+        <div class="flex items-center gap-2 mb-8 text-white">
+          <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/30">
+            <i class="bi bi-heart-pulse-fill text-white text-xl"></i>
+          </div>
+          <div class="flex flex-col leading-tight">
+            <span class="text-xl font-extrabold tracking-tight">Nội trú <span class="text-primary">HIS</span></span>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bệnh viện Đa khoa Việt Nam</span>
+          </div>
+        </div>
+        <p class="text-slate-400 mb-8 leading-relaxed">Đơn vị y tế tiên phong trong việc ứng dụng công nghệ vào quản lý và khám chữa bệnh tại Việt Nam.</p>
+        <div class="flex gap-4">
+          <a href="#" class="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-primary transition-colors"><i class="bi bi-facebook"></i></a>
+          <a href="#" class="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-primary transition-colors"><i class="bi bi-youtube"></i></a>
+          <a href="#" class="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-primary transition-colors"><i class="bi bi-linkedin"></i></a>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-lg font-bold mb-8">Về chúng tôi</h4>
+        <ul class="space-y-4 text-slate-400">
+          <li><a href="#" class="hover:text-primary transition-colors">Giới thiệu bệnh viện</a></li>
+          <li><a href="#" class="hover:text-primary transition-colors">Đội ngũ lãnh đạo</a></li>
+          <li><a href="#" class="hover:text-primary transition-colors">Thành tựu & Giải thưởng</a></li>
+          <li><a href="#" class="hover:text-primary transition-colors">Tin tức & Sự kiện</a></li>
+          <li><a href="#" class="hover:text-primary transition-colors">Tuyển dụng</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="text-lg font-bold mb-8">Dịch vụ chính</h4>
+        <ul class="space-y-4 text-slate-400">
+          <li><a href="#" class="hover:text-primary transition-colors">Khám tổng quát</a></li>
+          <li><a href="#" class="hover:text-primary transition-colors">Dịch vụ nội trú</a></li>
+          <li><a href="#" class="hover:text-primary transition-colors">Xét nghiệm & Chẩn đoán</a></li>
+          <li><a href="#" class="hover:text-primary transition-colors">Gói tầm soát sức khỏe</a></li>
+          <li><a href="#" class="hover:text-primary transition-colors">Bảo hiểm Y tế</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="text-lg font-bold mb-8">Bản tin</h4>
+        <p class="text-slate-400 mb-6">Đăng ký để nhận các thông tin sức khỏe hữu ích nhất.</p>
+        <form class="relative">
+          <input type="email" class="w-full bg-white/5 border border-white/10 px-5 py-4 rounded-2xl outline-none focus:border-primary transition-colors" placeholder="Email của bạn">
+          <button class="absolute right-2 top-2 bottom-2 bg-primary px-5 rounded-xl hover:bg-primary/90 transition-colors">
+            <i class="bi bi-send-fill text-white"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6 text-sm text-slate-500 font-medium">
+      <p>&copy; 2024 Bệnh viện Đa khoa Việt Nam. Tất cả quyền được bảo lưu.</p>
+      <div class="flex gap-8">
+        <a href="#" class="hover:text-white transition-colors">Chính sách bảo mật</a>
+        <a href="#" class="hover:text-white transition-colors">Điều khoản sử dụng</a>
+        <a href="#" class="hover:text-white transition-colors">Quy trình khiếu nại</a>
+      </div>
+    </div>
+  </div>
+</footer>

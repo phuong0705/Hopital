@@ -5,11 +5,14 @@ const dashboardController = require('../controllers/dashboard.controller');
 const router = express.Router();
 
 router.get('/', (req, res) => {
-  if (!req.session.user) {
-    return res.redirect('/login');
+  if (req.session.user) {
+    return res.redirect(req.session.user.roleCode === 'PATIENT' ? '/patients/me' : '/dashboard');
   }
 
-  return res.redirect(req.session.user.roleCode === 'PATIENT' ? '/patients/me' : '/dashboard');
+  return res.render('landing', {
+    title: 'Trang chủ',
+    layout: 'layouts/landing'
+  });
 });
 
 router.use('/', require('./auth.routes'));
