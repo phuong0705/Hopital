@@ -3,87 +3,388 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Đăng ký | Quản lý khám chữa bệnh nội trú</title>
+  <title>Đăng ký tài khoản | QuanLyKhamChuaBenhNoiTru</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css" rel="stylesheet">
-  <link href="/css/app.css" rel="stylesheet">
-  <link href="/css/clinical-vibe.css?v=2" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #072e2d;
+      --card-bg: rgba(255, 255, 255, 0.04);
+      --input-bg: rgba(0, 0, 0, 0.2);
+      --text-color: #ffffff;
+      --muted-color: rgba(255, 255, 255, 0.6);
+      --primary-cyan: #0ea5e9;
+      --gradient-cyan: linear-gradient(135deg, #22d3ee, #0891b2);
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Be Vietnam Pro', sans-serif;
+      background: radial-gradient(circle at 70% 20%, rgba(34, 211, 238, 0.08), transparent 500px),
+                  radial-gradient(circle at 10% 80%, rgba(15, 118, 110, 0.1), transparent 500px),
+                  linear-gradient(135deg, #0a3332 0%, #051a19 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-color);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 800 800' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M400 0C179.086 0 0 179.086 0 400s179.086 400 400 400 400-179.086 400-400S620.914 0 400 0zm0 760C201.177 760 40 598.823 40 400S201.177 40 400 40s360 161.177 360 360-161.177 360-360 360z' fill='%23ffffff' fill-opacity='0.03'/%3E%3C/svg%3E");
+      background-size: 1200px;
+      background-position: center;
+      background-repeat: no-repeat;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 800px;
+      padding: 40px 20px;
+      z-index: 1;
+    }
+
+    .login-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 40px;
+      padding: 48px;
+      box-shadow: 0 40px 100px rgba(0, 0, 0, 0.3);
+    }
+
+    .login-header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .login-header p {
+      color: var(--muted-color);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      margin-bottom: 0;
+    }
+
+    .form-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: var(--muted-color);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      display: block;
+    }
+
+    .input-group-custom {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-group-custom {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-group-custom > i:not(.password-toggle) {
+      position: absolute;
+      left: 16px;
+      color: var(--muted-color);
+      font-size: 16px;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .input-group-custom .form-control,
+    .input-group-custom .form-select {
+      background: var(--input-bg);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      color: #ffffff;
+      padding: 10px 44px 10px 44px;
+      font-size: 15px;
+      height: 52px;
+      transition: all 0.3s ease;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+    }
+
+    .input-group-custom .form-control:focus,
+    .input-group-custom .form-select:focus {
+      background: rgba(0, 0, 0, 0.3);
+      border-color: var(--primary-cyan);
+      box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15);
+      outline: none;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 16px;
+      color: var(--muted-color);
+      cursor: pointer;
+      transition: color 0.2s;
+      z-index: 3;
+      font-size: 16px;
+    }
+
+    .password-toggle:hover {
+      color: #ffffff;
+    }
+
+    .input-group-custom .form-select option {
+      background: #102827;
+      color: #ffffff;
+    }
+
+    .btn-login {
+      background: var(--gradient-cyan);
+      border: none;
+      border-radius: 18px;
+      color: #ffffff;
+      width: 100%;
+      height: 58px;
+      font-size: 17px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 32px;
+      box-shadow: 0 10px 30px rgba(34, 211, 238, 0.25);
+      transition: all 0.3s ease;
+    }
+
+    .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 40px rgba(34, 211, 238, 0.35);
+      filter: brightness(1.1);
+    }
+
+    .auth-links {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+      font-size: 14px;
+    }
+
+    .auth-links a {
+      color: var(--muted-color);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .auth-links a:hover {
+      color: #ffffff;
+    }
+
+    .alert-custom {
+      background: rgba(225, 29, 72, 0.15);
+      border: 1px solid rgba(225, 29, 72, 0.3);
+      color: #fda4af;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      grid-column: span 2;
+    }
+    
+    @media (max-width: 600px) {
+      .alert-custom {
+        grid-column: span 1;
+      }
+    }
+
+    .auth-motion-card {
+      animation: auth-slide-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    
+    .auth-motion-stagger > * {
+      opacity: 0;
+      animation: auth-fade-in 0.5s ease-out forwards;
+    }
+
+    @keyframes auth-slide-up {
+      from { opacity: 0; transform: translateY(30px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes auth-fade-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .auth-motion-stagger > *:nth-child(1) { animation-delay: 0.1s; }
+    .auth-motion-stagger > *:nth-child(2) { animation-delay: 0.2s; }
+    .auth-motion-stagger > *:nth-child(3) { animation-delay: 0.3s; }
+    .auth-motion-stagger > *:nth-child(4) { animation-delay: 0.4s; }
+    .auth-motion-stagger > *:nth-child(5) { animation-delay: 0.5s; }
+  </style>
 </head>
-<body class="login-body">
-  <main class="login-page auth-page-wide">
-    <section class="login-hero animate__animated animate__fadeInLeft">
-      <div class="login-brand">
-        <span class="brand-mark"><i class="bi bi-heart-pulse-fill"></i></span>
-        <span>
-          <strong>Bệnh viện Đa khoa Việt Nam</strong>
-          <small>Cổng hồ sơ người bệnh nội trú</small>
-        </span>
+<body>
+  <div class="login-container auth-motion-page">
+    <div class="login-card auth-motion-card">
+      <div class="login-header text-center auth-motion-stagger">
+        <h1>Đăng ký tài khoản</h1>
+        <p>Khởi tạo hồ sơ bệnh nhân và tài khoản truy cập hệ thống.</p>
       </div>
-      <h1>Tạo tài khoản để theo dõi hồ sơ điều trị, đơn thuốc, xét nghiệm và viện phí.</h1>
-    </section>
-    <section class="login-card auth-card-wide animate__animated animate__fadeInRight">
-      <h2>Đăng ký tài khoản bệnh nhân</h2>
-      <p>Thông tin này dùng để tạo hồ sơ bệnh nhân cơ bản và tài khoản đăng nhập.</p>
 
-      <% if (flash && flash.error && flash.error.length) { %>
-        <% flash.error.forEach(message => { %>
-          <div class="alert alert-danger app-alert"><i class="bi bi-exclamation-triangle-fill"></i><%= message %></div>
-        <% }) %>
-      <% } %>
+      <form action="/register" method="post">
+        <div class="form-grid auth-motion-stagger">
+          <% if (flash && flash.error && flash.error.length) { %>
+            <% flash.error.forEach(message => { %>
+              <div class="alert-custom">
+                <i class="bi bi-exclamation-triangle"></i>
+                <%= message %>
+              </div>
+            <% }) %>
+          <% } %>
 
-      <form action="/register" method="post" class="auth-form-grid mt-4">
-        <div>
-          <label class="form-label" for="fullName">Họ tên</label>
-          <input class="form-control" id="fullName" name="fullName" value="<%= form.fullName || '' %>" required>
-        </div>
-        <div>
-          <label class="form-label" for="dateOfBirth">Ngày sinh</label>
-          <input class="form-control" id="dateOfBirth" name="dateOfBirth" type="date" value="<%= form.dateOfBirth || '' %>" required>
-        </div>
-        <div>
-          <label class="form-label" for="gender">Giới tính</label>
-          <select class="form-select" id="gender" name="gender" required>
-            <option value="">Chọn giới tính</option>
-            <option value="Nam" <%= form.gender === 'Nam' ? 'selected' : '' %>>Nam</option>
-            <option value="Nữ" <%= form.gender === 'Nữ' ? 'selected' : '' %>>Nữ</option>
-          </select>
-        </div>
-        <div>
-          <label class="form-label" for="phone">Số điện thoại</label>
-          <input class="form-control" id="phone" name="phone" value="<%= form.phone || '' %>" placeholder="09xxxxxxxx">
-        </div>
-        <div>
-          <label class="form-label" for="identityNumber">CCCD</label>
-          <input class="form-control" id="identityNumber" name="identityNumber" value="<%= form.identityNumber || '' %>" placeholder="012345678901">
-        </div>
-        <div>
-          <label class="form-label" for="email">Email</label>
-          <input class="form-control" id="email" name="email" type="email" value="<%= form.email || '' %>" required>
-        </div>
-        <div>
-          <label class="form-label" for="username">Username</label>
-          <input class="form-control" id="username" name="username" value="<%= form.username || '' %>" required>
-        </div>
-        <div>
-          <label class="form-label" for="password">Mật khẩu</label>
-          <input class="form-control" id="password" name="password" type="password" minlength="6" required>
-        </div>
-        <div>
-          <label class="form-label" for="confirmPassword">Xác nhận mật khẩu</label>
-          <input class="form-control" id="confirmPassword" name="confirmPassword" type="password" minlength="6" required>
-        </div>
-        <div class="auth-form-actions">
-          <a class="btn btn-light" href="/login">Quay lại đăng nhập</a>
-          <button class="btn btn-primary" type="submit">
-            Đăng ký
-          </button>
+          <div class="form-group">
+            <label class="form-label">HỌ TÊN</label>
+            <div class="input-group-custom">
+              <i class="bi bi-person"></i>
+              <input class="form-control" name="fullName" value="<%= form.fullName || '' %>" placeholder="Nguyễn Văn A" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">NGÀY SINH</label>
+            <div class="input-group-custom">
+              <i class="bi bi-calendar-event"></i>
+              <input class="form-control" name="dateOfBirth" type="date" value="<%= form.dateOfBirth || '' %>" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">GIỚI TÍNH</label>
+            <div class="input-group-custom">
+              <i class="bi bi-gender-ambiguous"></i>
+              <select class="form-select" name="gender" required>
+                <option value="">Chọn giới tính</option>
+                <option value="Nam" <%= form.gender === 'Nam' ? 'selected' : '' %>>Nam</option>
+                <option value="Nữ" <%= form.gender === 'Nữ' ? 'selected' : '' %>>Nữ</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">SỐ ĐIỆN THOẠI</label>
+            <div class="input-group-custom">
+              <i class="bi bi-telephone"></i>
+              <input class="form-control" name="phone" value="<%= form.phone || '' %>" placeholder="09xxxxxxxx">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">CCCD / ĐỊNH DANH</label>
+            <div class="input-group-custom">
+              <i class="bi bi-card-text"></i>
+              <input class="form-control" name="identityNumber" value="<%= form.identityNumber || '' %>" placeholder="012345678901">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">EMAIL</label>
+            <div class="input-group-custom">
+              <i class="bi bi-envelope"></i>
+              <input class="form-control" name="email" type="email" value="<%= form.email || '' %>" placeholder="email@vi-du.com" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">TÊN ĐĂNG NHẬP</label>
+            <div class="input-group-custom">
+              <i class="bi bi-person-badge"></i>
+              <input class="form-control" name="username" value="<%= form.username || '' %>" placeholder="username123" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">MẬT KHẨU</label>
+            <div class="input-group-custom">
+              <i class="bi bi-lock"></i>
+              <input class="form-control" id="passwordField" name="password" type="password" minlength="6" placeholder="******" required>
+              <i class="bi bi-eye password-toggle" id="togglePassword"></i>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">XÁC NHẬN MẬT KHẨU</label>
+            <div class="input-group-custom">
+              <i class="bi bi-shield-lock"></i>
+              <input class="form-control" id="confirmPasswordField" name="confirmPassword" type="password" minlength="6" placeholder="******" required>
+              <i class="bi bi-eye password-toggle" id="toggleConfirmPassword"></i>
+            </div>
+          </div>
+          
+          <div class="form-group" style="grid-column: span 2; display: flex; align-items: flex-end;">
+             <button class="btn btn-login" type="submit" style="margin-top: 0;">
+                <i class="bi bi-person-plus"></i>
+                Đăng ký ngay
+              </button>
+          </div>
         </div>
       </form>
-    </section>
-  </main>
+
+      <div class="auth-links auth-motion-stagger">
+        <a href="/login">Đã có tài khoản? Đăng nhập</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/motion@11.11.18/dist/motion.js"></script>
+  <script src="/js/auth-motion.js"></script>
+  <script>
+    function setupToggle(toggleId, fieldId) {
+      const toggle = document.querySelector(toggleId);
+      const field = document.querySelector(fieldId);
+      if (toggle && field) {
+        toggle.addEventListener('click', function () {
+          const type = field.getAttribute('type') === 'password' ? 'text' : 'password';
+          field.setAttribute('type', type);
+          this.classList.toggle('bi-eye');
+          this.classList.toggle('bi-eye-slash');
+        });
+      }
+    }
+    setupToggle('#togglePassword', '#passwordField');
+    setupToggle('#toggleConfirmPassword', '#confirmPasswordField');
+  </script>
 </body>
 </html>

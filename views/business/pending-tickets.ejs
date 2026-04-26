@@ -1,0 +1,56 @@
+<section class="module-hero">
+  <div>
+    <h2>Phiếu khám đang chờ</h2>
+  </div>
+  <div class="module-actions">
+    <a href="/dashboard" class="btn btn-light"><i class="bi bi-grid me-2"></i>Tổng quan</a>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm mã phiếu, bệnh nhân" data-module-search="pendingTicketsTable">
+    </div>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="pendingTicketsTable">
+      <thead>
+        <tr>
+          <th>Thời gian lập</th>
+          <th>Mã phiếu</th>
+          <th>Bệnh nhân</th>
+          <th>Loại khám</th>
+          <th>Lý do / Triệu chứng</th>
+          <th class="text-end">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.ticketCode} ${row.patientName}`.toLowerCase() %>">
+            <td><%= format.datetime(row.createdAt) %></td>
+            <td><strong><%= row.ticketCode %></strong></td>
+            <td><strong><%= row.patientName %></strong></td>
+            <td>
+              <%= row.examType %>
+              <% if (row.isUrgent) { %>
+                <span class="badge bg-danger ms-1">Cấp cứu</span>
+              <% } %>
+            </td>
+            <td class="text-wrap-cell"><%= row.reason %></td>
+            <td class="text-end">
+              <a href="/nghiep-vu/chan-benh?ticketId=<%= row.ticketId %>" class="btn btn-sm btn-primary">
+                <i class="bi bi-activity me-1"></i> Khám bệnh
+              </a>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr><td colspan="6" class="text-center py-5 text-muted italic">Hiện không có phiếu khám nào đang chờ bạn xử lý.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -7,6 +7,7 @@ const router = express.Router();
 router.use(requireRole(['ADMIN']));
 
 router.get('/roles-permissions', adminController.rolesPermissions);
+router.post('/roles-permissions/modules', adminController.updateRoleModulePermissions);
 router.post('/roles', adminController.createRole);
 router.post('/roles/:id/update', adminController.updateRole);
 router.post('/roles/:id/delete', adminController.deleteRole);

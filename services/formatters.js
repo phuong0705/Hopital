@@ -22,6 +22,14 @@ function datetime(value) {
   }).format(new Date(value));
 }
 
+function time(value) {
+  if (!value) return '';
+  return new Intl.DateTimeFormat('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(value));
+}
+
 function age(dateOfBirth) {
   if (!dateOfBirth) return '';
   const dob = new Date(dateOfBirth);
@@ -38,5 +46,6 @@ module.exports = {
   currency,
   date,
   datetime,
+  time,
   age
 };

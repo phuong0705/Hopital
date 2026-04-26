@@ -1,0 +1,72 @@
+<section class="module-hero">
+  <div>
+    <h2>Danh sách lịch hẹn khám</h2>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In danh sách</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm mã hẹn, bệnh nhân hoặc lý do" data-module-search="doctorAppointmentsTable">
+    </div>
+    <select class="form-select w-auto" data-module-filter="doctorAppointmentsTable" data-filter-key="status">
+      <option value="">Tất cả trạng thái</option>
+      <option>Đã đặt</option>
+      <option>Đã tiếp nhận</option>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="doctorAppointmentsTable">
+      <thead>
+        <tr>
+          <th>Thời gian</th>
+          <th>Mã hẹn</th>
+          <th>Bệnh nhân</th>
+          <th>Lý do khám</th>
+          <th>Trạng thái</th>
+          <th class="text-end">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.appointmentCode} ${row.patientCode} ${row.patientName} ${row.reason || ''}`.toLowerCase() %>" data-status="<%= row.status %>">
+            <td>
+              <div class="fw-bold text-primary">
+                <%= format.datetime(row.appointmentTime) %>
+              </div>
+            </td>
+            <td><code><%= row.appointmentCode %></code></td>
+            <td>
+              <strong><%= row.patientName %></strong>
+              <small class="d-block text-muted"><%= row.patientCode %> · <%= row.phone || 'Không có SĐT' %></small>
+            </td>
+            <td class="text-wrap-cell compact"><%= row.reason || 'Khám theo lịch hẹn' %></td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td class="text-end">
+              <div class="d-flex justify-content-end gap-1">
+                <a href="/nghiep-vu/lap-phieu-kham?patientId=<%= row.patientId %>&reason=<%= encodeURIComponent(row.reason || '') %>" class="btn btn-sm btn-light" title="Lập phiếu khám">
+                  <i class="bi bi-file-earmark-plus"></i>
+                </a>
+                <a href="/nghiep-vu/chan-benh?patientId=<%= row.patientId %>" class="btn btn-sm btn-light" title="Chẩn bệnh">
+                  <i class="bi bi-activity"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr><td colspan="6" class="text-center py-5 text-muted italic">Bạn không có lịch hẹn nào.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+  <div class="empty-inline module-empty d-none" data-empty-for="doctorAppointmentsTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy lịch hẹn phù hợp</strong>
+  </div>
+</section>

@@ -1,22 +1,11 @@
 <section class="module-hero">
   <div>
     <h2>Tích hợp HIS / LIS / PACS</h2>
-    <p class="text-muted mb-0">Theo dõi kết nối nội bộ bằng cấu hình môi trường và dữ liệu phát sinh thật.</p>
   </div>
   <div class="module-actions">
     <a class="btn btn-light" href="/labtests"><i class="bi bi-clipboard2-pulse me-2"></i>LIS</a>
     <a class="btn btn-primary" href="/reports"><i class="bi bi-bar-chart me-2"></i>Reports</a>
   </div>
-</section>
-
-<section class="patient-action-grid compact mt-4">
-  <% signals.forEach(signal => { %>
-    <div class="patient-action-card">
-      <i class="bi <%= signal.systemCode === 'HIS' ? 'bi-hospital' : signal.systemCode === 'LIS' ? 'bi-clipboard2-pulse' : 'bi-image' %>"></i>
-      <strong><%= signal.systemCode %> · <%= signal.totalEvents %> sự kiện</strong>
-      <span>Lần phát sinh gần nhất: <%= signal.lastEventAt ? format.datetime(signal.lastEventAt) : 'Chưa có dữ liệu' %></span>
-    </div>
-  <% }) %>
 </section>
 
 <section class="panel mt-4">

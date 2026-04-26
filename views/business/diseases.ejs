@@ -59,12 +59,11 @@
         data-severity="<%= row.severityLevel %>"
         data-specialty="<%= row.specialty %>">
         <div class="disease-card-head">
-          <span></span>
-          <span class="status-badge <%= severityClass %>"><%= row.severityLevel %></span>
+          <span class="disease-icon-box"><i class="bi bi-virus"></i></span>
+          <span class="status-badge status-info"><%= row.icd10Code %></span>
         </div>
         <h3><%= row.diseaseName %></h3>
         <div class="disease-meta">
-          <span><i class="bi bi-upc-scan"></i> ICD-10: <strong><%= row.icd10Code %></strong></span>
           <span><i class="bi bi-hospital"></i> <%= row.specialty %></span>
         </div>
         <div class="disease-preview">

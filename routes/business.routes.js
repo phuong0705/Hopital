@@ -28,6 +28,8 @@ router.get('/theo-doi-thoi-gian-nam', requireRole(['ADMIN', 'DOCTOR', 'NURSE', '
 router.get('/lap-phac-do', requireRole(['ADMIN', 'DOCTOR']), businessController.carePlan);
 router.get('/lich-mo-thu-thuat', requireRole(['ADMIN', 'DOCTOR']), businessController.procedureSchedule);
 router.get('/tong-hop-ket-qua-xet-nghiem', requireRole(['ADMIN', 'DOCTOR', 'NURSE']), businessController.labSummary);
+router.get('/lich-hen-kham-hom-nay', requireRole(['ADMIN', 'DOCTOR']), businessController.doctorTodayAppointments);
+router.get('/phieu-kham-cho', requireRole(['ADMIN', 'DOCTOR']), businessController.pendingExamTickets);
 
 // Nursing Module
 router.get('/giao-ban-dieu-duong', requireRole(['ADMIN', 'NURSE']), businessController.nurseHandoff);
@@ -40,7 +42,9 @@ router.post('/cap-nhat-trang-thai-phong/:id/status', requireRole(['ADMIN', 'NURS
 router.get('/quan-ly-thuoc-tai-khoa', requireRole(['ADMIN', 'NURSE']), businessController.wardMeds);
 router.get('/quan-ly-thuoc-tai-khoa/:id/history', requireRole(['ADMIN', 'NURSE']), businessController.medicineHistory);
 router.post('/quan-ly-thuoc-tai-khoa/transaction', requireRole(['ADMIN', 'NURSE']), businessController.addMedicineTransaction);
+router.post('/quan-ly-thuoc-tai-khoa/provision', requireRole(['ADMIN', 'NURSE']), businessController.createMedicineProvision);
 router.get('/vat-tu-tieu-hao', requireRole(['ADMIN', 'NURSE']), businessController.supplies);
+router.post('/vat-tu-tieu-hao/transaction', requireRole(['ADMIN', 'NURSE']), businessController.addSupplyTransaction);
 
 // Finance Module
 router.get('/tinh-phi-kham', requireRole(['ADMIN', 'RECEPTIONIST']), businessController.feeExam);
@@ -63,6 +67,7 @@ router.get('/bao-cao-xuat-vien', requireRole(['ADMIN', 'DOCTOR', 'RECEPTIONIST']
 
 // System Admin Module
 router.get('/sao-luu-du-lieu', requireRole(['ADMIN']), businessController.backupData);
+router.post('/sao-luu-du-lieu', requireRole(['ADMIN']), businessController.createBackup);
 router.get('/phuc-hoi-du-lieu', requireRole(['ADMIN']), businessController.restoreData);
 
 router.get('/:slug', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), businessController.showBusiness);

@@ -273,6 +273,23 @@ async function labtests(req, res, next) {
   }
 }
 
+async function updateLabTestResult(req, res, next) {
+  try {
+    const { testCode } = req.params;
+    const { status, resultSummary } = req.body;
+
+    if (!status || !resultSummary) {
+      return res.status(400).json({ error: 'Vui lòng nhập đầy đủ trạng thái và kết quả/kết luận' });
+    }
+
+    await moduleRepository.updateLabTestResult(testCode, status, resultSummary);
+    res.json({ success: true, message: 'Cập nhật kết quả thành công' });
+  } catch (error) {
+    console.error('Lỗi khi cập nhật kết quả xét nghiệm:', error);
+    res.status(500).json({ error: 'Không thể cập nhật kết quả xét nghiệm' });
+  }
+}
+
 async function departmentDetail(req, res, next) {
   try {
     const departmentId = req.params.id;
@@ -409,6 +426,10 @@ async function deleteDepartment(req, res, next) {
     req.flash('success', 'Xóa khoa thành công.');
     res.redirect('/departments');
   } catch (error) {
+    if (error.number === 51001) {
+      req.flash('error', error.message);
+      return res.redirect('/departments');
+    }
     next(error);
   }
 }
@@ -491,6 +512,7 @@ module.exports = {
   prescriptions,
   createPrescription,
   labtests,
+  updateLabTestResult,
   billing,
   createBilling,
   discharges,

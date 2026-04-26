@@ -126,9 +126,16 @@ async function updateDepartment(departmentId, data) {
 }
 
 async function deleteDepartment(departmentId) {
-  // Should check for dependencies (rooms, doctors) before deleting, 
-  // but for now I'll just do a simple delete.
-  await execute(`DELETE FROM Departments WHERE department_id = @departmentId`, { departmentId: Number(departmentId) });
+  await execute(`
+    IF EXISTS (SELECT 1 FROM Rooms WHERE department_id = @departmentId)
+       OR EXISTS (SELECT 1 FROM Doctors WHERE department_id = @departmentId)
+       OR EXISTS (SELECT 1 FROM Admissions WHERE department_id = @departmentId)
+    BEGIN
+      THROW 51001, N'Không thể xóa khoa còn phòng, bác sĩ hoặc hồ sơ bệnh nhân liên quan.', 1;
+    END;
+
+    DELETE FROM Departments WHERE department_id = @departmentId;
+  `, { departmentId: Number(departmentId) });
 }
 
 async function getDepartmentRooms(departmentId) {
@@ -472,7 +479,8 @@ async function updateTreatmentStatus(scheduleId, data) {
 
 async function getNursingWorklist() {
   return query(`
-    SELECT TOP 20 a.admission_id AS admissionId, p.patient_code AS patientCode, p.full_name AS patientName,
+    SELECT TOP 20 a.admission_id AS admissionId, p.patient_id AS patientId,
+      p.patient_code AS patientCode, p.full_name AS patientName,
       d.department_name AS departmentName, r.room_code AS roomCode, b.bed_code AS bedCode,
       a.priority_level AS priorityLevel, mr.vital_signs AS vitalSigns,
       ts.scheduled_time AS scheduledTime, ts.treatment_content AS treatmentContent,
@@ -589,14 +597,25 @@ async function getLabTests(doctorId = null) {
     SELECT lt.test_code AS testCode, mr.record_id AS recordId, p.patient_code AS patientCode,
       p.full_name AS patientName, lt.test_type AS testType,
       lt.ordered_date AS orderedDate, lt.status, lt.result_summary AS resultSummary,
-      doc.full_name AS doctorName
+      doc.full_name AS doctorName, d.department_name AS departmentName
     FROM LabTests lt
     INNER JOIN MedicalRecords mr ON mr.record_id = lt.record_id
     INNER JOIN Patients p ON p.patient_id = mr.patient_id
+    INNER JOIN Admissions a ON a.admission_id = mr.admission_id
+    INNER JOIN Departments d ON d.department_id = a.department_id
     INNER JOIN Doctors doc ON doc.doctor_id = lt.doctor_id
     ${whereDoctor}
     ORDER BY lt.ordered_date DESC
   `, doctorId ? { doctorId: Number(doctorId) } : {});
+}
+
+async function updateLabTestResult(testCode, status, resultSummary) {
+  return query(`
+    UPDATE LabTests
+    SET status = @status,
+        result_summary = @resultSummary
+    WHERE test_code = @testCode
+  `, { testCode, status, resultSummary });
 }
 
 async function getBilling() {
@@ -792,11 +811,33 @@ async function updateBedStatus(bedId, status) {
 async function getDoctorDuties() {
   return query(`
     SELECT d.doctor_id AS doctorId, d.doctor_code AS doctorCode, d.full_name AS fullName,
-      d.specialty, d.shift_name AS shiftName, dept.department_name AS departmentName,
+      d.specialty, d.shift_name AS shiftName, d.department_id AS departmentId, dept.department_name AS departmentName,
       (SELECT COUNT(*) FROM Admissions WHERE doctor_id = d.doctor_id AND status = N'Đang điều trị') AS activePatients
     FROM Doctors d
     LEFT JOIN Departments dept ON dept.department_id = d.department_id
     ORDER BY dept.department_name, d.full_name
+  `);
+}
+
+async function getDutyShiftStats() {
+  return query(`
+    SELECT
+      COALESCE(NULLIF(shift_name, ''), N'Chưa phân ca') AS shiftName,
+      COUNT(DISTINCT Doctors.doctor_id) AS doctorCount,
+      COUNT(DISTINCT CASE WHEN Doctors.department_id IS NULL THEN Doctors.doctor_id END) AS unassignedDepartmentCount,
+      COUNT(a.admission_id) AS activePatients
+    FROM Doctors
+    LEFT JOIN Admissions a ON a.doctor_id = Doctors.doctor_id AND a.status = N'Đang điều trị'
+    GROUP BY COALESCE(NULLIF(shift_name, ''), N'Chưa phân ca')
+    ORDER BY
+      CASE COALESCE(NULLIF(shift_name, ''), N'Chưa phân ca')
+        WHEN N'Ca Sáng' THEN 1
+        WHEN N'Ca Chiều' THEN 2
+        WHEN N'Ca Đêm' THEN 3
+        WHEN N'Chưa phân ca' THEN 9
+        ELSE 4
+      END,
+      shiftName
   `);
 }
 
@@ -932,6 +973,7 @@ module.exports = {
   getActiveMedicalRecords,
   createPrescription,
   getLabTests,
+  updateLabTestResult,
   getBilling,
   createBilling,
   getDischarges,
@@ -944,6 +986,7 @@ module.exports = {
   updateNurseNotes,
   updateBedStatus,
   getDoctorDuties,
+  getDutyShiftStats,
   getStaffPerformance,
   updateDoctorDuty,
   removeDoctorDuty,

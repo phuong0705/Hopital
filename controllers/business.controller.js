@@ -9,6 +9,10 @@ const serviceRepository = require('../repositories/service.repository');
 const patientRepository = require('../repositories/patient.repository');
 const moduleRepository = require('../repositories/module.repository');
 const lookupRepository = require('../repositories/lookup.repository');
+const examRepository = require('../repositories/exam.repository');
+const supplyRepository = require('../repositories/supply.repository');
+const backupRepository = require('../repositories/backup.repository');
+const cashierRepository = require('../repositories/cashier.repository');
 
 function containsKeyword(value, keywords) {
   const normalized = normalizeText(value);
@@ -198,10 +202,11 @@ async function updateServiceStatus(req, res, next) {
 }
 async function examTicket(req, res, next) {
   try {
-    const [patients, departments, doctors] = await Promise.all([
+    const [patients, departments, doctors, tickets] = await Promise.all([
       patientRepository.getInpatients(),
       lookupRepository.getDepartments(),
-      lookupRepository.getDoctors()
+      lookupRepository.getDoctors(),
+      examRepository.getRecentExamTickets()
     ]);
 
     res.render('business/exam-ticket', {
@@ -209,7 +214,10 @@ async function examTicket(req, res, next) {
       activeMenu: req.query.activeMenu || 'exam-ticket',
       patients,
       departments,
-      doctors
+      doctors,
+      tickets,
+      selectedPatientId: req.query.patientId,
+      initialReason: req.query.reason
     });
   } catch (error) {
     next(error);
@@ -218,8 +226,14 @@ async function examTicket(req, res, next) {
 
 async function createExamTicket(req, res, next) {
   try {
-    // Logic to create exam ticket placeholder
-    req.flash('success', 'Lập phiếu khám thành công. Đang chuyển hướng in phiếu...');
+    const { patientId, departmentId, doctorId, reason } = req.body;
+    if (!patientId || !departmentId || !doctorId || !reason) {
+      req.flash('error', 'Vui lòng nhập đầy đủ bệnh nhân, khoa khám, bác sĩ và lý do khám.');
+      return res.redirect('/nghiep-vu/lap-phieu-kham');
+    }
+
+    const ticket = await examRepository.createExamTicket(req.body, req.session.user.userId);
+    req.flash('success', `Đã lập phiếu khám ${ticket.ticketCode}.`);
     res.redirect('/nghiep-vu/lap-phieu-kham');
   } catch (error) {
     next(error);
@@ -476,6 +490,46 @@ async function labSummary(req, res, next) {
   }
 }
 
+async function doctorTodayAppointments(req, res, next) {
+  try {
+    const doctorId = await getSessionDoctorId(req);
+    const rows = await cashierRepository.getAppointmentsByDoctor(doctorId === -1 ? 0 : doctorId);
+    
+    res.render('business/doctor-appointments', {
+      title: 'Lịch hẹn khám hôm nay',
+      activeMenu: req.query.activeMenu || 'doctor-today-appointments',
+      rows
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function pendingExamTickets(req, res, next) {
+  try {
+    const doctor = await getSessionDoctor(req);
+    if (!doctor) {
+      req.flash('error', 'Không tìm thấy hồ sơ bác sĩ.');
+      return res.redirect('/dashboard');
+    }
+
+    const rows = await examRepository.getRecentExamTickets(100);
+    // Filter for tickets assigned to this doctor and still in 'Đã lập phiếu' status
+    const pendingTickets = rows.filter(t => 
+      t.status === 'Đã lập phiếu' && 
+      t.doctorName === doctor.fullName
+    );
+
+    res.render('business/pending-tickets', {
+      title: 'Danh sách phiếu khám chờ',
+      activeMenu: req.query.activeMenu || 'doctor-pending-tickets',
+      rows: pendingTickets
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function feeExam(req, res, next) {
   try {
     const patients = await patientRepository.getInpatients();
@@ -523,11 +577,15 @@ async function doctorDuty(req, res, next) {
 
 async function dutyShift(req, res, next) {
   try {
-    const rows = await moduleRepository.getDoctorDuties(); // Reusing the same data for now
+    const [rows, shiftStats] = await Promise.all([
+      moduleRepository.getDoctorDuties(),
+      moduleRepository.getDutyShiftStats()
+    ]);
     res.render('business/duty-shift', {
       title: 'Quản lý ca trực',
       activeMenu: req.query.activeMenu || 'duty-shift',
-      rows
+      rows,
+      shiftStats
     });
   } catch (error) {
     next(error);
@@ -651,12 +709,24 @@ async function reportDischarges(req, res, next) {
 
 async function backupData(req, res, next) {
   try {
+    const rows = await backupRepository.getBackupJobs();
     res.render('business/backup', {
       title: 'Sao lưu dữ liệu',
-      activeMenu: req.query.activeMenu || 'backup-data'
+      activeMenu: req.query.activeMenu || 'backup-data',
+      rows
     });
   } catch (error) {
     next(error);
+  }
+}
+
+async function createBackup(req, res, next) {
+  try {
+    const job = await backupRepository.createBackupJob(req.body, req.session.user.userId);
+    req.flash('success', `Đã ghi nhận bản sao lưu ${job.backupCode}.`);
+    return res.redirect('/nghiep-vu/sao-luu-du-lieu');
+  } catch (error) {
+    return next(error);
   }
 }
 
@@ -801,13 +871,40 @@ async function addMedicineTransaction(req, res, next) {
   }
 }
 
+async function createMedicineProvision(req, res, next) {
+  try {
+    const request = await medicineRepository.createProvisionRequest({
+      departmentName: req.session.user.departmentName || req.body.departmentName || '',
+      note: req.body.note || '',
+      createdBy: req.session.user.userId
+    });
+    req.flash('success', `Đã gửi yêu cầu dự trù ${request.requestCode}.`);
+    res.redirect('/nghiep-vu/quan-ly-thuoc-tai-khoa');
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function supplies(req, res, next) {
   try {
+    const rows = await supplyRepository.getSupplies();
     res.render('business/supplies', {
       title: 'Vật tư tiêu hao',
       activeMenu: req.query.activeMenu || 'nurse-supplies',
-      rows: [] // Placeholder for supplies inventory
+      rows
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function addSupplyTransaction(req, res, next) {
+  try {
+    await supplyRepository.addSupplyTransaction(req.body, req.session.user.userId);
+    req.flash('success', req.body.transactionType === 'Xuất sử dụng'
+      ? 'Đã cập nhật xuất sử dụng vật tư.'
+      : 'Đã ghi nhận yêu cầu vật tư.');
+    res.redirect('/nghiep-vu/vat-tu-tieu-hao');
   } catch (error) {
     next(error);
   }
@@ -835,6 +932,8 @@ module.exports = {
   carePlan,
   procedureSchedule,
   labSummary,
+  doctorTodayAppointments,
+  pendingExamTickets,
   feeExam,
   invoiceList,
   doctorDuty,
@@ -849,6 +948,7 @@ module.exports = {
   reportMedicines,
   reportDischarges,
   backupData,
+  createBackup,
   restoreData,
   nurseHandoff,
   nurseVitals,
@@ -860,5 +960,7 @@ module.exports = {
   wardMeds,
   medicineHistory,
   addMedicineTransaction,
-  supplies
+  createMedicineProvision,
+  supplies,
+  addSupplyTransaction
 };

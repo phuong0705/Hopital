@@ -1,31 +1,12 @@
 <section class="module-hero">
   <div>
     <h2>Quản lý Roles & Quyền</h2>
-    <p class="text-muted mb-0">Vai trò lấy từ bảng Roles; quyền truy cập lấy từ cấu hình module đang chạy.</p>
   </div>
   <div class="module-actions">
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRoleModal">
       <i class="bi bi-shield-plus me-2"></i>Thêm vai trò
     </button>
     <a class="btn btn-light" href="/users"><i class="bi bi-people me-2"></i>Người dùng</a>
-  </div>
-</section>
-
-<section class="patient-action-grid compact mt-4">
-  <div class="patient-action-card">
-    <i class="bi bi-shield-check"></i>
-    <strong><%= roles.length %> vai trò</strong>
-    <span>Định nghĩa trong bảng Roles.</span>
-  </div>
-  <div class="patient-action-card">
-    <i class="bi bi-people"></i>
-    <strong><%= counts.users || 0 %> tài khoản</strong>
-    <span>Tài khoản đang có trong hệ thống.</span>
-  </div>
-  <div class="patient-action-card">
-    <i class="bi bi-grid"></i>
-    <strong><%= modules.length %> module</strong>
-    <span>Module được kiểm soát theo role.</span>
   </div>
 </section>
 
@@ -36,53 +17,20 @@
       <p>Đây là nguồn phân quyền gốc cho người dùng đăng nhập.</p>
     </div>
   </div>
-  <div class="module-table-wrap">
-    <table class="table app-table module-table">
-      <thead>
-        <tr>
-          <th>Mã role</th>
-          <th>Tên role</th>
-          <th>Mô tả</th>
-          <th>Người dùng</th>
-          <th class="text-end">Hành động</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% roles.forEach(role => { %>
-          <tr>
-            <td><strong><%= role.roleCode %></strong></td>
-            <td><%= role.roleName %></td>
-            <td class="text-wrap-cell"><%= role.description || '-' %></td>
-            <td><%= role.userCount %></td>
-            <td class="text-end">
-              <div class="table-actions">
-                <button class="btn btn-sm btn-light action-icon" 
-                  data-bs-toggle="modal" 
-                  data-bs-target="#editRoleModal"
-                  data-role='<%= JSON.stringify(role) %>'>
-                  <i class="bi bi-pencil"></i>
-                </button>
-                <form action="/admin/roles/<%= role.roleId %>/delete" method="post" class="d-inline" onsubmit="return confirm('Xóa vai trò này?')">
-                  <button class="btn btn-sm btn-light text-danger action-icon" <%= role.userCount > 0 ? 'disabled' : '' %>>
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </form>
-              </div>
-            </td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
-  </div>
 </section>
 
 <section class="panel mt-4">
+  <form action="/admin/roles-permissions/modules" method="post">
   <div class="panel-header">
     <div>
       <h2>Ma trận quyền module</h2>
-      <p>Admin luôn có toàn quyền; các role còn lại theo cấu hình truy cập hiện tại (Registry).</p>
+      <p>Admin có thể bật/tắt quyền truy cập module cho từng role. Role ADMIN được giữ toàn quyền để tránh khóa quản trị.</p>
     </div>
-    <a class="btn btn-sm btn-light" href="/admin/modules"><i class="bi bi-grid me-2"></i>Chi tiết module</a>
+    <div class="module-actions">
+      <button class="btn btn-sm btn-light" type="button" id="checkAllPermissions"><i class="bi bi-check2-all me-2"></i>Cho phép tất cả</button>
+      <button class="btn btn-sm btn-light" type="button" id="clearAllPermissions"><i class="bi bi-x-lg me-2"></i>Bỏ chọn</button>
+      <a class="btn btn-sm btn-light" href="/admin/modules"><i class="bi bi-grid me-2"></i>Chi tiết module</a>
+    </div>
   </div>
   <div class="module-table-wrap">
     <table class="table app-table module-table">
@@ -90,7 +38,7 @@
         <tr>
           <th>Module</th>
           <% roles.forEach(role => { %>
-            <th><%= role.roleCode %></th>
+            <th class="text-center"><%= role.roleCode %></th>
           <% }) %>
         </tr>
       </thead>
@@ -104,13 +52,22 @@
               </div>
             </td>
             <% roles.forEach(role => {
-              const allowed = role.roleCode === 'ADMIN' || item.roles.includes(role.roleCode);
+              const allowed = permissionMatrix[item.key] && permissionMatrix[item.key][role.roleCode];
+              const pairValue = `${item.key}::${role.roleCode}`;
             %>
-              <td>
-                <% if (allowed) { %>
-                  <span class="status-badge status-success">Cho phép</span>
+              <td class="text-center">
+                <% if (role.roleCode === 'ADMIN') { %>
+                  <span class="status-badge status-success">Luôn cho phép</span>
                 <% } else { %>
-                  <span class="status-badge status-secondary">Chặn</span>
+                  <label class="permission-switch" title="<%= allowed ? 'Đang cho phép' : 'Đang chặn' %>">
+                    <input
+                      type="checkbox"
+                      name="permissions"
+                      value="<%= pairValue %>"
+                      <%= allowed ? 'checked' : '' %>
+                      data-permission-toggle>
+                    <span></span>
+                  </label>
                 <% } %>
               </td>
             <% }) %>
@@ -119,6 +76,11 @@
       </tbody>
     </table>
   </div>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3">
+    <span class="text-muted small">Quyền sẽ được lưu vào bảng RoleModulePermissions.</span>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>Lưu ma trận quyền</button>
+  </div>
+  </form>
 </section>
 
 <!-- Modal Tạo mới -->
@@ -191,6 +153,19 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
+    const permissionToggles = Array.from(document.querySelectorAll('[data-permission-toggle]'));
+    document.getElementById('checkAllPermissions')?.addEventListener('click', function() {
+      permissionToggles.forEach(function(input) {
+        input.checked = true;
+      });
+    });
+
+    document.getElementById('clearAllPermissions')?.addEventListener('click', function() {
+      permissionToggles.forEach(function(input) {
+        input.checked = false;
+      });
+    });
+
     const editModal = document.getElementById('editRoleModal');
     if (editModal) {
       editModal.addEventListener('show.bs.modal', function(event) {

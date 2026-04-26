@@ -19,6 +19,7 @@ app.set('layout', 'layouts/main');
 
 app.use(expressLayouts);
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/vendor/framer-motion', express.static(path.join(__dirname, 'node_modules', 'framer-motion', 'dist')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(methodOverride('_method'));

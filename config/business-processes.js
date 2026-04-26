@@ -36,10 +36,11 @@ const businessGroups = [
     roles: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST'],
     items: [
       { key: 'exam-ticket', code: '3.1', title: 'Lập phiếu khám', href: '/nghiep-vu/lap-phieu-kham', icon: 'bi-file-earmark-plus' },
-      { key: 'diagnosis', code: '3.2', title: 'Chẩn bệnh', href: '/nghiep-vu/chan-benh', icon: 'bi-activity' },
-      { key: 'labtests-order', code: '3.3', title: 'Chỉ định xét nghiệm', href: '/labtests', icon: 'bi-clipboard2-pulse' },
-      { key: 'clinical-lookup', code: '3.4', title: 'Tra cứu dữ liệu', href: '/nghiep-vu/tra-cuu-du-lieu-kham', icon: 'bi-database-search' },
-      { key: 'exam-results', code: '3.5', title: 'Theo dõi kết quả khám', href: '/nghiep-vu/theo-doi-ket-qua-kham', icon: 'bi-clipboard-data' }
+      { key: 'doctor-today-appointments', code: '3.2', title: 'Lịch hẹn hôm nay', href: '/nghiep-vu/lich-hen-kham-hom-nay', icon: 'bi-calendar-check' },
+      { key: 'diagnosis', code: '3.3', title: 'Chẩn bệnh', href: '/nghiep-vu/chan-benh', icon: 'bi-activity' },
+      { key: 'labtests-order', code: '3.4', title: 'Chỉ định xét nghiệm', href: '/labtests', icon: 'bi-clipboard2-pulse' },
+      { key: 'clinical-lookup', code: '3.5', title: 'Tra cứu dữ liệu', href: '/nghiep-vu/tra-cuu-du-lieu-kham', icon: 'bi-database-search' },
+      { key: 'exam-results', code: '3.6', title: 'Theo dõi kết quả khám', href: '/nghiep-vu/theo-doi-ket-qua-kham', icon: 'bi-clipboard-data' }
     ]
   },
   {
@@ -65,7 +66,7 @@ const businessGroups = [
       { key: 'care-plan', code: '5.1', title: 'Lập phác đồ', href: '/nghiep-vu/lap-phac-do', icon: 'bi-diagram-3' },
       { key: 'treatment-prescriptions', code: '5.2', title: 'Kê đơn thuốc', href: '/prescriptions', icon: 'bi-capsule-pill' },
       { key: 'treatments', code: '5.3', title: 'Theo dõi diễn biến', href: '/treatments', icon: 'bi-calendar2-pulse' },
-      { key: 'lab-summary', code: '5.4', title: 'Tổng hợp kết quả xét nghiệm', href: '/labtests', icon: 'bi-clipboard-data' }
+      { key: 'lab-summary', code: '5.4', title: 'Tổng hợp kết quả xét nghiệm', href: '/nghiep-vu/tong-hop-ket-qua-xet-nghiem', icon: 'bi-clipboard-data' }
     ]
   },
   {

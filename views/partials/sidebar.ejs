@@ -54,7 +54,8 @@
     {
       label: 'KHÁM & CHẨN ĐOÁN',
       items: [
-        { key: 'doctor-exam-ticket', label: 'Lập phiếu khám', icon: 'bi-file-earmark-plus', href: '/nghiep-vu/lap-phieu-kham?activeMenu=doctor-exam-ticket' },
+        { key: 'doctor-today-appointments', label: 'Danh sách lịch hẹn', icon: 'bi-calendar-check', href: '/nghiep-vu/lich-hen-kham-hom-nay?activeMenu=doctor-today-appointments' },
+        { key: 'doctor-pending-tickets', label: 'Phiếu khám chờ', icon: 'bi-file-earmark-medical', href: '/nghiep-vu/phieu-kham-cho?activeMenu=doctor-pending-tickets', badge: doctorPendingTickets },
         { key: 'doctor-diagnosis', label: 'Chẩn bệnh', icon: 'bi-activity', href: '/nghiep-vu/chan-benh?activeMenu=doctor-diagnosis' },
         { key: 'doctor-lab-orders', label: 'Chỉ định xét nghiệm', icon: 'bi-clipboard2-pulse', href: '/labtests?activeMenu=doctor-lab-orders' },
         { key: 'doctor-imaging-procedure-order', label: 'Chỉ định CĐHA / Thủ thuật', icon: 'bi-bezier2', href: '/nghiep-vu/chi-dinh-cdha-thu-thuat?activeMenu=doctor-imaging-procedure-order' },
@@ -90,7 +91,7 @@
     {
       label: 'TỔNG QUAN',
       items: [
-        { key: 'nurse-dashboard', label: 'Dashboard ca trực', icon: 'bi-house-door', href: '/dashboard?activeMenu=nurse-dashboard' },
+        { key: 'nurse-dashboard', label: 'Dashboard ca trực', icon: 'bi-house-door', href: '/dashboard/nurse?activeMenu=nurse-dashboard' },
         { key: 'nurse-handoff', label: 'Giao ban điều dưỡng', icon: 'bi-chat-dots', href: '/nghiep-vu/giao-ban-dieu-duong?activeMenu=nurse-handoff' }
       ]
     },
@@ -229,6 +230,9 @@
           <a class="nav-link doctor-nav-link <%= activeMenu === item.key ? 'active' : '' %>" href="<%= item.href %>">
             <i class="bi <%= item.icon %>"></i>
             <span><%= item.label %></span>
+            <% if (item.badge) { %>
+              <span class="badge rounded-pill bg-danger ms-auto"><%= item.badge %></span>
+            <% } %>
           </a>
         <% }) %>
       <% }) %>
@@ -239,6 +243,9 @@
           <a class="nav-link doctor-nav-link <%= activeMenu === item.key ? 'active' : '' %>" href="<%= item.href %>">
             <i class="bi <%= item.icon %>"></i>
             <span><%= item.label %></span>
+            <% if (item.badge) { %>
+              <span class="badge rounded-pill bg-danger ms-auto"><%= item.badge %></span>
+            <% } %>
           </a>
         <% }) %>
       <% }) %>
@@ -263,6 +270,9 @@
           <a class="nav-link doctor-nav-link <%= activeMenu === item.key ? 'active' : '' %>" href="<%= item.href %>">
             <i class="bi <%= item.icon %>"></i>
             <span><%= item.label %></span>
+            <% if (item.badge) { %>
+              <span class="badge rounded-pill bg-danger ms-auto"><%= item.badge %></span>
+            <% } %>
           </a>
         <% }) %>
       <% }) %>
@@ -279,6 +289,9 @@
           <a class="nav-link doctor-nav-link <%= activeMenu === item.key ? 'active' : '' %>" href="<%= item.href %>">
             <i class="bi <%= item.icon %>"></i>
             <span><%= item.label %></span>
+            <% if (item.badge) { %>
+              <span class="badge rounded-pill bg-danger ms-auto"><%= item.badge %></span>
+            <% } %>
           </a>
         <% }) %>
       <% }) %>

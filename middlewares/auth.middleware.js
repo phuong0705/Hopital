@@ -1,6 +1,8 @@
 const { businessGroups } = require('../config/business-processes');
 const patientRepository = require('../repositories/patient.repository');
 const cashierRepository = require('../repositories/cashier.repository');
+const examRepository = require('../repositories/exam.repository');
+const moduleRepository = require('../repositories/module.repository');
 
 function requireAuth(req, res, next) {
   if (!req.session.user) {
@@ -27,6 +29,7 @@ async function exposeUser(req, res, next) {
   };
 
   res.locals.unreadCount = 0;
+  res.locals.doctorPendingTickets = 0;
   res.locals.cashierCounts = {
     appointmentsToday: 0,
     adjustmentsToday: 0,
@@ -36,6 +39,14 @@ async function exposeUser(req, res, next) {
   if (req.session.user) {
     try {
       res.locals.unreadCount = await patientRepository.getUnreadNotificationCount(req.session.user.userId);
+      
+      if (req.session.user.roleCode === 'DOCTOR') {
+        const doctor = await moduleRepository.getDoctorByUser(req.session.user.fullName);
+        if (doctor) {
+          res.locals.doctorPendingTickets = await examRepository.getPendingExamTicketCount(doctor.doctorId);
+        }
+      }
+
       if (['ADMIN', 'RECEPTIONIST'].includes(req.session.user.roleCode)) {
         res.locals.cashierCounts = await cashierRepository.getCashierSidebarCounts();
       }

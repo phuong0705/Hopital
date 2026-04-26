@@ -23,14 +23,28 @@ async function rolesPermissions(req, res, next) {
       adminRepository.getSystemCounts()
     ]);
     const modules = flattenModules();
+    const permissionMatrix = await adminRepository.getModulePermissionMatrix(modules, roles);
 
     return res.render('admin/roles-permissions', {
       title: 'Quản lý Roles & Quyền',
       activeMenu: 'admin-roles',
       roles,
       modules,
+      permissionMatrix,
       counts
     });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateRoleModulePermissions(req, res, next) {
+  try {
+    const roles = await adminRepository.getRolesWithUserCounts();
+    const modules = flattenModules();
+    await adminRepository.updateModulePermissions(modules, roles, req.body.permissions || []);
+    req.flash('success', 'Đã cập nhật ma trận quyền module.');
+    return res.redirect('/admin/roles-permissions');
   } catch (error) {
     return next(error);
   }
@@ -179,6 +193,7 @@ async function monitoring(req, res, next) {
 
 module.exports = {
   rolesPermissions,
+  updateRoleModulePermissions,
   createRole,
   updateRole,
   deleteRole,

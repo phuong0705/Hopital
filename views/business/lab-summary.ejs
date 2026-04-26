@@ -54,7 +54,7 @@
                 <a href="/medical-records/<%= row.recordId %>" class="btn btn-sm btn-light" data-bs-toggle="tooltip" title="Xem hồ sơ bệnh án">
                   <i class="bi bi-journal-medical"></i>
                 </a>
-                <button class="btn btn-sm btn-primary" onclick="alert('Tính năng nhập kết quả chi tiết đang được phát triển')">
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#updateResultModal" data-test-code="<%= row.testCode %>" data-status="<%= row.status %>" data-result="<%= row.resultSummary || '' %>">
                   <i class="bi bi-pencil-square"></i>
                 </button>
               </div>
@@ -70,3 +70,92 @@
     </table>
   </div>
 </section>
+
+<!-- Update Result Modal -->
+<div class="modal fade" id="updateResultModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nhập kết quả xét nghiệm</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="updateResultForm">
+          <input type="hidden" id="testCodeInput" name="testCode">
+          <div class="mb-3">
+            <label class="form-label">Trạng thái</label>
+            <select class="form-select" id="statusInput" name="status" required>
+              <option value="Chờ lấy mẫu">Chờ lấy mẫu</option>
+              <option value="Đang thực hiện">Đang thực hiện</option>
+              <option value="Đã có kết quả">Đã có kết quả</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Kết quả / Kết luận</label>
+            <textarea class="form-control" id="resultInput" name="resultSummary" rows="4" required></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+        <button type="button" class="btn btn-primary" id="saveResultBtn">Lưu kết quả</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const updateResultModal = document.getElementById('updateResultModal');
+    if (updateResultModal) {
+      updateResultModal.addEventListener('show.bs.modal', event => {
+        const button = event.relatedTarget;
+        const testCode = button.getAttribute('data-test-code');
+        const status = button.getAttribute('data-status');
+        const result = button.getAttribute('data-result');
+
+        document.getElementById('testCodeInput').value = testCode;
+        document.getElementById('statusInput').value = status;
+        document.getElementById('resultInput').value = result;
+      });
+    }
+
+    const saveResultBtn = document.getElementById('saveResultBtn');
+    if (saveResultBtn) {
+      saveResultBtn.addEventListener('click', async () => {
+        const form = document.getElementById('updateResultForm');
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+
+        const testCode = document.getElementById('testCodeInput').value;
+        const status = document.getElementById('statusInput').value;
+        const resultSummary = document.getElementById('resultInput').value;
+
+        try {
+          saveResultBtn.disabled = true;
+          const response = await fetch(`/labtests/${testCode}/result`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status, resultSummary })
+          });
+
+          const data = await response.json();
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            alert(data.error || 'Có lỗi xảy ra');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Không thể kết nối đến máy chủ');
+        } finally {
+          saveResultBtn.disabled = false;
+        }
+      });
+    }
+  });
+</script>

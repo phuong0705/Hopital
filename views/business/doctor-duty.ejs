@@ -3,7 +3,7 @@
     <h2>Phân công bác sĩ trực</h2>
   </div>
   <div class="module-actions">
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#dutyModal">Thêm phân công</button>
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#dutyModal">Thêm phân công</button>
   </div>
 </section>
 
@@ -21,43 +21,93 @@
         </tr>
       </thead>
       <tbody>
-        <% rows.forEach(row => { %>
-          <tr>
-            <td>
-              <strong><%= row.fullName %></strong>
-            </td>
-            <td><%= row.departmentName %></td>
-            <td><%= row.specialty %></td>
-            <td><span class="badge bg-primary-soft text-primary"><%= row.shiftName %></span></td>
-            <td><strong><%= row.activePatients %></strong> bệnh nhân</td>
-            <td class="text-end">
-              <div class="table-actions justify-content-end">
-                <button class="btn btn-sm btn-light action-icon" title="Đổi phân công" 
-                  data-bs-toggle="modal" data-bs-target="#dutyModal"
-                  data-id="<%= row.doctorId %>"
-                  data-name="<%= row.fullName %>"
-                  data-dept="<%= row.departmentId %>"
-                  data-shift="<%= row.shiftName %>">
-                  <i class="bi bi-arrow-repeat"></i>
-                </button>
-                <button class="btn btn-sm btn-light text-danger action-icon" title="Gỡ phân công"
-                  data-bs-toggle="modal" data-bs-target="#removeDutyModal"
-                  data-id="<%= row.doctorId %>"
-                  data-name="<%= row.fullName %>">
-                  <i class="bi bi-person-x"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-        <% }) %>
+        <% if (rows && rows.length) { %>
+          <% rows.forEach(row => { %>
+            <tr>
+              <td><strong><%= row.fullName %></strong></td>
+              <td><%= row.departmentName || 'Chưa gán khoa' %></td>
+              <td><%= row.specialty || '-' %></td>
+              <td><span class="badge bg-primary-soft text-primary"><%= row.shiftName || 'Chưa phân ca' %></span></td>
+              <td><strong><%= row.activePatients %></strong> bệnh nhân</td>
+              <td class="text-end">
+                <div class="table-actions justify-content-end">
+                  <button class="btn btn-sm btn-light action-icon" title="Đổi phân công"
+                    type="button"
+                    data-bs-toggle="modal" data-bs-target="#dutyModal"
+                    data-id="<%= row.doctorId %>"
+                    data-name="<%= row.fullName %>"
+                    data-dept="<%= row.departmentId || '' %>"
+                    data-shift="<%= row.shiftName || '' %>">
+                    <i class="bi bi-arrow-repeat"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light text-danger action-icon" title="Gỡ phân công"
+                    type="button"
+                    data-bs-toggle="modal" data-bs-target="#removeDutyModal"
+                    data-id="<%= row.doctorId %>"
+                    data-name="<%= row.fullName %>">
+                    <i class="bi bi-person-x"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr><td colspan="6" class="text-center py-4 text-muted">Chưa có bác sĩ trong danh mục.</td></tr>
+        <% } %>
       </tbody>
     </table>
   </div>
 </section>
 
-<!-- Update Duty Modal (existing) -->
-...
-<!-- Remove Duty Modal -->
+<div class="modal fade" id="dutyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form id="dutyForm" method="post" action="/nghiep-vu/quan-ly-bac-si-truc/new">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dutyModalTitle">Phân công trực mới</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3" id="doctorSelectWrapper">
+            <label class="form-label">Bác sĩ</label>
+            <select id="dutyDoctorSelect" class="form-select" name="doctorId" required>
+              <option value="" disabled selected>-- Chọn bác sĩ --</option>
+              <% allDoctors.forEach(doctor => { %>
+                <option value="<%= doctor.doctorId %>"><%= doctor.fullName %> - <%= doctor.specialty || 'Bác sĩ' %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="mb-3 d-none" id="doctorNameWrapper">
+            <label class="form-label">Bác sĩ</label>
+            <input id="dutyDoctorNameDisplay" class="form-control" disabled>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Khoa trực</label>
+            <select id="dutyDeptSelect" class="form-select" name="departmentId" required>
+              <option value="" disabled selected>-- Chọn khoa --</option>
+              <% departments.forEach(department => { %>
+                <option value="<%= department.departmentId %>"><%= department.departmentName %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ca trực</label>
+            <select id="dutyShiftSelect" class="form-select" name="shiftName" required>
+              <option value="Ca Sáng">Ca Sáng</option>
+              <option value="Ca Chiều">Ca Chiều</option>
+              <option value="Ca Đêm">Ca Đêm</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu phân công</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="removeDutyModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-sm modal-dialog-centered">
     <div class="modal-content app-modal">
@@ -68,7 +118,7 @@
         </div>
         <div class="modal-body text-center py-4">
           <i class="bi bi-exclamation-triangle text-danger display-4 mb-3"></i>
-          <p>Bạn có chắc chắn muốn gỡ phân công trực cho bác sĩ <strong id="removeDoctorName">...</strong>?</p>
+          <p>Bạn có chắc chắn muốn gỡ phân công trực cho bác sĩ <strong id="removeDoctorName"></strong>?</p>
           <p class="text-muted small">Thông tin về khoa và ca trực sẽ bị xóa.</p>
         </div>
         <div class="modal-footer">
@@ -82,18 +132,18 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    // Duty Modal (existing script logic...)
     const dutyModal = document.getElementById('dutyModal');
     dutyModal?.addEventListener('show.bs.modal', (event) => {
       const button = event.relatedTarget;
       const id = button?.getAttribute('data-id');
       const name = button?.getAttribute('data-name');
-      const dept = button?.getAttribute('data-dept');
-      const shift = button?.getAttribute('data-shift');
-      
+      const dept = button?.getAttribute('data-dept') || '';
+      const shift = button?.getAttribute('data-shift') || 'Ca Sáng';
+
       const form = document.getElementById('dutyForm');
       const title = document.getElementById('dutyModalTitle');
       const selectWrapper = document.getElementById('doctorSelectWrapper');
+      const nameWrapper = document.getElementById('doctorNameWrapper');
       const nameDisplay = document.getElementById('dutyDoctorNameDisplay');
       const doctorSelect = document.getElementById('dutyDoctorSelect');
       const deptSelect = document.getElementById('dutyDeptSelect');
@@ -103,9 +153,9 @@
         form.action = '/nghiep-vu/quan-ly-bac-si-truc/' + id;
         title.textContent = 'Cập nhật phân công';
         selectWrapper.classList.add('d-none');
+        nameWrapper.classList.remove('d-none');
         doctorSelect.removeAttribute('name');
         doctorSelect.required = false;
-        nameDisplay.classList.remove('d-none');
         nameDisplay.value = name;
         deptSelect.value = dept;
         shiftSelect.value = shift;
@@ -113,25 +163,23 @@
         form.action = '/nghiep-vu/quan-ly-bac-si-truc/new';
         title.textContent = 'Phân công trực mới';
         selectWrapper.classList.remove('d-none');
+        nameWrapper.classList.add('d-none');
         doctorSelect.setAttribute('name', 'doctorId');
         doctorSelect.required = true;
         doctorSelect.value = '';
-        nameDisplay.classList.add('d-none');
+        deptSelect.value = '';
+        shiftSelect.value = 'Ca Sáng';
       }
     });
 
-    // Remove Duty Modal
     const removeModal = document.getElementById('removeDutyModal');
     removeModal?.addEventListener('show.bs.modal', (event) => {
       const button = event.relatedTarget;
       const id = button.getAttribute('data-id');
       const name = button.getAttribute('data-name');
-      
-      const form = document.getElementById('removeDutyForm');
-      const nameText = document.getElementById('removeDoctorName');
-      
-      form.action = '/nghiep-vu/quan-ly-bac-si-truc/' + id + '/delete';
-      nameText.textContent = name;
+
+      document.getElementById('removeDutyForm').action = '/nghiep-vu/quan-ly-bac-si-truc/' + id + '/delete';
+      document.getElementById('removeDoctorName').textContent = name;
     });
   });
 </script>

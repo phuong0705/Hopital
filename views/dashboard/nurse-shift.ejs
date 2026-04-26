@@ -1,0 +1,287 @@
+<%
+  const statusLabels = statusChart.map(row => row.label);
+  const statusValues = statusChart.map(row => Number(row.total || 0));
+  const shiftLabels = shiftChart.map(row => row.label);
+  const shiftValues = shiftChart.map(row => Number(row.total || 0));
+%>
+
+<section class="nurse-shift-hero">
+  <div>
+    <div class="report-eyebrow">
+      <span>Điều dưỡng</span>
+      <span>Cập nhật <%= format.datetime(generatedAt) %></span>
+    </div>
+    <h1>Dashboard ca trực</h1>
+    <p><%= currentUser.fullName %> · <%= userDepartment || currentUser.departmentName || 'Toàn viện' %></p>
+  </div>
+  <div class="nurse-shift-actions">
+    <a class="btn btn-light" href="/nghiep-vu/giao-ban-dieu-duong?activeMenu=nurse-handoff">
+      <i class="bi bi-chat-dots me-2"></i>Giao ban
+    </a>
+    <button class="btn btn-primary" type="button" onclick="window.location.reload()">
+      <i class="bi bi-arrow-clockwise me-2"></i>Làm mới
+    </button>
+  </div>
+</section>
+
+<div class="nurse-kpi-grid">
+  <% kpis.forEach(item => { %>
+    <section class="nurse-kpi-card is-<%= item.tone %>">
+      <div class="nurse-kpi-icon"><i class="bi <%= item.icon %>"></i></div>
+      <span><%= item.label %></span>
+      <strong><%= item.value %></strong>
+      <small><%= item.detail %></small>
+    </section>
+  <% }) %>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-7">
+    <section class="nurse-report-panel h-100">
+      <div class="panel-header d-flex align-items-start justify-content-between gap-3">
+        <div>
+          <h2>Việc cần xử lý trong ca</h2>
+          <p>Ưu tiên bệnh nhân nguy cơ cao, y lệnh chưa hoàn tất và sinh hiệu bất thường.</p>
+        </div>
+        <span class="status-badge status-warning"><%= worklist.length %> việc</span>
+      </div>
+
+      <div class="nurse-worklist">
+        <% worklist.slice(0, 8).forEach(row => { %>
+          <a class="nurse-task-row" href="/patients/<%= row.patientId || '#' %>">
+            <span class="nurse-task-time">
+              <%= row.scheduledTime ? new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(new Date(row.scheduledTime)) : '--:--' %>
+            </span>
+            <span class="nurse-task-main">
+              <strong><%= row.patientName %></strong>
+              <small><%= row.roomCode || 'Chưa xếp phòng' %> · Giường <%= row.bedCode || '-' %></small>
+              <em><%= row.treatmentContent || 'Theo dõi chăm sóc' %></em>
+            </span>
+            <span class="nurse-task-meta">
+              <%- include('../partials/badge', { text: row.priorityLevel }) %>
+              <%- include('../partials/badge', { text: row.treatmentStatus || 'Chưa cập nhật' }) %>
+            </span>
+          </a>
+        <% }) %>
+        <% if (!worklist.length) { %>
+          <div class="empty-inline">Chưa có đầu việc điều dưỡng trong ca hiện tại.</div>
+        <% } %>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-xl-5">
+    <section class="nurse-report-panel h-100">
+      <div class="panel-header">
+        <h2>Tải việc theo ca</h2>
+        <p>Phân bố y lệnh trong ngày trực hiện tại.</p>
+      </div>
+      <div class="nurse-chart-wrap">
+        <canvas id="nurseShiftChart" data-labels='<%- JSON.stringify(shiftLabels) %>' data-values='<%- JSON.stringify(shiftValues) %>'></canvas>
+      </div>
+      <div class="nurse-occupancy">
+        <div>
+          <strong>Công suất giường</strong>
+          <span><%= bedOccupancy %>% đang sử dụng</span>
+        </div>
+        <div class="progress app-progress">
+          <div class="progress-bar <%= bedOccupancy >= 90 ? 'bg-danger' : bedOccupancy >= 75 ? 'bg-warning' : 'bg-success' %>" style="width: <%= Math.min(bedOccupancy, 100) %>%"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="row g-4 mt-1">
+  <div class="col-xl-5">
+    <section class="nurse-report-panel h-100">
+      <div class="panel-header">
+        <h2>Trạng thái người bệnh</h2>
+        <p>Cơ cấu bệnh nhân trong phạm vi khoa/phòng của điều dưỡng.</p>
+      </div>
+      <div class="nurse-chart-wrap">
+        <canvas id="nurseStatusChart" data-labels='<%- JSON.stringify(statusLabels) %>' data-values='<%- JSON.stringify(statusValues) %>'></canvas>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-xl-7">
+    <section class="nurse-report-panel h-100">
+      <div class="panel-header d-flex align-items-start justify-content-between gap-3">
+        <div>
+          <h2>Cảnh báo lâm sàng</h2>
+          <p>Bệnh nhân cần theo dõi sát trong ca trực.</p>
+        </div>
+        <span class="status-badge status-danger"><%= highRiskPatients.length + abnormalVitals.length %> cảnh báo</span>
+      </div>
+
+      <div class="module-table-wrap nurse-table-wrap">
+        <table class="table app-table module-table mb-0">
+          <thead>
+            <tr>
+              <th>Bệnh nhân</th>
+              <th>Vị trí</th>
+              <th>Ưu tiên</th>
+              <th>Sinh hiệu</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% const alertRows = [...new Map([...highRiskPatients, ...abnormalVitals].map(row => [row.patientCode, row])).values()]; %>
+            <% alertRows.slice(0, 6).forEach(row => { %>
+              <tr>
+                <td>
+                  <div class="module-primary">
+                    <strong><%= row.fullName %></strong>
+                    <small><%= row.patientCode %></small>
+                  </div>
+                </td>
+                <td><%= row.roomCode || 'Chưa xếp' %> · <%= row.bedCode || '-' %></td>
+                <td><%- include('../partials/badge', { text: row.priorityLevel }) %></td>
+                <td class="text-wrap-cell"><%= row.vitalSigns || 'Chưa cập nhật' %></td>
+              </tr>
+            <% }) %>
+            <% if (!alertRows.length) { %>
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">Không có cảnh báo lâm sàng trong ca hiện tại.</td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="row g-4 mt-1">
+  <div class="col-xl-8">
+    <section class="nurse-report-panel h-100">
+      <div class="panel-header">
+        <h2>Bệnh nhân bàn giao nhanh</h2>
+        <p>Danh sách nội trú mới nhất để vào chi tiết hồ sơ khi cần.</p>
+      </div>
+      <div class="module-table-wrap nurse-table-wrap">
+        <table class="table app-table module-table mb-0">
+          <thead>
+            <tr>
+              <th>Bệnh nhân</th>
+              <th>Phòng/Giường</th>
+              <th>Chẩn đoán</th>
+              <th>Trạng thái</th>
+              <th class="no-export"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% patients.slice(0, 8).forEach(row => { %>
+              <tr>
+                <td>
+                  <div class="module-primary">
+                    <strong><%= row.fullName %></strong>
+                    <small><%= row.patientCode %></small>
+                  </div>
+                </td>
+                <td><%= row.roomCode || 'Chưa xếp' %> · <%= row.bedCode || '-' %></td>
+                <td class="text-wrap-cell"><%= row.diagnosis || 'Theo dõi sức khỏe' %></td>
+                <td><%- include('../partials/badge', { text: row.status }) %></td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-light" href="/patients/<%= row.patientId %>">Chi tiết</a>
+                </td>
+              </tr>
+            <% }) %>
+            <% if (!patients.length) { %>
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">Chưa có bệnh nhân trong phạm vi khoa/phòng.</td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-xl-4">
+    <section class="nurse-report-panel h-100">
+      <div class="panel-header">
+        <h2>Đội trực liên quan</h2>
+        <p>Bác sĩ/kíp trực cùng khoa để phối hợp khi cần.</p>
+      </div>
+      <div class="nurse-team-list">
+        <% departmentTeam.slice(0, 8).forEach(row => { %>
+          <div class="nurse-team-row">
+            <span><i class="bi bi-person-badge"></i></span>
+            <div>
+              <strong><%= row.fullName %></strong>
+              <small><%= row.specialty || 'Nhân sự trực' %> · <%= row.shiftName || 'Chưa phân ca' %></small>
+            </div>
+          </div>
+        <% }) %>
+        <% if (!departmentTeam.length) { %>
+          <div class="empty-inline">Chưa có dữ liệu đội trực cùng khoa.</div>
+        <% } %>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const colors = ['#0284c7', '#10b981', '#f59e0b', '#e11d48', '#4338ca', '#0f766e'];
+    const makeChartData = (canvas) => ({
+      labels: JSON.parse(canvas.dataset.labels || '[]'),
+      values: JSON.parse(canvas.dataset.values || '[]')
+    });
+
+    const shiftCanvas = document.getElementById('nurseShiftChart');
+    if (shiftCanvas) {
+      const chartData = makeChartData(shiftCanvas);
+      new Chart(shiftCanvas, {
+        type: 'bar',
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            label: 'Y lệnh',
+            data: chartData.values,
+            backgroundColor: ['#0284c7', '#10b981', '#f59e0b'],
+            borderRadius: 8,
+            maxBarThickness: 42
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#e8eef5' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    const statusCanvas = document.getElementById('nurseStatusChart');
+    if (statusCanvas) {
+      const chartData = makeChartData(statusCanvas);
+      new Chart(statusCanvas, {
+        type: 'doughnut',
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            data: chartData.values,
+            backgroundColor: colors,
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '66%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { boxWidth: 10, usePointStyle: true, font: { family: 'Be Vietnam Pro' } }
+            }
+          }
+        }
+      });
+    }
+  });
+</script>

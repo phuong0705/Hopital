@@ -6,7 +6,6 @@
 <section class="module-hero">
   <div>
     <h2>Danh mục bác sĩ</h2>
-    <p class="text-muted mb-0">Quản lý danh sách bác sĩ, chuyên khoa và ca trực toàn viện.</p>
   </div>
   <div class="module-actions">
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createDoctorModal">
@@ -43,7 +42,7 @@
         data-shift="<%= row.shiftName %>">
         <div class="doctor-card-top">
           <div class="doctor-avatar"><%= row.fullName.charAt(0) %></div>
-          <div>
+          <div class="doctor-main-info">
             <h3><%= row.fullName %></h3>
             <p><%= row.specialty %></p>
             <div class="doctor-inline-tags">
@@ -51,8 +50,8 @@
               <span class="ms-2"><i class="bi bi-hospital"></i><%= row.departmentName %></span>
             </div>
           </div>
-          <div class="ms-auto d-flex flex-column align-items-end">
-            <span class="status-badge status-info mb-1"><%= row.shiftName %></span>
+          <div class="doctor-status-stack">
+            <span class="status-badge status-info"><%= row.shiftName %></span>
             <%- include('../partials/badge', { text: row.status }) %>
           </div>
         </div>
@@ -76,15 +75,17 @@
           <button class="btn btn-sm btn-light icon-action" 
             data-bs-toggle="modal" 
             data-bs-target="#editDoctorModal"
+            data-bs-title="Chỉnh sửa"
+            aria-label="Chỉnh sửa bác sĩ"
             data-doctor='<%= JSON.stringify(row) %>'>
             <i class="bi bi-pencil"></i>
           </button>
           <form action="/doctors/<%= row.doctorId %>/delete" method="post" class="d-inline" onsubmit="return confirm('Xóa bác sĩ này?')">
-            <button class="btn btn-sm btn-light text-danger icon-action" <%= row.patientCount > 0 ? 'disabled' : '' %>>
+            <button class="btn btn-sm btn-light text-danger icon-action" data-bs-toggle="tooltip" data-bs-title="Xóa" aria-label="Xóa bác sĩ" <%= row.patientCount > 0 ? 'disabled' : '' %>>
               <i class="bi bi-trash"></i>
             </button>
           </form>
-          <a class="btn btn-sm btn-light icon-action ms-auto" href="/patients?doctorId=<%= row.doctorId %>" data-bs-toggle="tooltip" data-bs-title="Bệnh nhân phụ trách"><i class="bi bi-people"></i></a>
+          <a class="btn btn-sm btn-light icon-action" href="/patients?doctorId=<%= row.doctorId %>" data-bs-toggle="tooltip" data-bs-title="Bệnh nhân phụ trách" aria-label="Bệnh nhân phụ trách"><i class="bi bi-people"></i></a>
         </div>
       </article>
     <% }) %>

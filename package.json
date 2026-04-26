@@ -28,6 +28,7 @@
     "express": "^4.19.2",
     "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.18.0",
+    "framer-motion": "^12.38.0",
     "method-override": "^3.0.0",
     "msnodesqlv8": "^5.1.9",
     "mssql": "^11.0.1"

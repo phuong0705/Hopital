@@ -8,6 +8,42 @@
 </section>
 
 <section class="panel mt-4">
+  <div class="panel-header">
+    <h2>Phiếu khám đã lập gần đây</h2>
+  </div>
+  <div class="table-responsive">
+    <table class="table app-table">
+      <thead>
+        <tr>
+          <th>Mã phiếu</th>
+          <th>Bệnh nhân</th>
+          <th>Khoa</th>
+          <th>Bác sĩ</th>
+          <th>Loại khám</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (tickets && tickets.length) { %>
+          <% tickets.forEach(ticket => { %>
+            <tr>
+              <td><strong><%= ticket.ticketCode %></strong></td>
+              <td><%= ticket.patientName %></td>
+              <td><%= ticket.departmentName %></td>
+              <td><%= ticket.doctorName %></td>
+              <td><%= ticket.examType %><%= ticket.isUrgent ? ' · Cấp cứu' : '' %></td>
+              <td><%- include('../partials/badge', { text: ticket.status }) %></td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr><td colspan="6" class="text-center py-4 text-muted">Chưa có phiếu khám nào được lập.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel mt-4">
   <form action="/nghiep-vu/lap-phieu-kham" method="post" class="app-form">
     <div class="row g-4">
       <div class="col-md-6">
@@ -15,7 +51,7 @@
         <select name="patientId" class="form-select" required>
           <option value="">-- Chọn bệnh nhân --</option>
           <% patients.forEach(p => { %>
-            <option value="<%= p.patientId %>"><%= p.fullName %></option>
+            <option value="<%= p.patientId %>" <%= (locals.selectedPatientId && String(p.patientId) === String(selectedPatientId)) ? 'selected' : '' %>><%= p.fullName %></option>
           <% }) %>
         </select>
         <div class="form-text">Bệnh nhân chưa có hồ sơ? <a href="/patients/reception">Tiếp nhận mới tại đây</a></div>
@@ -49,7 +85,7 @@
       </div>
       <div class="col-12">
         <label class="form-label">Lý do khám / Triệu chứng ban đầu</label>
-        <textarea name="reason" class="form-control" rows="3" placeholder="Mô tả tình trạng bệnh nhân..." required></textarea>
+        <textarea name="reason" class="form-control" rows="3" placeholder="Mô tả tình trạng bệnh nhân..." required><%= locals.initialReason || '' %></textarea>
       </div>
       <div class="col-12">
         <div class="form-check form-switch">

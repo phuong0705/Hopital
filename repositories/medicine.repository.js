@@ -67,6 +67,22 @@ async function ensureMedicineTables() {
   `);
 
   await execute(`
+    IF OBJECT_ID(N'MedicineProvisionRequests', N'U') IS NULL
+    BEGIN
+      CREATE TABLE MedicineProvisionRequests (
+        request_id INT IDENTITY(1,1) PRIMARY KEY,
+        request_code VARCHAR(30) NOT NULL UNIQUE,
+        department_name NVARCHAR(150),
+        note NVARCHAR(500),
+        status NVARCHAR(50) NOT NULL DEFAULT N'Đã gửi yêu cầu',
+        created_by INT NULL,
+        created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        CONSTRAINT FK_MedicineProvisionRequests_User FOREIGN KEY (created_by) REFERENCES Users(user_id)
+      );
+    END;
+  `);
+
+  await execute(`
     IF NOT EXISTS (SELECT 1 FROM MedicineCatalog)
     BEGIN
       INSERT INTO MedicineCatalog (
@@ -166,6 +182,28 @@ async function addInventoryTransaction(data) {
   });
 }
 
+async function createProvisionRequest(data) {
+  await ensureMedicineTables();
+
+  const rows = await query(`
+    DECLARE @nextNumber INT;
+    SELECT @nextNumber = ISNULL(MAX(TRY_CONVERT(INT, SUBSTRING(request_code, 3, 20))), 0) + 1
+    FROM MedicineProvisionRequests;
+
+    DECLARE @requestCode VARCHAR(30) = CONCAT('DT', RIGHT(CONCAT('000000', @nextNumber), 6));
+
+    INSERT INTO MedicineProvisionRequests (request_code, department_name, note, status, created_by)
+    OUTPUT INSERTED.request_id AS requestId, INSERTED.request_code AS requestCode
+    VALUES (@requestCode, NULLIF(@departmentName, ''), NULLIF(@note, ''), N'Đã gửi yêu cầu', @createdBy);
+  `, {
+    departmentName: data.departmentName || '',
+    note: data.note || '',
+    createdBy: data.createdBy || null
+  });
+
+  return rows[0];
+}
+
 async function createMedicine(data) {
   await ensureMedicineTables();
 
@@ -193,7 +231,7 @@ async function createMedicine(data) {
     unitPrice: Number(data.unitPrice || 0),
     stockWarningLevel: Number(data.stockWarningLevel || 20),
     currentStock: Number(data.currentStock || 0),
-    usage_note: data.usageNote || '',
+    usageNote: data.usageNote || '',
     contraindications: data.contraindications || '',
     status: data.status || 'Đang sử dụng'
   });
@@ -218,5 +256,6 @@ module.exports = {
   createMedicine,
   updateMedicineStatus,
   getMedicineHistory,
-  addInventoryTransaction
+  addInventoryTransaction,
+  createProvisionRequest
 };

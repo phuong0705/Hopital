@@ -125,6 +125,28 @@ async function getAppointments() {
   `);
 }
 
+async function getAppointmentsByDoctor(doctorId) {
+  await ensureCashierTables();
+
+  return query(`
+    SELECT a.appointment_id AS appointmentId, a.appointment_code AS appointmentCode,
+      a.patient_id AS patientId, COALESCE(p.patient_code, N'BN mới') AS patientCode,
+      a.patient_name AS patientName, a.phone, dep.department_name AS departmentName,
+      doc.full_name AS doctorName, a.appointment_time AS appointmentTime,
+      a.reason, a.status, u.full_name AS createdBy, a.created_at AS createdAt
+    FROM Appointments a
+    LEFT JOIN Patients p ON p.patient_id = a.patient_id
+    LEFT JOIN Departments dep ON dep.department_id = a.department_id
+    LEFT JOIN Doctors doc ON doc.doctor_id = a.doctor_id
+    LEFT JOIN Users u ON u.user_id = a.created_by
+    WHERE a.doctor_id = @doctorId
+      AND a.status <> N'Đã hủy'
+    ORDER BY 
+      CASE WHEN CAST(a.appointment_time AS date) = CAST(GETDATE() AS date) THEN 0 ELSE 1 END,
+      a.appointment_time ASC
+  `, { doctorId: Number(doctorId) });
+}
+
 async function createAppointment(data, userId) {
   await ensureCashierTables();
 
@@ -344,6 +366,7 @@ module.exports = {
   getCashierSidebarCounts,
   getAppointmentDependencies,
   getAppointments,
+  getAppointmentsByDoctor,
   createAppointment,
   updateAppointmentStatus,
   getQueue,

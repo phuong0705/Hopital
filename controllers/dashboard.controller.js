@@ -62,6 +62,10 @@ function renderDashboardHome(req, res) {
     });
   }
 
+  if (req.session.user.roleCode === 'NURSE') {
+    return res.redirect('/dashboard/nurse');
+  }
+
   return res.render('dashboard/index', {
     title: 'Tổng quan',
     activeMenu: 'dashboard'
@@ -86,6 +90,171 @@ async function home(req, res, next) {
   } catch (error) {
     return next(error);
   }
+}
+
+function isNurseScope(row, departmentName) {
+  if (!departmentName) return true;
+  return row.departmentName === departmentName;
+}
+
+function buildNurseStatusRows(patients) {
+  const statusMap = patients.reduce((map, row) => {
+    const key = row.status || 'Chưa cập nhật';
+    map.set(key, (map.get(key) || 0) + 1);
+    return map;
+  }, new Map());
+
+  return Array.from(statusMap.entries()).map(([label, total]) => ({ label, total }));
+}
+
+function buildNurseShiftBlocks(treatments) {
+  const blocks = [
+    { label: 'Sáng', from: 6, to: 12, total: 0 },
+    { label: 'Chiều', from: 12, to: 18, total: 0 },
+    { label: 'Đêm', from: 18, to: 30, total: 0 }
+  ];
+
+  treatments.forEach((row) => {
+    const scheduled = row.scheduledTime ? new Date(row.scheduledTime) : null;
+    if (!scheduled || Number.isNaN(scheduled.getTime())) return;
+
+    const hour = scheduled.getHours();
+    const normalizedHour = hour < 6 ? hour + 24 : hour;
+    const block = blocks.find((item) => normalizedHour >= item.from && normalizedHour < item.to);
+    if (block) block.total += 1;
+  });
+
+  return blocks.map(({ label, total }) => ({ label, total }));
+}
+
+async function nurseShift(req, res, next) {
+  try {
+    const userDepartment = req.session.user.departmentName || '';
+    const [patientsRaw, worklistRaw, treatmentsRaw, labsRaw, bedsRaw, dutyRowsRaw] = await Promise.all([
+      patientRepository.getInpatients(),
+      moduleRepository.getNursingWorklist(),
+      moduleRepository.getTreatments(),
+      moduleRepository.getLabTests(),
+      moduleRepository.getBeds(),
+      moduleRepository.getDoctorDuties()
+    ]);
+
+    const patients = patientsRaw.filter((row) => isNurseScope(row, userDepartment));
+    const worklist = worklistRaw.filter((row) => isNurseScope(row, userDepartment));
+    const treatments = treatmentsRaw.filter((row) => isNurseScope(row, userDepartment));
+    const labs = labsRaw.filter((row) => isNurseScope(row, userDepartment));
+    const beds = bedsRaw.filter((row) => isNurseScope(row, userDepartment));
+    const departmentTeam = dutyRowsRaw.filter((row) => isNurseScope(row, userDepartment));
+
+    const pendingTreatments = treatments.filter((row) => !isStatus(row.status, 'hoan thanh'));
+    const activeTreatments = treatments.filter((row) => isStatus(row.status, 'dang thuc hien'));
+    const pendingLabs = labs.filter((row) => !isStatus(row.status, 'da co ket qua'));
+    const highRiskPatients = patients.filter((row) => ['Nguy cấp', 'Cao'].includes(row.priorityLevel));
+    const dischargeQueue = patients.filter((row) => isStatus(row.status, 'cho xuat vien'));
+    const usedBeds = beds.filter((row) => isStatus(row.status, 'dang su dung')).length;
+    const bedOccupancy = beds.length ? Math.round((usedBeds / beds.length) * 100) : 0;
+    const abnormalVitals = patients
+      .map((row) => ({ ...row, vitalsParsed: parseVitalsForNurse(row.vitalSigns) }))
+      .filter((row) => row.vitalsParsed.isAbnormal);
+
+    const kpis = [
+      {
+        label: 'Bệnh nhân trong khoa',
+        value: patients.length,
+        detail: `${highRiskPatients.length} ca cần theo dõi sát`,
+        icon: 'bi-people',
+        tone: 'sky'
+      },
+      {
+        label: 'Y lệnh trong ca',
+        value: treatments.length,
+        detail: `${pendingTreatments.length} việc chưa hoàn tất`,
+        icon: 'bi-check2-square',
+        tone: 'emerald'
+      },
+      {
+        label: 'Sinh hiệu cảnh báo',
+        value: abnormalVitals.length,
+        detail: activeTreatments.length ? `${activeTreatments.length} y lệnh đang thực hiện` : 'Không có y lệnh đang làm',
+        icon: 'bi-activity',
+        tone: 'rose'
+      },
+      {
+        label: 'Công suất giường',
+        value: `${bedOccupancy}%`,
+        detail: `${usedBeds}/${beds.length || 0} giường đang sử dụng`,
+        icon: 'bi-hospital',
+        tone: 'amber'
+      }
+    ];
+
+    return res.render('dashboard/nurse-shift', {
+      title: 'Dashboard ca trực điều dưỡng',
+      activeMenu: req.query.activeMenu || 'nurse-dashboard',
+      userDepartment,
+      patients,
+      worklist,
+      pendingTreatments,
+      pendingLabs,
+      highRiskPatients,
+      dischargeQueue,
+      abnormalVitals,
+      departmentTeam,
+      bedOccupancy,
+      kpis,
+      statusChart: buildNurseStatusRows(patients),
+      shiftChart: buildNurseShiftBlocks(treatments),
+      generatedAt: new Date()
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+function parseVitalsForNurse(vitalString) {
+  const vitals = {
+    pulse: null,
+    bp: null,
+    temp: null,
+    spo2: null,
+    isAbnormal: false,
+    alerts: []
+  };
+
+  if (!vitalString) return vitals;
+
+  String(vitalString).split(/;|,/).map((s) => s.trim()).forEach((part) => {
+    const normalized = normalizeForSearch(part);
+    if (normalized.includes('mach')) {
+      const val = parseInt(part.match(/\d+/)?.[0], 10);
+      if (!isNaN(val)) {
+        vitals.pulse = val;
+        if (val > 100 || val < 60) vitals.alerts.push(`Mạch ${val}`);
+      }
+    } else if (normalized.includes('huyet ap') || normalized.includes('ha:')) {
+      const val = part.match(/\d+\s*\/\s*\d+/)?.[0] || '';
+      if (val) {
+        vitals.bp = val;
+        const [sys] = val.split('/').map((s) => parseInt(s));
+        if (!isNaN(sys) && (sys > 140 || sys < 90)) vitals.alerts.push(`HA ${val}`);
+      }
+    } else if (normalized.includes('nhiet')) {
+      const val = parseFloat(part.replace(',', '.').match(/\d+(\.\d+)?/)?.[0]);
+      if (!isNaN(val)) {
+        vitals.temp = val;
+        if (val > 38.0 || val < 36.0) vitals.alerts.push(`Nhiệt ${val}°C`);
+      }
+    } else if (normalized.includes('spo2')) {
+      const val = parseInt(part.match(/\d+/)?.[0], 10);
+      if (!isNaN(val)) {
+        vitals.spo2 = val;
+        if (val < 94) vitals.alerts.push(`SpO2 ${val}%`);
+      }
+    }
+  });
+
+  vitals.isAbnormal = vitals.alerts.length > 0;
+  return vitals;
 }
 
 function parseVitals(vitalString) {
@@ -244,5 +413,6 @@ async function doctorSummary(req, res, next) {
 module.exports = {
   index,
   home,
+  nurseShift,
   doctorSummary
 };

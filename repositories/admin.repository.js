@@ -1,4 +1,107 @@
-const { query } = require('./base.repository');
+const { query, execute } = require('./base.repository');
+
+async function ensureRoleModulePermissionsTable() {
+  await execute(`
+    IF OBJECT_ID('RoleModulePermissions', 'U') IS NULL
+    BEGIN
+      CREATE TABLE RoleModulePermissions (
+        permission_id INT IDENTITY(1,1) PRIMARY KEY,
+        module_key VARCHAR(100) NOT NULL,
+        role_code VARCHAR(30) NOT NULL,
+        allowed BIT NOT NULL CONSTRAINT DF_RoleModulePermissions_allowed DEFAULT 0,
+        updated_at DATETIME2 NOT NULL CONSTRAINT DF_RoleModulePermissions_updated_at DEFAULT SYSDATETIME(),
+        CONSTRAINT UQ_RoleModulePermissions UNIQUE (module_key, role_code)
+      );
+    END;
+  `);
+}
+
+async function syncModulePermissions(modules, roles) {
+  await ensureRoleModulePermissionsTable();
+
+  for (const item of modules) {
+    for (const role of roles) {
+      const defaultAllowed = role.roleCode === 'ADMIN' || (item.roles || []).includes(role.roleCode);
+      await execute(`
+        IF NOT EXISTS (
+          SELECT 1
+          FROM RoleModulePermissions
+          WHERE module_key = @moduleKey AND role_code = @roleCode
+        )
+        BEGIN
+          INSERT INTO RoleModulePermissions (module_key, role_code, allowed)
+          VALUES (@moduleKey, @roleCode, @allowed);
+        END;
+      `, {
+        moduleKey: item.key,
+        roleCode: role.roleCode,
+        allowed: defaultAllowed ? 1 : 0
+      });
+    }
+  }
+}
+
+async function getModulePermissionMatrix(modules, roles) {
+  await syncModulePermissions(modules, roles);
+
+  const rows = await query(`
+    SELECT module_key AS moduleKey, role_code AS roleCode, allowed
+    FROM RoleModulePermissions
+  `);
+
+  const matrix = {};
+  modules.forEach((item) => {
+    matrix[item.key] = {};
+    roles.forEach((role) => {
+      matrix[item.key][role.roleCode] = role.roleCode === 'ADMIN';
+    });
+  });
+
+  rows.forEach((row) => {
+    if (!matrix[row.moduleKey]) matrix[row.moduleKey] = {};
+    matrix[row.moduleKey][row.roleCode] = Boolean(row.allowed);
+  });
+
+  roles
+    .filter((role) => role.roleCode === 'ADMIN')
+    .forEach((role) => {
+      modules.forEach((item) => {
+        matrix[item.key][role.roleCode] = true;
+      });
+    });
+
+  return matrix;
+}
+
+async function updateModulePermissions(modules, roles, allowedPairs = []) {
+  await syncModulePermissions(modules, roles);
+
+  const allowedSet = new Set(Array.isArray(allowedPairs) ? allowedPairs : [allowedPairs].filter(Boolean));
+  const editableRoles = roles.filter((role) => role.roleCode !== 'ADMIN');
+
+  for (const item of modules) {
+    for (const role of editableRoles) {
+      const allowed = allowedSet.has(`${item.key}::${role.roleCode}`);
+      await execute(`
+        UPDATE RoleModulePermissions
+        SET allowed = @allowed,
+            updated_at = SYSDATETIME()
+        WHERE module_key = @moduleKey AND role_code = @roleCode;
+      `, {
+        moduleKey: item.key,
+        roleCode: role.roleCode,
+        allowed: allowed ? 1 : 0
+      });
+    }
+  }
+
+  await execute(`
+    UPDATE RoleModulePermissions
+    SET allowed = 1,
+        updated_at = SYSDATETIME()
+    WHERE role_code = 'ADMIN';
+  `);
+}
 
 async function getRolesWithUserCounts() {
   return query(`
@@ -12,7 +115,6 @@ async function getRolesWithUserCounts() {
 }
 
 async function createRole(data) {
-  const { execute } = require('./base.repository');
   await execute(`
     INSERT INTO Roles (role_code, role_name, description)
     VALUES (@roleCode, @roleName, @description)
@@ -24,7 +126,6 @@ async function createRole(data) {
 }
 
 async function updateRole(roleId, data) {
-  const { execute } = require('./base.repository');
   await execute(`
     UPDATE Roles
     SET role_code = @roleCode,
@@ -40,7 +141,6 @@ async function updateRole(roleId, data) {
 }
 
 async function deleteRole(roleId) {
-  const { execute } = require('./base.repository');
   // Check for users before deleting
   const users = await query(`SELECT COUNT(*) as count FROM Users WHERE role_id = @roleId`, { roleId: Number(roleId) });
   if (users[0].count > 0) {
@@ -186,6 +286,8 @@ async function getStaffDirectory() {
 
 module.exports = {
   getRolesWithUserCounts,
+  getModulePermissionMatrix,
+  updateModulePermissions,
   getSystemCounts,
   getAuditEvents,
   getRealtimeMetrics,

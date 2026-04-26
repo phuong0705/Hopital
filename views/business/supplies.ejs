@@ -1,10 +1,9 @@
 <section class="module-hero">
   <div>
     <h2>Quản lý vật tư tiêu hao</h2>
-    <p class="text-muted mb-0">Theo dõi bông, băng, cồn, gạc, bơm kim tiêm... sử dụng cho bệnh nhân.</p>
   </div>
   <div class="module-actions">
-    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#requestSupplyModal"><i class="bi bi-cart-plus me-2"></i>Lĩnh vật tư</button>
+    <button class="btn btn-light" type="button" data-bs-toggle="modal" data-bs-target="#requestSupplyModal"><i class="bi bi-cart-plus me-2"></i>Lĩnh vật tư</button>
   </div>
 </section>
 
@@ -12,14 +11,15 @@
   <div class="module-toolbar">
     <div class="module-search">
       <i class="bi bi-search"></i>
-      <input class="form-control" type="search" placeholder="Tìm tên vật tư">
+      <input class="form-control" type="search" placeholder="Tìm tên hoặc mã vật tư" data-module-search="suppliesTable">
     </div>
   </div>
 
   <div class="module-table-wrap">
-    <table class="table app-table module-table">
+    <table class="table app-table module-table" id="suppliesTable">
       <thead>
         <tr>
+          <th>Mã vật tư</th>
           <th>Tên vật tư</th>
           <th>Đơn vị</th>
           <th>Tồn kho khoa</th>
@@ -29,30 +29,29 @@
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td><strong>Bơm kim tiêm 5ml</strong></td>
-          <td>Cái</td>
-          <td>450</td>
-          <td>500</td>
-          <td><span class="badge bg-success">Ổn định</span></td>
-          <td class="text-end"><button class="btn btn-sm btn-light" onclick="alert('Đã xuất 1 đơn vị sử dụng')">Xuất sử dụng</button></td>
-        </tr>
-        <tr>
-          <td><strong>Găng tay y tế (Size M)</strong></td>
-          <td>Đôi</td>
-          <td>12</td>
-          <td>100</td>
-          <td><span class="badge bg-danger">Sắp hết</span></td>
-          <td class="text-end"><button class="btn btn-sm btn-light" onclick="alert('Đã xuất 1 đơn vị sử dụng')">Xuất sử dụng</button></td>
-        </tr>
-        <tr>
-          <td><strong>Bông hút nước</strong></td>
-          <td>Gói</td>
-          <td>25</td>
-          <td>30</td>
-          <td><span class="badge bg-warning text-dark">Dưới định mức</span></td>
-          <td class="text-end"><button class="btn btn-sm btn-light" onclick="alert('Đã xuất 1 đơn vị sử dụng')">Xuất sử dụng</button></td>
-        </tr>
+        <% if (rows && rows.length) { %>
+          <% rows.forEach(row => { %>
+            <% const badgeClass = row.warningStatus === 'Ổn định' ? 'bg-success' : row.warningStatus === 'Sắp hết' || row.warningStatus === 'Hết hàng' ? 'bg-danger' : 'bg-warning text-dark'; %>
+            <tr data-search="<%= `${row.supplyCode} ${row.supplyName}`.toLowerCase() %>">
+              <td><strong><%= row.supplyCode %></strong></td>
+              <td><%= row.supplyName %></td>
+              <td><%= row.unit %></td>
+              <td><strong class="<%= row.currentStock < row.stockNorm ? 'text-danger' : 'text-primary' %>"><%= row.currentStock %></strong></td>
+              <td><%= row.stockNorm %></td>
+              <td><span class="badge <%= badgeClass %>"><%= row.warningStatus %></span></td>
+              <td class="text-end">
+                <form action="/nghiep-vu/vat-tu-tieu-hao/transaction" method="post" class="d-inline">
+                  <input type="hidden" name="supplyId" value="<%= row.supplyId %>">
+                  <input type="hidden" name="transactionType" value="Xuất sử dụng">
+                  <input type="hidden" name="quantity" value="1">
+                  <button class="btn btn-sm btn-light" type="submit">Xuất 1 <%= row.unit %></button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr><td colspan="7" class="text-center py-4 text-muted">Chưa có danh mục vật tư.</td></tr>
+        <% } %>
       </tbody>
     </table>
   </div>
@@ -61,31 +60,36 @@
 <div class="modal fade" id="requestSupplyModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content app-modal">
-      <div class="modal-header">
-        <h5 class="modal-title">Lĩnh vật tư y tế</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <form>
+      <form action="/nghiep-vu/vat-tu-tieu-hao/transaction" method="post">
+        <input type="hidden" name="transactionType" value="Yêu cầu lĩnh">
+        <div class="modal-header">
+          <h5 class="modal-title">Lĩnh vật tư y tế</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">Vật tư cần lĩnh</label>
-            <select class="form-select">
-              <option>Bơm kim tiêm 5ml</option>
-              <option>Găng tay y tế (Size M)</option>
-              <option>Bông hút nước</option>
-              <option>Cồn 70 độ</option>
+            <select class="form-select" name="supplyId" required>
+              <option value="" disabled selected>-- Chọn vật tư --</option>
+              <% rows.forEach(row => { %>
+                <option value="<%= row.supplyId %>"><%= row.supplyName %> (<%= row.supplyCode %>)</option>
+              <% }) %>
             </select>
           </div>
           <div class="mb-3">
             <label class="form-label">Số lượng yêu cầu</label>
-            <input type="number" class="form-control" value="100">
+            <input type="number" class="form-control" name="quantity" value="100" min="1" required>
           </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-        <button type="button" class="btn btn-primary" onclick="bootstrap.Modal.getInstance(document.getElementById('requestSupplyModal')).hide(); alert('Đã gửi phiếu lĩnh vật tư')">Gửi yêu cầu</button>
-      </div>
+          <div class="mb-3">
+            <label class="form-label">Ghi chú</label>
+            <textarea class="form-control" name="note" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary">Gửi yêu cầu</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
