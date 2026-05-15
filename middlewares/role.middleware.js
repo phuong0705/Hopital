@@ -63,22 +63,21 @@ function requireRole(roles = []) {
       return next();
     }
 
+    if (!allowedRoles.includes(user.roleCode)) {
+      return renderForbidden(res);
+    }
+
     const moduleKeys = findMatchedModuleKeys(req);
     if (moduleKeys.length) {
       try {
         const isAllowedByMatrix = await hasModulePermission(user.roleCode, moduleKeys);
-        if (isAllowedByMatrix === true) return next();
         if (isAllowedByMatrix === false) return renderForbidden(res);
       } catch (error) {
         console.error('Khong the kiem tra RoleModulePermissions:', error.message);
       }
     }
 
-    if (allowedRoles.includes(user.roleCode)) {
-      return next();
-    }
-
-    return renderForbidden(res);
+    return next();
   };
 }
 

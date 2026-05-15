@@ -41,7 +41,7 @@ async function exposeUser(req, res, next) {
       res.locals.unreadCount = await patientRepository.getUnreadNotificationCount(req.session.user.userId);
       
       if (req.session.user.roleCode === 'DOCTOR') {
-        const doctor = await moduleRepository.getDoctorByUser(req.session.user.fullName);
+        const doctor = await moduleRepository.getDoctorByUser(req.session.user);
         if (doctor) {
           res.locals.doctorPendingTickets = await examRepository.getPendingExamTicketCount(doctor.doctorId);
         }

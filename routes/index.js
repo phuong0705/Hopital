@@ -19,7 +19,7 @@ router.use('/', require('./auth.routes'));
 router.use('/api/reports', require('./reports-api.routes'));
 router.get('/api/dashboard/doctor', requireAuth, dashboardController.doctorSummary);
 router.get('/reports', requireAuth, (req, res) => {
-  const target = new URL(process.env.REPORTS_FRONTEND_URL || 'http://localhost:3011/reports');
+  const target = new URL(process.env.REPORTS_FRONTEND_URL || 'http://localhost:3003/reports');
   if (req.query.tab) {
     target.searchParams.set('tab', req.query.tab);
   }

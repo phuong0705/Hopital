@@ -14,16 +14,25 @@ const poolOptions = {
   idleTimeoutMillis: 30000
 };
 
+function buildWindowsAuthConnectionString() {
+  const parts = [
+    `Driver={${odbcDriver}}`,
+    `Server=${server}`,
+    `Database=${database}`,
+    'Trusted_Connection=Yes'
+  ];
+
+  if (process.env.DB_ENCRYPT === 'true') {
+    parts.push(`Encrypt=${encrypt}`);
+    parts.push(trustServerCertificate ? 'TrustServerCertificate=Yes' : 'TrustServerCertificate=No');
+  }
+
+  return parts.join(';') + ';';
+}
+
 const dbConfig = isWindowsAuth
   ? {
-      connectionString: [
-        `Driver={${odbcDriver}}`,
-        `Server=${server}`,
-        `Database=${database}`,
-        'Trusted_Connection=Yes',
-        `Encrypt=${encrypt}`,
-        trustServerCertificate ? 'TrustServerCertificate=Yes' : 'TrustServerCertificate=No'
-      ].join(';') + ';',
+      connectionString: buildWindowsAuthConnectionString(),
       pool: poolOptions
     }
   : {

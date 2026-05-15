@@ -22,6 +22,12 @@ function requireApiAuth(req, res, next) {
     });
   }
 
+  if (!['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST'].includes(req.session.user.roleCode)) {
+    return res.status(403).json({
+      message: 'Tài khoản không có quyền xem báo cáo.'
+    });
+  }
+
   return next();
 }
 

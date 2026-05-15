@@ -19,7 +19,7 @@ function makeListAction(options) {
 
 async function getSessionDoctorId(req) {
   if (!req.session.user || req.session.user.roleCode !== 'DOCTOR') return null;
-  const doctor = await moduleRepository.getDoctorByUser(req.session.user.fullName);
+  const doctor = await moduleRepository.getDoctorByUser(req.session.user);
   return doctor ? doctor.doctorId : -1;
 }
 
@@ -199,7 +199,7 @@ async function treatments(req, res, next) {
     let doctors = [];
 
     if (isDoctor) {
-      selectedDoctor = await moduleRepository.getDoctorByUser(req.session.user.fullName);
+      selectedDoctor = await moduleRepository.getDoctorByUser(req.session.user);
       selectedDoctorId = selectedDoctor ? selectedDoctor.doctorId : null;
     } else {
       doctors = await moduleRepository.getTreatmentDoctorsOverview();
@@ -233,7 +233,7 @@ async function prescriptions(req, res, next) {
       moduleRepository.getActiveMedicalRecords(doctorId),
       doctorId ? Promise.resolve([]) : moduleRepository.getDoctors()
     ]);
-    const selectedDoctor = doctorId ? await moduleRepository.getDoctorByUser(req.session.user.fullName) : null;
+    const selectedDoctor = doctorId ? await moduleRepository.getDoctorByUser(req.session.user) : null;
 
     res.render('prescriptions/index', {
       title: 'Thuốc và đơn thuốc',

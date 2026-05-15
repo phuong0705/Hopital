@@ -318,15 +318,27 @@ async function getBookingHistory(patientId) {
   `, { patientId });
 }
 
-async function payBilling(billingId) {
+async function payBilling(billingId, patientId) {
   await execute(`
     DECLARE @patientName NVARCHAR(150), @billCode VARCHAR(40);
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM Billing b
+      INNER JOIN Admissions a ON a.admission_id = b.admission_id
+      WHERE b.billing_id = @billingId
+        AND a.patient_id = @patientId
+    )
+    BEGIN
+      THROW 51003, N'Hóa đơn không thuộc hồ sơ bệnh nhân hiện tại.', 1;
+    END;
     
     SELECT @patientName = p.full_name, @billCode = b.bill_code
     FROM Billing b
     INNER JOIN Admissions a ON a.admission_id = b.admission_id
     INNER JOIN Patients p ON p.patient_id = a.patient_id
-    WHERE b.billing_id = @billingId;
+    WHERE b.billing_id = @billingId
+      AND p.patient_id = @patientId;
 
     UPDATE Billing
     SET payment_status = N'Đã thanh toán'
@@ -336,12 +348,17 @@ async function payBilling(billingId) {
     VALUES (N'Thanh toán viện phí', 
       CONCAT(N'Bệnh nhân ', @patientName, N' đã thanh toán hóa đơn ', @billCode), 
       'payment-success');
-  `, { billingId: Number(billingId) });
+  `, {
+    billingId: Number(billingId),
+    patientId: Number(patientId)
+  });
 }
 
 async function getNotifications(userId) {
   return query(`
-    SELECT notification_id AS id, title, message, type, is_read AS isRead, created_at AS createdAt
+    SELECT notification_id AS id, title, message, type,
+      CASE WHEN user_id IS NULL THEN CAST(1 AS bit) ELSE is_read END AS isRead,
+      created_at AS createdAt
     FROM Notifications
     WHERE user_id = @userId OR user_id IS NULL
     ORDER BY created_at DESC
@@ -352,7 +369,7 @@ async function getUnreadNotificationCount(userId) {
   const rows = await query(`
     SELECT COUNT(*) AS unreadCount
     FROM Notifications
-    WHERE (user_id = @userId OR user_id IS NULL) AND is_read = 0
+    WHERE user_id = @userId AND is_read = 0
   `, { userId });
   return rows[0].unreadCount;
 }
@@ -361,7 +378,7 @@ async function markNotificationsAsRead(userId) {
   await execute(`
     UPDATE Notifications
     SET is_read = 1
-    WHERE user_id = @userId OR (user_id IS NULL AND is_read = 0)
+    WHERE user_id = @userId
   `, { userId });
 }
 

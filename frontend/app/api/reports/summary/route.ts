@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-const apiBaseUrl = process.env.REPORTS_API_BASE_URL || "http://localhost:3001";
+const apiBaseUrl = process.env.REPORTS_API_BASE_URL || "http://localhost:3003";
 
 export async function GET() {
   const cookieStore = await cookies();

@@ -3,7 +3,7 @@ const moduleRepository = require('../repositories/module.repository');
 const dashboardRepository = require('../repositories/dashboard.repository');
 
 function getDoctorDashboardUrl() {
-  const target = new URL(process.env.REPORTS_FRONTEND_URL || 'http://localhost:3011/reports');
+  const target = new URL(process.env.REPORTS_FRONTEND_URL || 'http://localhost:3003/reports');
   target.pathname = '/doctor-dashboard';
   target.search = '';
   return target.toString();
@@ -11,7 +11,7 @@ function getDoctorDashboardUrl() {
 
 async function getSessionDoctor(req) {
   if (!req.session.user || req.session.user.roleCode !== 'DOCTOR') return null;
-  return moduleRepository.getDoctorByUser(req.session.user.fullName);
+  return moduleRepository.getDoctorByUser(req.session.user);
 }
 
 function normalizeForSearch(value) {

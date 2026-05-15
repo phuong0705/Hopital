@@ -411,15 +411,48 @@ async function getTreatmentDoctorsOverview() {
   `);
 }
 
-async function getDoctorByUser(fullName) {
+async function ensureDoctorUserLinkColumn() {
+  await execute(`
+    IF COL_LENGTH('Doctors', 'user_id') IS NULL
+    BEGIN
+      ALTER TABLE Doctors ADD user_id INT NULL;
+    END;
+  `);
+
+  await execute(`
+    UPDATE doc
+    SET user_id = u.user_id
+    FROM Doctors doc
+    INNER JOIN Users u ON u.full_name = doc.full_name
+    INNER JOIN Roles r ON r.role_id = u.role_id
+    WHERE r.role_code = 'DOCTOR'
+      AND doc.user_id IS NULL;
+  `);
+}
+
+async function getDoctorByUser(userOrFullName) {
+  await ensureDoctorUserLinkColumn();
+
+  const user = typeof userOrFullName === 'object' && userOrFullName !== null
+    ? userOrFullName
+    : { fullName: userOrFullName };
+
   const rows = await query(`
     SELECT TOP 1 doc.doctor_id AS doctorId, doc.doctor_code AS doctorCode, doc.full_name AS fullName,
       doc.specialty, doc.shift_name AS shiftName, doc.department_id AS departmentId, dept.department_name AS departmentName
     FROM Doctors doc
     LEFT JOIN Departments dept ON dept.department_id = doc.department_id
-    WHERE doc.full_name = @fullName
-    ORDER BY doc.doctor_id
-  `, { fullName });
+    WHERE (doc.user_id = @userId)
+       OR (@userId IS NULL AND doc.full_name = @fullName)
+       OR (doc.user_id IS NULL AND doc.full_name = @fullName)
+    ORDER BY
+      CASE WHEN doc.user_id = @userId THEN 0 ELSE 1 END,
+      CASE WHEN doc.status = N'Đang làm việc' THEN 0 ELSE 1 END,
+      doc.doctor_id
+  `, {
+    userId: user.userId ? Number(user.userId) : null,
+    fullName: user.fullName || ''
+  });
 
   return rows[0];
 }

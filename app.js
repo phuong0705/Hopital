@@ -7,11 +7,13 @@ const expressLayouts = require('express-ejs-layouts');
 require('dotenv').config();
 
 const routes = require('./routes');
-const { exposeUser } = require('./middlewares/auth.middleware');
+const { exposeUser, requireAuth } = require('./middlewares/auth.middleware');
+const { requireRole } = require('./middlewares/role.middleware');
 const formatters = require('./services/formatters');
+const { proxyToReportsFrontend } = require('./services/frontendProxy');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3003;
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -37,6 +39,9 @@ app.use(exposeUser);
 
 app.locals.format = formatters;
 
+app.use('/_next', proxyToReportsFrontend);
+app.use('/reports', requireAuth, requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), proxyToReportsFrontend);
+app.use('/doctor-dashboard', requireAuth, requireRole(['DOCTOR']), proxyToReportsFrontend);
 app.use(routes);
 
 app.use((req, res) => {

@@ -8,14 +8,19 @@ const database = process.env.DB_DATABASE || 'master';
 const encrypt = process.env.DB_ENCRYPT === 'true' ? 'Yes' : 'No';
 const trustServerCertificate = process.env.DB_TRUST_SERVER_CERTIFICATE !== 'false' ? 'Yes' : 'No';
 
-const connectionString = [
+const connectionParts = [
   `Driver={${driver}}`,
   `Server=${server}`,
   `Database=${database}`,
-  'Trusted_Connection=Yes',
-  `Encrypt=${encrypt}`,
-  `TrustServerCertificate=${trustServerCertificate}`
-].join(';') + ';';
+  'Trusted_Connection=Yes'
+];
+
+if (process.env.DB_ENCRYPT === 'true') {
+  connectionParts.push(`Encrypt=${encrypt}`);
+  connectionParts.push(`TrustServerCertificate=${trustServerCertificate}`);
+}
+
+const connectionString = connectionParts.join(';') + ';';
 
 console.log('Dang kiem tra ket noi SQL Server bang Windows Authentication...');
 console.log(`Server: ${server}`);
@@ -32,6 +37,13 @@ sql.open(connectionString, (error, connection) => {
       error.details.forEach((detail) => {
         console.error(`- [${detail.sqlState}] ${detail.message}`);
       });
+    }
+
+    if (String(error.message || '').includes('Encryption not supported')) {
+      console.error('\nGoi y: SQL Server/ODBC dang yeu cau ma hoa nhung client khong thuong luong duoc TLS.');
+      console.error('- Kiem tra SQL Server instance co dang bat Force Encryption khong.');
+      console.error('- Cap nhat Microsoft ODBC Driver for SQL Server hoac SQL Server TLS/certificate.');
+      console.error('- Neu chi chay local, giu DB_ENCRYPT=false va tat Force Encryption tren SQL Server Configuration Manager.');
     }
 
     process.exit(1);

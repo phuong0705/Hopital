@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { DoctorDashboardShell } from "@/components/doctor-dashboard/doctor-dashboard-shell";
 import type { DoctorDashboardPayload } from "@/components/doctor-dashboard/types";
 
-const apiBaseUrl = process.env.REPORTS_API_BASE_URL || "http://localhost:3001";
+const apiBaseUrl = process.env.REPORTS_API_BASE_URL || "http://localhost:3003";
 
 async function getDoctorDashboard(): Promise<DoctorDashboardPayload | null> {
   const cookieStore = await cookies();

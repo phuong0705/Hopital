@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { ReportsShell } from "@/components/reports/reports-shell";
 import type { ReportsPayload } from "@/components/reports/types";
 
-const apiBaseUrl = process.env.REPORTS_API_BASE_URL || "http://localhost:3001";
+const apiBaseUrl = process.env.REPORTS_API_BASE_URL || "http://localhost:3003";
 
 async function getReports(): Promise<ReportsPayload | null> {
   const cookieStore = await cookies();

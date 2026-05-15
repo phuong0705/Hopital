@@ -3,11 +3,13 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const rootDir = path.resolve(__dirname, '..');
+require('dotenv').config({ path: path.join(rootDir, '.env') });
+
 const frontendDir = path.join(rootDir, 'frontend');
 const isWindows = process.platform === 'win32';
 const npmCommand = isWindows ? 'npm.cmd' : 'npm';
 const nodemonCommand = path.join(rootDir, 'node_modules', '.bin', isWindows ? 'nodemon.cmd' : 'nodemon');
-const backendPort = process.env.PORT || '3001';
+const backendPort = process.env.PORT || '3003';
 
 const children = [];
 let shuttingDown = false;
@@ -84,7 +86,10 @@ const backend = spawn(backendCommand, backendArgs, {
   stdio: 'inherit',
   windowsHide: false,
   shell: isWindows,
-  env: process.env
+  env: {
+    ...process.env,
+    PORT: backendPort
+  }
 });
 
 attachChild('backend', backend);

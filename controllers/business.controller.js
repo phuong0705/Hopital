@@ -42,7 +42,7 @@ function priorityRank(value) {
 
 async function getSessionDoctor(req) {
   if (!req.session.user || req.session.user.roleCode !== 'DOCTOR') return null;
-  return moduleRepository.getDoctorByUser(req.session.user.fullName);
+  return moduleRepository.getDoctorByUser(req.session.user);
 }
 
 async function getSessionDoctorId(req) {
@@ -458,7 +458,7 @@ async function carePlan(req, res, next) {
 async function procedureSchedule(req, res, next) {
   try {
     const doctorId = await getSessionDoctorId(req);
-    const selectedDoctor = doctorId ? await moduleRepository.getDoctorByUser(req.session.user.fullName) : null;
+    const selectedDoctor = doctorId ? await moduleRepository.getDoctorByUser(req.session.user) : null;
     const rows = doctorId ? await moduleRepository.getTreatments(doctorId) : [];
     const procedureKeywords = ['thủ thuật', 'mổ', 'phẫu thuật', 'can thiệp', 'nội soi', 'đặt', 'rút', 'chọc', 'dẫn lưu'];
 

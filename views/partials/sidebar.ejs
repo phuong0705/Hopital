@@ -121,8 +121,8 @@
     {
       label: 'BÁO CÁO',
       items: [
-        { key: 'nurse-reports', label: 'Báo cáo ca trực', icon: 'bi-bar-chart', href: '/reports?activeMenu=nurse-reports' },
-        { key: 'nurse-discharge-prep', label: 'Chuẩn bị xuất viện', icon: 'bi-box-arrow-right', href: '/discharges?activeMenu=nurse-discharge-prep' }
+        { key: 'nurse-billing', label: 'Theo dõi viện phí', icon: 'bi-credit-card', href: '/billing?activeMenu=nurse-billing' },
+        { key: 'nurse-reports', label: 'Báo cáo ca trực', icon: 'bi-bar-chart', href: '/reports?activeMenu=nurse-reports' }
       ]
     }
   ];
@@ -173,13 +173,16 @@
       label: 'ĐẶT LỊCH & THANH TOÁN',
       items: [
         { key: 'patient-booking', label: 'Đặt lịch tái khám', icon: 'bi-calendar-plus', href: '/patients/me/booking' },
-        { key: 'patient-billing', label: 'Hóa đơn & Thanh toán', icon: 'bi-credit-card', href: '/patients/me/billing' }
+        { key: 'patient-billing', label: 'Hóa đơn & Thanh toán', icon: 'bi-credit-card', href: '/patients/me/billing' },
+        { key: 'patient-bhyt', label: 'Thẻ BHYT của tôi', icon: 'bi-card-checklist', href: '/patients/me/bhyt' },
+        { key: 'patient-discharge', label: 'Thông tin xuất viện', icon: 'bi-box-arrow-right', href: '/patients/me/discharge' }
       ]
     },
     {
-      label: 'THÔNG BÁO',
+      label: 'THÔNG BÁO & HỖ TRỢ',
       items: [
-        { key: 'patient-notifications', label: 'Thông báo', icon: 'bi-bell', href: '/patients/me/notifications' }
+        { key: 'patient-notifications', label: 'Thông báo', icon: 'bi-bell', href: '/patients/me/notifications' },
+        { key: 'patient-support', label: 'Yêu cầu hỗ trợ', icon: 'bi-headset', href: '/patients/me/support' }
       ]
     }
   ];

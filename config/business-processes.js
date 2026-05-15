@@ -24,7 +24,7 @@ const businessGroups = [
       { key: 'reception', code: '2.1', title: 'Tiếp nhận bệnh nhân', href: '/patients/reception', icon: 'bi-person-plus' },
       { key: 'medical-records', code: '2.2', title: 'Quản lý HSBA', href: '/medical-records', icon: 'bi-journal-medical' },
       { key: 'patients', code: '2.3', title: 'Quản lý thông tin cá nhân', href: '/patients/list', icon: 'bi-person-lines-fill' },
-      { key: 'prescriptions', code: '2.4', title: 'Kê đơn thuốc', href: '/prescriptions', icon: 'bi-prescription2' },
+      { key: 'prescriptions', code: '2.4', title: 'Kê đơn thuốc', href: '/prescriptions', icon: 'bi-prescription2', roles: ['ADMIN', 'DOCTOR'] },
       { key: 'bhyt', code: '2.5', title: 'Quản lý BHYT', href: '/bhyt', icon: 'bi-card-checklist' }
     ]
   },
@@ -53,7 +53,7 @@ const businessGroups = [
       { key: 'inpatient-admission', code: '4.1', title: 'Nhập viện', href: '/patients/reception', icon: 'bi-box-arrow-in-right' },
       { key: 'bed-assignment', code: '4.2', title: 'Phân giường/phòng', href: '/beds', icon: 'bi-layout-text-window-reverse' },
       { key: 'length-of-stay', code: '4.3', title: 'Theo dõi thời gian nằm', href: '/nghiep-vu/theo-doi-thoi-gian-nam', icon: 'bi-clock-history' },
-      { key: 'discharges', code: '4.4', title: 'Xuất viện', href: '/discharges', icon: 'bi-box-arrow-right' }
+      { key: 'discharges', code: '4.4', title: 'Xuất viện', href: '/discharges', icon: 'bi-box-arrow-right', roles: ['ADMIN', 'DOCTOR'] }
     ]
   },
   {
@@ -64,7 +64,7 @@ const businessGroups = [
     roles: ['ADMIN', 'DOCTOR', 'NURSE'],
     items: [
       { key: 'care-plan', code: '5.1', title: 'Lập phác đồ', href: '/nghiep-vu/lap-phac-do', icon: 'bi-diagram-3' },
-      { key: 'treatment-prescriptions', code: '5.2', title: 'Kê đơn thuốc', href: '/prescriptions', icon: 'bi-capsule-pill' },
+      { key: 'treatment-prescriptions', code: '5.2', title: 'Kê đơn thuốc', href: '/prescriptions', icon: 'bi-capsule-pill', roles: ['ADMIN', 'DOCTOR'] },
       { key: 'treatments', code: '5.3', title: 'Theo dõi diễn biến', href: '/treatments', icon: 'bi-calendar2-pulse' },
       { key: 'lab-summary', code: '5.4', title: 'Tổng hợp kết quả xét nghiệm', href: '/nghiep-vu/tong-hop-ket-qua-xet-nghiem', icon: 'bi-clipboard-data' }
     ]

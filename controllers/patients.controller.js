@@ -39,7 +39,7 @@ function toDateTimeLocalValue(value) {
 
 async function getSessionDoctorId(req) {
   if (!req.session.user || req.session.user.roleCode !== 'DOCTOR') return null;
-  const doctor = await moduleRepository.getDoctorByUser(req.session.user.fullName);
+  const doctor = await moduleRepository.getDoctorByUser(req.session.user);
   return doctor ? doctor.doctorId : -1;
 }
 
@@ -223,10 +223,15 @@ async function submitBooking(req, res, next) {
 async function processPayment(req, res, next) {
   try {
     const { id } = req.params;
-    await patientRepository.payBilling(id);
+    await patientRepository.payBilling(id, req.session.user.patientId);
     req.flash('success', 'Thanh toán thành công. Trạng thái đã được cập nhật.');
     return res.redirect('/patients/me/billing');
   } catch (error) {
+    if (error.number === 51003) {
+      req.flash('error', error.message);
+      return res.redirect('/patients/me/billing');
+    }
+
     return next(error);
   }
 }
