@@ -31,7 +31,8 @@
     "framer-motion": "^12.38.0",
     "method-override": "^3.0.0",
     "msnodesqlv8": "^5.1.9",
-    "mssql": "^11.0.1"
+    "mssql": "^11.0.1",
+    "multer": "^2.1.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

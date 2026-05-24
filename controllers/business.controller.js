@@ -13,6 +13,7 @@ const examRepository = require('../repositories/exam.repository');
 const supplyRepository = require('../repositories/supply.repository');
 const backupRepository = require('../repositories/backup.repository');
 const cashierRepository = require('../repositories/cashier.repository');
+const formTemplateRepository = require('../repositories/form-template.repository');
 
 function containsKeyword(value, keywords) {
   const normalized = normalizeText(value);
@@ -128,6 +129,15 @@ async function medicineCatalog(req, res, next) {
   }
 }
 
+async function searchMedicines(req, res, next) {
+  try {
+    const rows = await medicineRepository.searchMedicines(req.query.keyword || req.query.q || '');
+    return res.json({ rows });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function createMedicine(req, res, next) {
   try {
     const { medicineCode, medicineName, medicineGroup, dosageForm } = req.body;
@@ -196,6 +206,19 @@ async function updateServiceStatus(req, res, next) {
     await serviceRepository.updateServiceStatus(req.params.id, req.body.status || 'Ngưng sử dụng');
     req.flash('success', 'Cập nhật trạng thái dịch vụ thành công.');
     return res.redirect('/nghiep-vu/danh-muc-dich-vu');
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function formTemplates(req, res, next) {
+  try {
+    const rows = await formTemplateRepository.getFormTemplates();
+    return res.render('business/form-templates', {
+      title: 'Danh mục biểu mẫu',
+      activeMenu: req.query.activeMenu || 'doctor-form-templates',
+      rows
+    });
   } catch (error) {
     return next(error);
   }
@@ -505,6 +528,53 @@ async function doctorTodayAppointments(req, res, next) {
   }
 }
 
+async function doctorReceptionExam(req, res, next) {
+  try {
+    const doctor = await getSessionDoctor(req);
+    if (!doctor) {
+      req.flash('error', 'Không tìm thấy hồ sơ bác sĩ.');
+      return res.redirect('/dashboard');
+    }
+
+    const [appointments, patients, activeAdmissions] = await Promise.all([
+      cashierRepository.getAppointmentsByDoctor(doctor.doctorId),
+      patientRepository.getInpatients({ doctorId: doctor.doctorId }),
+      moduleRepository.getActiveAdmissions(doctor.doctorId)
+    ]);
+
+    return res.render('business/doctor-reception-exam', {
+      title: 'Tiếp nhận & khám bệnh',
+      activeMenu: req.query.activeMenu || 'doctor-reception-exam',
+      doctor,
+      appointments,
+      patients,
+      activeAdmissions,
+      statusOptions: ['Đang điều trị', 'Theo dõi', 'Ổn định', 'Chờ xuất viện'],
+      priorityOptions: ['Thấp', 'Trung bình', 'Cao', 'Nguy cấp'],
+      returnTo: '/nghiep-vu/tiep-nhan-kham-benh?activeMenu=doctor-reception-exam'
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateDoctorAppointmentStatus(req, res, next) {
+  try {
+    const doctorId = await getSessionDoctorId(req);
+    if (!doctorId || doctorId === -1) {
+      req.flash('error', 'Không tìm thấy hồ sơ bác sĩ để cập nhật lịch hẹn.');
+      return res.redirect('/nghiep-vu/lich-hen-kham-hom-nay?activeMenu=doctor-today-appointments');
+    }
+
+    await cashierRepository.updateDoctorAppointmentStatus(req.params.id, doctorId, req.body.status);
+    req.flash('success', 'Đã cập nhật trạng thái lịch hẹn.');
+    const redirectTo = req.body.returnTo || req.get('Referer') || '/nghiep-vu/lich-hen-kham-hom-nay?activeMenu=doctor-today-appointments';
+    return res.redirect(redirectTo.startsWith('/') ? redirectTo : '/nghiep-vu/lich-hen-kham-hom-nay?activeMenu=doctor-today-appointments');
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function pendingExamTickets(req, res, next) {
   try {
     const doctor = await getSessionDoctor(req);
@@ -527,6 +597,106 @@ async function pendingExamTickets(req, res, next) {
     });
   } catch (error) {
     next(error);
+  }
+}
+
+function getDoctorScopeId(doctorId) {
+  return doctorId === -1 ? null : doctorId;
+}
+
+function finalActionRedirect() {
+  return '/nghiep-vu/xu-tri-sau-kham?activeMenu=doctor-final-action';
+}
+
+function buildFinalActionDecision(row) {
+  if (row.dischargeId) return 'Đã lập hồ sơ ra viện';
+  if (statusEquals(row.status, 'Chờ xuất viện')) return 'Hoàn tất ra viện';
+  if (Number(row.pendingLabCount || 0) > 0) return 'Chờ đủ kết quả';
+  if (statusEquals(row.status, 'Ổn định')) return 'Cân nhắc ra viện';
+  if (Number(row.prescriptionCount || 0) === 0) return 'Cần kê đơn/y lệnh';
+  return 'Tiếp tục điều trị';
+}
+
+async function finalAction(req, res, next) {
+  try {
+    const rawDoctorId = await getSessionDoctorId(req);
+    const doctorId = getDoctorScopeId(rawDoctorId);
+    const [rows, activeRecords, doctors, doctor] = await Promise.all([
+      moduleRepository.getFinalActionWorklist(doctorId),
+      moduleRepository.getActiveMedicalRecords(doctorId),
+      doctorId ? Promise.resolve([]) : moduleRepository.getDoctors(),
+      getSessionDoctor(req)
+    ]);
+
+    const decisionRows = rows.map((row) => ({
+      ...row,
+      finalDecision: buildFinalActionDecision(row)
+    }));
+
+    const stats = {
+      total: decisionRows.length,
+      readyDischarge: decisionRows.filter((row) => row.finalDecision === 'Cân nhắc ra viện' || row.finalDecision === 'Hoàn tất ra viện').length,
+      waitingResults: decisionRows.filter((row) => row.finalDecision === 'Chờ đủ kết quả').length,
+      withoutPrescription: decisionRows.filter((row) => Number(row.prescriptionCount || 0) === 0).length
+    };
+
+    return res.render('business/final-action', {
+      title: 'Kê đơn / nhập viện / chuyển viện / ra viện',
+      activeMenu: req.query.activeMenu || 'doctor-final-action',
+      rows: decisionRows,
+      activeRecords,
+      doctors,
+      selectedDoctor: doctor,
+      stats
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function createFinalPrescription(req, res, next) {
+  try {
+    const rawDoctorId = await getSessionDoctorId(req);
+    const doctorId = getDoctorScopeId(rawDoctorId);
+
+    if (!doctorId && !req.body.doctorId) {
+      req.flash('error', 'Vui lòng chọn bác sĩ kê đơn.');
+      return res.redirect(finalActionRedirect());
+    }
+
+    await moduleRepository.createPrescription(req.body, doctorId);
+    req.flash('success', 'Đã kê đơn cho hồ sơ được chọn.');
+    return res.redirect(finalActionRedirect());
+  } catch (error) {
+    if (error.message && error.message.startsWith('Vui lòng')) {
+      req.flash('error', error.message);
+      return res.redirect(finalActionRedirect());
+    }
+    return next(error);
+  }
+}
+
+async function createFinalDischarge(req, res, next) {
+  try {
+    const rawDoctorId = await getSessionDoctorId(req);
+    const doctorId = getDoctorScopeId(rawDoctorId);
+    await moduleRepository.createDischarge(req.body, doctorId);
+    req.flash('success', 'Đã lập hồ sơ ra viện và đưa lượt điều trị vào hàng chờ hoàn tất.');
+    return res.redirect(finalActionRedirect());
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function createFinalTransfer(req, res, next) {
+  try {
+    const rawDoctorId = await getSessionDoctorId(req);
+    const doctorId = getDoctorScopeId(rawDoctorId);
+    await moduleRepository.createTransferDisposition(req.body, doctorId);
+    req.flash('success', 'Đã lập hồ sơ chuyển viện.');
+    return res.redirect(finalActionRedirect());
+  } catch (error) {
+    return next(error);
   }
 }
 
@@ -916,9 +1086,11 @@ module.exports = {
   createDisease,
   updateDiseaseStatus,
   medicineCatalog,
+  searchMedicines,
   createMedicine,
   updateMedicineStatus,
   serviceCatalog,
+  formTemplates,
   createService,
   updateServiceStatus,
   examTicket,
@@ -933,7 +1105,13 @@ module.exports = {
   procedureSchedule,
   labSummary,
   doctorTodayAppointments,
+  doctorReceptionExam,
+  updateDoctorAppointmentStatus,
   pendingExamTickets,
+  finalAction,
+  createFinalPrescription,
+  createFinalDischarge,
+  createFinalTransfer,
   feeExam,
   invoiceList,
   doctorDuty,

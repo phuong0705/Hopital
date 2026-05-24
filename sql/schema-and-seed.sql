@@ -188,6 +188,7 @@ CREATE TABLE LabTests (
   ordered_date DATETIME2 NOT NULL,
   status NVARCHAR(50) NOT NULL DEFAULT N'Chờ kết quả',
   result_summary NVARCHAR(1000),
+  result_files NVARCHAR(MAX),
   CONSTRAINT FK_LabTests_MedicalRecords FOREIGN KEY (record_id) REFERENCES MedicalRecords(record_id),
   CONSTRAINT FK_LabTests_Doctors FOREIGN KEY (doctor_id) REFERENCES Doctors(doctor_id)
 );

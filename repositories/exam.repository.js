@@ -62,6 +62,7 @@ async function getRecentExamTickets(limit = 20) {
     SELECT TOP (@limit)
       et.ticket_id AS ticketId,
       et.ticket_code AS ticketCode,
+      p.patient_id AS patientId,
       p.full_name AS patientName,
       d.department_name AS departmentName,
       doc.full_name AS doctorName,

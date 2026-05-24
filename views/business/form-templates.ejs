@@ -1,0 +1,69 @@
+<section class="module-hero">
+  <div>
+    <h2>Danh mục biểu mẫu</h2>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <button class="btn btn-light" type="button" data-export-table="formTemplatesTable" data-filename="danh-muc-bieu-mau.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
+  </div>
+</section>
+
+<section class="panel module-panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm mã, tên, nhóm biểu mẫu" data-module-search="formTemplatesTable">
+    </div>
+    <select class="form-select" data-module-filter="formTemplatesTable" data-filter-key="type">
+      <option value="">Tất cả nhóm biểu mẫu</option>
+      <% [...new Set(rows.map(row => row.templateType))].filter(Boolean).forEach(type => { %>
+        <option><%= type %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="formTemplatesTable">
+      <thead>
+        <tr>
+          <th>Mã biểu mẫu</th>
+          <th>Tên biểu mẫu</th>
+          <th>Nhóm</th>
+          <th>Mô tả</th>
+          <th>Trạng thái</th>
+          <th class="text-end no-export">Tệp</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr data-search="<%= `${row.templateCode} ${row.templateName} ${row.templateType} ${row.description || ''}`.toLowerCase() %>" data-type="<%= row.templateType %>">
+            <td><strong><%= row.templateCode %></strong></td>
+            <td><%= row.templateName %></td>
+            <td><span class="module-soft-pill"><%= row.templateType %></span></td>
+            <td class="text-wrap-cell"><%= row.description || '-' %></td>
+            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td class="text-end no-export">
+              <% if (row.fileUrl) { %>
+                <a class="btn btn-sm btn-light action-icon" href="<%= row.fileUrl %>" target="_blank" data-bs-toggle="tooltip" title="Mở biểu mẫu">
+                  <i class="bi bi-file-earmark-text"></i>
+                </a>
+              <% } else { %>
+                <span class="text-muted small">Chưa có tệp</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">Chưa có biểu mẫu nào trong danh mục.</td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty-inline module-empty d-none" data-empty-for="formTemplatesTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy biểu mẫu phù hợp</strong>
+  </div>
+</section>

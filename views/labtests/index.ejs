@@ -1,3 +1,15 @@
+<%
+  const canCreateLabTest = currentUser && ['ADMIN', 'DOCTOR'].includes(currentUser.roleCode);
+  const canViewLabDetail = currentUser && ['ADMIN', 'DOCTOR', 'NURSE', 'LAB'].includes(currentUser.roleCode);
+  const doctorFilterOptions = [...new Set(rows.map(row => row.doctorName).filter(Boolean))];
+  const toDateInputValue = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().slice(0, 10);
+  };
+%>
+
 <section class="module-hero">
   <div>
     <h2>Xét nghiệm / cận lâm sàng</h2>
@@ -5,7 +17,9 @@
   <div class="module-actions">
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
     <button class="btn btn-light" type="button" data-export-table="labtestsTable" data-filename="xet-nghiem.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
-    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#labtestModal">Tạo chỉ định</button>
+    <% if (canCreateLabTest) { %>
+      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#labtestModal">Tạo chỉ định</button>
+    <% } %>
   </div>
 </section>
 
@@ -13,12 +27,20 @@
   <div class="module-toolbar">
     <div class="module-search">
       <i class="bi bi-search"></i>
-      <input class="form-control" type="search" placeholder="Tìm bệnh nhân, mã chỉ định, loại xét nghiệm" data-module-search="labtestsTable">
+      <input class="form-control" id="labTestSearch" type="search" placeholder="Tìm bệnh nhân, mã chỉ định, loại xét nghiệm">
     </div>
-    <select class="form-select" data-module-filter="labtestsTable" data-filter-key="status">
+    <input class="form-control" id="labTestPatientCodeFilter" placeholder="Mã bệnh nhân">
+    <select class="form-select" id="labTestDoctorFilter" aria-label="Lọc theo bác sĩ phụ trách">
+      <option value="">Tất cả bác sĩ</option>
+      <% doctorFilterOptions.forEach(doctorName => { %>
+        <option value="<%= doctorName %>"><%= doctorName %></option>
+      <% }) %>
+    </select>
+    <input class="form-control" id="labTestSentDateFilter" type="date" aria-label="Lọc theo ngày gửi">
+    <select class="form-select" id="labTestStatusFilter" aria-label="Lọc theo trạng thái">
       <option value="">Tất cả trạng thái</option>
       <% [...new Set(rows.map(row => row.status))].forEach(status => { %>
-        <option><%= status %></option>
+        <option value="<%= status %>"><%= status %></option>
       <% }) %>
     </select>
   </div>
@@ -33,19 +55,57 @@
           <th>Trạng thái</th>
           <th>Kết quả</th>
           <th>Bác sĩ</th>
+          <% if (canViewLabDetail) { %>
+            <th class="text-end">Hành động</th>
+          <% } %>
         </tr>
       </thead>
       <tbody>
         <% rows.forEach(row => { %>
-          <tr data-search="<%= `${row.testCode} ${row.patientName} ${row.testType} ${row.resultSummary || ''} ${row.doctorName}`.toLowerCase() %>" data-status="<%= row.status %>">
-            <td><%= row.patientName %></td>
+          <tr
+            data-search="<%= `${row.testCode} ${row.patientCode} ${row.patientName} ${row.testType} ${row.resultSummary || ''} ${row.doctorName}`.toLowerCase() %>"
+            data-patient-code="<%= row.patientCode || '' %>"
+            data-doctor="<%= row.doctorName || '' %>"
+            data-sent-date="<%= toDateInputValue(row.orderedDate) %>"
+            data-status="<%= row.status %>">
+            <td>
+              <strong><%= row.patientName %></strong>
+              <small class="d-block text-muted"><%= row.patientCode %></small>
+            </td>
             <td><%= row.testType %></td>
             <td><%= format.datetime(row.orderedDate) %></td>
             <td><%- include('../partials/badge', { text: row.status }) %></td>
             <td class="text-wrap-cell compact"><%= row.resultSummary || 'Chưa có kết quả' %></td>
             <td><%= row.doctorName %></td>
+            <% if (canViewLabDetail) { %>
+              <td class="text-end">
+                <button
+                  class="btn btn-sm btn-primary"
+                  type="button"
+                  data-bs-toggle="modal"
+                  data-bs-target="#labOrderDetailModal"
+                  data-test-code="<%= row.testCode %>"
+                  data-patient-name="<%= row.patientName || '' %>"
+                  data-patient-code="<%= row.patientCode || '' %>"
+                  data-patient-gender="<%= row.gender || '' %>"
+                  data-patient-dob="<%= row.dateOfBirth ? format.date(row.dateOfBirth) : '' %>"
+                  data-patient-phone="<%= row.phone || '' %>"
+                  data-department="<%= row.departmentName || '' %>"
+                  data-doctor="<%= row.doctorName || '' %>"
+                  data-ordered-date="<%= row.orderedDate ? format.datetime(row.orderedDate) : '' %>"
+                  data-diagnosis="<%= row.preliminaryDiagnosis || '' %>"
+                  data-test-type="<%= row.testType || '' %>">
+                  <i class="bi bi-card-list me-1"></i>Xem chi tiết
+                </button>
+              </td>
+            <% } %>
           </tr>
         <% }) %>
+        <% if (!rows.length) { %>
+          <tr data-empty-row="true">
+            <td colspan="<%= canViewLabDetail ? 7 : 6 %>" class="text-center py-4 text-muted">Chưa có chỉ định xét nghiệm nào</td>
+          </tr>
+        <% } %>
       </tbody>
     </table>
   </div>
@@ -56,25 +116,298 @@
   </div>
 </section>
 
-<div class="modal fade" id="labtestModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const table = document.getElementById('labtestsTable');
+    if (!table) return;
+
+    const controls = {
+      search: document.getElementById('labTestSearch'),
+      patientCode: document.getElementById('labTestPatientCodeFilter'),
+      doctor: document.getElementById('labTestDoctorFilter'),
+      sentDate: document.getElementById('labTestSentDateFilter'),
+      status: document.getElementById('labTestStatusFilter')
+    };
+    const emptyState = document.querySelector('[data-empty-for="labtestsTable"]');
+    const tableRows = Array.from(table.querySelectorAll('tbody tr')).filter(row => !row.dataset.emptyRow);
+
+    function normalize(value) {
+      return (value || '').toString().trim().toLowerCase();
+    }
+
+    function applyLabFilters() {
+      const keyword = normalize(controls.search?.value);
+      const patientCode = normalize(controls.patientCode?.value);
+      const doctor = controls.doctor?.value || '';
+      const sentDate = controls.sentDate?.value || '';
+      const status = controls.status?.value || '';
+      let visibleCount = 0;
+
+      tableRows.forEach(row => {
+        const visible =
+          (!keyword || normalize(row.dataset.search).includes(keyword)) &&
+          (!patientCode || normalize(row.dataset.patientCode).includes(patientCode)) &&
+          (!doctor || row.dataset.doctor === doctor) &&
+          (!sentDate || row.dataset.sentDate === sentDate) &&
+          (!status || row.dataset.status === status);
+
+        row.classList.toggle('d-none', !visible);
+        if (visible) visibleCount += 1;
+      });
+
+      emptyState?.classList.toggle('d-none', visibleCount > 0);
+    }
+
+    Object.values(controls).forEach(control => {
+      control?.addEventListener('input', applyLabFilters);
+      control?.addEventListener('change', applyLabFilters);
+    });
+  });
+</script>
+
+<% if (canViewLabDetail) { %>
+<div class="modal fade" id="labOrderDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
     <div class="modal-content app-modal">
       <div class="modal-header">
-        <h5 class="modal-title">Tạo chỉ định cận lâm sàng</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title">Chi tiết chỉ định</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div class="modal-patient-preview">
-          <i class="bi bi-clipboard2-pulse"></i>
-          <div>
-            <strong>Tạo chỉ định từ hồ sơ bệnh án</strong>
+        <div class="modal-patient-preview align-items-start">
+          <i class="bi bi-person-vcard"></i>
+          <div class="w-100">
+            <div class="d-flex flex-wrap justify-content-between gap-2">
+              <strong id="detailPatientName">-</strong>
+              <span class="module-soft-pill" id="detailPatientCode">-</span>
+            </div>
+            <div class="info-list compact mt-3 mb-0">
+              <dt>Giới tính</dt>
+              <dd id="detailPatientGender">-</dd>
+              <dt>Ngày sinh</dt>
+              <dd id="detailPatientDob">-</dd>
+              <dt>Số điện thoại</dt>
+              <dd id="detailPatientPhone">-</dd>
+              <dt>Khoa điều trị</dt>
+              <dd id="detailDepartment">-</dd>
+              <dt>Bác sĩ phụ trách</dt>
+              <dd id="detailDoctor">-</dd>
+              <dt>Ngày gửi</dt>
+              <dd id="detailOrderedDate">-</dd>
+              <dt>Chẩn đoán sơ bộ</dt>
+              <dd id="detailDiagnosis">-</dd>
+              <dt>Loại chỉ định</dt>
+              <dd id="detailTestType">-</dd>
+            </div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-light" type="button" data-bs-dismiss="modal">Đóng</button>
-        <a class="btn btn-primary" href="/medical-records">Mở hồ sơ bệnh án</a>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const detailModal = document.getElementById('labOrderDetailModal');
+    if (!detailModal) return;
+
+    const setText = (id, value) => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = value || '-';
+    };
+
+    detailModal.addEventListener('show.bs.modal', event => {
+      const button = event.relatedTarget;
+      if (!button) return;
+
+      setText('detailPatientName', button.dataset.patientName);
+      setText('detailPatientCode', button.dataset.patientCode);
+      setText('detailPatientGender', button.dataset.patientGender);
+      setText('detailPatientDob', button.dataset.patientDob);
+      setText('detailPatientPhone', button.dataset.patientPhone);
+      setText('detailDepartment', button.dataset.department);
+      setText('detailDoctor', button.dataset.doctor);
+      setText('detailOrderedDate', button.dataset.orderedDate);
+      setText('detailDiagnosis', button.dataset.diagnosis);
+      setText('detailTestType', button.dataset.testType);
+    });
+  });
+</script>
+<% } %>
+
+<% if (canCreateLabTest) { %>
+<div class="modal fade" id="labtestModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/labtests" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Tạo chỉ định cận lâm sàng</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <% if (activeRecords.length) { %>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Hồ sơ bệnh án</label>
+                <div class="row g-2 mb-2">
+                  <div class="col-md-6">
+                    <input class="form-control" id="labPatientCodeFilter" placeholder="Lọc theo mã bệnh nhân">
+                  </div>
+                  <div class="col-md-6">
+                    <input class="form-control" id="labAdmissionDateFilter" type="date" aria-label="Lọc theo ngày nhập viện">
+                  </div>
+                </div>
+                <select class="form-select" name="recordId" id="labRecordSelect" required>
+                  <% activeRecords.forEach(record => { %>
+                    <option value="<%= record.recordId %>"><%= record.patientCode %> · <%= record.patientName %> · <%= record.recordCode %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="col-12">
+                <div class="modal-patient-preview align-items-start">
+                  <i class="bi bi-clipboard2-pulse"></i>
+                  <div class="w-100">
+                    <div class="d-flex flex-wrap justify-content-between gap-2">
+                      <strong id="labPreviewPatient"><%= activeRecords[0].patientName %></strong>
+                      <span class="module-soft-pill" id="labPreviewRecord"><%= activeRecords[0].recordCode %></span>
+                    </div>
+                    <div class="info-list compact mt-3 mb-0">
+                      <dt>Mã bệnh nhân</dt>
+                      <dd id="labPreviewPatientCode"><%= activeRecords[0].patientCode %></dd>
+                      <dt>Khoa điều trị</dt>
+                      <dd id="labPreviewDepartment"><%= activeRecords[0].departmentName || 'Chưa cập nhật' %></dd>
+                      <dt>Ngày nhập viện</dt>
+                      <dd id="labPreviewAdmissionDate"><%= activeRecords[0].admissionDate ? format.date(activeRecords[0].admissionDate) : 'Chưa cập nhật' %></dd>
+                      <dt>Chẩn đoán</dt>
+                      <dd id="labPreviewDiagnosis"><%= activeRecords[0].diagnosis || 'Chưa cập nhật' %></dd>
+                      <dt>Dấu hiệu sinh tồn</dt>
+                      <dd id="labPreviewVitals"><%= activeRecords[0].vitalSigns || 'Chưa cập nhật' %></dd>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Loại xét nghiệm</label>
+                <input class="form-control" name="testType" placeholder="Ví dụ: Công thức máu, CRP, X-quang phổi" required>
+              </div>
+            </div>
+          <% } else { %>
+            <div class="empty-inline">
+              <i class="bi bi-journal-medical"></i>
+              <strong>Chưa có hồ sơ bệnh án phù hợp để tạo chỉ định.</strong>
+            </div>
+          <% } %>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-light" type="button" data-bs-dismiss="modal">Đóng</button>
+          <a class="btn btn-light" id="labRecordDetailLink" href="<%= activeRecords[0] ? `/medical-records/${activeRecords[0].recordId}` : '/medical-records' %>">Chi tiết bệnh án</a>
+          <button class="btn btn-primary" type="submit" <%= activeRecords.length ? '' : 'disabled' %>>
+            <i class="bi bi-save me-2"></i>Tạo chỉ định xét nghiệm
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  (() => {
+    const records = <%- JSON.stringify(activeRecords).replace(/</g, '\\u003c') %>;
+    const select = document.getElementById('labRecordSelect');
+    const detailLink = document.getElementById('labRecordDetailLink');
+    const patientCodeFilter = document.getElementById('labPatientCodeFilter');
+    const admissionDateFilter = document.getElementById('labAdmissionDateFilter');
+    if (!select || !records.length) return;
+
+    const fields = {
+      patient: document.getElementById('labPreviewPatient'),
+      record: document.getElementById('labPreviewRecord'),
+      patientCode: document.getElementById('labPreviewPatientCode'),
+      department: document.getElementById('labPreviewDepartment'),
+      admissionDate: document.getElementById('labPreviewAdmissionDate'),
+      diagnosis: document.getElementById('labPreviewDiagnosis'),
+      vitals: document.getElementById('labPreviewVitals')
+    };
+
+    function toDateInputValue(value) {
+      if (!value) return '';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '';
+      return date.toISOString().slice(0, 10);
+    }
+
+    function toDisplayDate(value) {
+      if (!value) return 'Chưa cập nhật';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return 'Chưa cập nhật';
+      return date.toLocaleDateString('vi-VN');
+    }
+
+    function getFilteredRecords() {
+      const patientCode = (patientCodeFilter.value || '').trim().toLowerCase();
+      const admissionDate = admissionDateFilter.value || '';
+
+      return records.filter(record => {
+        const matchesCode = !patientCode || String(record.patientCode || '').toLowerCase().includes(patientCode);
+        const matchesDate = !admissionDate || toDateInputValue(record.admissionDate) === admissionDate;
+        return matchesCode && matchesDate;
+      });
+    }
+
+    function renderOptions() {
+      const filteredRecords = getFilteredRecords();
+      select.innerHTML = '';
+
+      filteredRecords.forEach(record => {
+        const option = document.createElement('option');
+        option.value = record.recordId;
+        option.textContent = `${record.patientCode || 'BN'} · ${record.patientName || 'Chưa cập nhật'} · ${record.recordCode || 'HSBA'}`;
+        select.appendChild(option);
+      });
+
+      select.disabled = filteredRecords.length === 0;
+      return filteredRecords[0] || null;
+    }
+
+    function syncPreview() {
+      const selected = records.find(record => String(record.recordId) === select.value);
+      if (!selected) {
+        fields.patient.textContent = 'Không tìm thấy hồ sơ phù hợp';
+        fields.record.textContent = 'HSBA';
+        fields.patientCode.textContent = 'Chưa cập nhật';
+        fields.department.textContent = 'Chưa cập nhật';
+        fields.admissionDate.textContent = 'Chưa cập nhật';
+        fields.diagnosis.textContent = 'Chưa cập nhật';
+        fields.vitals.textContent = 'Chưa cập nhật';
+        detailLink.href = '/medical-records';
+        return;
+      }
+
+      fields.patient.textContent = selected.patientName || 'Chưa cập nhật';
+      fields.record.textContent = selected.recordCode || 'HSBA';
+      fields.patientCode.textContent = selected.patientCode || 'Chưa cập nhật';
+      fields.department.textContent = selected.departmentName || 'Chưa cập nhật';
+      fields.admissionDate.textContent = toDisplayDate(selected.admissionDate);
+      fields.diagnosis.textContent = selected.diagnosis || 'Chưa cập nhật';
+      fields.vitals.textContent = selected.vitalSigns || 'Chưa cập nhật';
+      detailLink.href = `/medical-records/${selected.recordId}`;
+    }
+
+    function applyFilters() {
+      const firstMatch = renderOptions();
+      if (firstMatch) {
+        select.value = String(firstMatch.recordId);
+      }
+      syncPreview();
+    }
+
+    select.addEventListener('change', syncPreview);
+    patientCodeFilter.addEventListener('input', applyFilters);
+    admissionDateFilter.addEventListener('change', applyFilters);
+    applyFilters();
+  })();
+</script>
+<% } %>

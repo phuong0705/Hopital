@@ -2,13 +2,6 @@ const patientRepository = require('../repositories/patient.repository');
 const moduleRepository = require('../repositories/module.repository');
 const dashboardRepository = require('../repositories/dashboard.repository');
 
-function getDoctorDashboardUrl() {
-  const target = new URL(process.env.REPORTS_FRONTEND_URL || 'http://localhost:3003/reports');
-  target.pathname = '/doctor-dashboard';
-  target.search = '';
-  return target.toString();
-}
-
 async function getSessionDoctor(req) {
   if (!req.session.user || req.session.user.roleCode !== 'DOCTOR') return null;
   return moduleRepository.getDoctorByUser(req.session.user);
@@ -74,11 +67,7 @@ function renderDashboardHome(req, res) {
 
 async function index(req, res, next) {
   try {
-    if (req.session.user.roleCode === 'DOCTOR') {
-      return res.redirect(getDoctorDashboardUrl());
-    }
-
-    return renderDashboardHome(req, res);
+    return res.redirect('/dashboard/home');
   } catch (error) {
     return next(error);
   }

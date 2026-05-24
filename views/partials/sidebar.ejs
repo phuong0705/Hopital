@@ -5,6 +5,7 @@
   const isAdmin = role === 'ADMIN';
   const isNurse = role === 'NURSE';
   const isReceptionist = role === 'RECEPTIONIST';
+  const isLab = role === 'LAB';
   const canGroup = (group) => isAdmin || group.roles.includes(role);
   const canItem = (item, group) => isAdmin || (item.roles || group.roles).includes(role);
   const adminMenuSections = [
@@ -37,7 +38,6 @@
     {
       label: 'BÁO CÁO & GIÁM SÁT',
       items: [
-        { key: 'report-statistics', label: 'Báo cáo tổng hợp', icon: 'bi-bar-chart', href: '/reports' },
         { key: 'admin-audit', label: 'Nhật ký hệ thống (Audit log)', icon: 'bi-file-earmark', href: '/admin/audit-log' },
         { key: 'admin-monitoring', label: 'Giám sát hệ thống realtime', icon: 'bi-activity', href: '/admin/monitoring' }
       ]
@@ -45,45 +45,21 @@
   ];
   const doctorMenuSections = [
     {
-      label: 'TỔNG QUAN',
+      label: 'QUY TRÌNH KHÁM BỆNH',
       items: [
-        { key: 'dashboard', label: 'Dashboard tra cứu', icon: 'bi-grid-1x2-fill', href: '/dashboard' },
-        { key: 'doctor-handoff', label: 'Giao ban điện tử', icon: 'bi-megaphone', href: '/nghiep-vu/giao-ban-dien-tu?activeMenu=doctor-handoff' }
+        { key: 'doctor-reception-exam', label: 'Tiếp nhận & khám bệnh', icon: 'bi-stethoscope', href: '/nghiep-vu/tiep-nhan-kham-benh?activeMenu=doctor-reception-exam' },
+        { key: 'doctor-lab-orders', label: 'Chỉ định cận lâm sàng', icon: 'bi-clipboard2-plus', href: '/labtests?activeMenu=doctor-lab-orders' },
+        { key: 'doctor-diagnostic-results', label: 'Đọc và đánh giá kết quả', icon: 'bi-clipboard2-data', href: '/nghiep-vu/tong-hop-ket-qua-xet-nghiem?activeMenu=doctor-diagnostic-results' },
+        { key: 'doctor-final-action', label: 'Kê đơn / nhập viện / chuyển viện / ra viện', icon: 'bi-arrow-left-right', href: '/nghiep-vu/xu-tri-sau-kham?activeMenu=doctor-final-action' },
+        { key: 'doctor-medical-records', label: 'Hoàn tất hồ sơ bệnh án', icon: 'bi-journal-check', href: '/medical-records?activeMenu=doctor-medical-records' }
       ]
     },
     {
-      label: 'KHÁM & CHẨN ĐOÁN',
+      label: 'THEO DÕI & TÀI LIỆU',
       items: [
-        { key: 'doctor-today-appointments', label: 'Danh sách lịch hẹn', icon: 'bi-calendar-check', href: '/nghiep-vu/lich-hen-kham-hom-nay?activeMenu=doctor-today-appointments' },
-        { key: 'doctor-pending-tickets', label: 'Phiếu khám chờ', icon: 'bi-file-earmark-medical', href: '/nghiep-vu/phieu-kham-cho?activeMenu=doctor-pending-tickets', badge: doctorPendingTickets },
-        { key: 'doctor-diagnosis', label: 'Chẩn bệnh', icon: 'bi-activity', href: '/nghiep-vu/chan-benh?activeMenu=doctor-diagnosis' },
-        { key: 'doctor-lab-orders', label: 'Chỉ định xét nghiệm', icon: 'bi-clipboard2-pulse', href: '/labtests?activeMenu=doctor-lab-orders' },
-        { key: 'doctor-imaging-procedure-order', label: 'Chỉ định CĐHA / Thủ thuật', icon: 'bi-bezier2', href: '/nghiep-vu/chi-dinh-cdha-thu-thuat?activeMenu=doctor-imaging-procedure-order' },
-        { key: 'doctor-diagnostic-results', label: 'Kết quả xét nghiệm / CĐHA', icon: 'bi-clipboard2-data', href: '/nghiep-vu/tong-hop-ket-qua-xet-nghiem?activeMenu=doctor-diagnostic-results' },
-        { key: 'doctor-exam-results', label: 'Theo dõi kết quả khám', icon: 'bi-eye', href: '/nghiep-vu/theo-doi-ket-qua-kham?activeMenu=doctor-exam-results' }
-      ]
-    },
-    {
-      label: 'ĐIỀU TRỊ',
-      items: [
-        { key: 'doctor-prescriptions', label: 'Kê đơn thuốc', icon: 'bi-capsule-pill', href: '/prescriptions?activeMenu=doctor-prescriptions' },
-        { key: 'doctor-icd-care-plan', label: 'Tra cứu ICD-10 & Phác đồ', icon: 'bi-journal-medical', href: '/nghiep-vu/danh-muc-benh?activeMenu=doctor-icd-care-plan' }
-      ]
-    },
-    {
-      label: 'NỘI TRÚ',
-      items: [
-        { key: 'doctor-admission', label: 'Nhập viện', icon: 'bi-box-arrow-in-right', href: '/patients/reception?activeMenu=doctor-admission' },
-        { key: 'doctor-bed-assignment', label: 'Phân giường / Phòng', icon: 'bi-layout-sidebar-inset', href: '/beds?activeMenu=doctor-bed-assignment' },
-        { key: 'doctor-procedure-schedule', label: 'Lịch mổ / Thủ thuật', icon: 'bi-calendar2-week', href: '/nghiep-vu/lich-mo-thu-thuat?activeMenu=doctor-procedure-schedule' },
-        { key: 'doctor-length-of-stay', label: 'Theo dõi thời gian nằm', icon: 'bi-clock-history', href: '/nghiep-vu/theo-doi-thoi-gian-nam?activeMenu=doctor-length-of-stay' },
-        { key: 'doctor-discharge', label: 'Xuất viện', icon: 'bi-box-arrow-right', href: '/discharges?activeMenu=doctor-discharge' }
-      ]
-    },
-    {
-      label: 'HỒ SƠ BỆNH NHÂN',
-      items: [
-        { key: 'doctor-medical-records', label: 'Quản lý HSBA', icon: 'bi-journal-text', href: '/medical-records?activeMenu=doctor-medical-records' }
+        { key: 'doctor-handoff', label: 'Giao ban', icon: 'bi-megaphone', href: '/nghiep-vu/giao-ban-dien-tu?activeMenu=doctor-handoff' },
+        { key: 'doctor-form-templates', label: 'Biểu mẫu', icon: 'bi-file-earmark-text', href: '/nghiep-vu/bieu-mau?activeMenu=doctor-form-templates' },
+        { key: 'doctor-prescription-history', label: 'Lịch sử đơn thuốc', icon: 'bi-capsule-pill', href: '/prescriptions?activeMenu=doctor-prescription-history' }
       ]
     }
   ];
@@ -121,8 +97,15 @@
     {
       label: 'BÁO CÁO',
       items: [
-        { key: 'nurse-billing', label: 'Theo dõi viện phí', icon: 'bi-credit-card', href: '/billing?activeMenu=nurse-billing' },
-        { key: 'nurse-reports', label: 'Báo cáo ca trực', icon: 'bi-bar-chart', href: '/reports?activeMenu=nurse-reports' }
+        { key: 'nurse-billing', label: 'Theo dõi viện phí', icon: 'bi-credit-card', href: '/billing?activeMenu=nurse-billing' }
+      ]
+    }
+  ];
+  const labMenuSections = [
+    {
+      label: 'VIỆN XÉT NGHIỆM',
+      items: [
+        { key: 'lab-orders', label: 'Nhận chỉ định xét nghiệm', icon: 'bi-clipboard2-pulse', href: '/labtests?activeMenu=lab-orders' }
       ]
     }
   ];
@@ -149,7 +132,6 @@
       label: 'TRA CỨU & BÁO CÁO',
       items: [
         { key: 'cashier-patient-lookup', label: 'Tra cứu bệnh nhân', icon: 'bi-search', href: '/patients/list?activeMenu=cashier-patient-lookup' },
-        { key: 'cashier-shift-report', label: 'Báo cáo thu ngân ca', icon: 'bi-bar-chart', href: '/thu-ngan/bao-cao-ca' },
         { key: 'cashier-services', label: 'Danh mục dịch vụ & giá', icon: 'bi-shield', href: '/nghiep-vu/danh-muc-dich-vu?activeMenu=cashier-services' }
       ]
     }
@@ -186,9 +168,15 @@
       ]
     }
   ];
+  const commonReportSection = {
+    label: 'BÁO CÁO',
+    items: [
+      { key: 'report-statistics', label: 'Báo cáo thống kê', icon: 'bi-bar-chart', href: '/reports?activeMenu=report-statistics' }
+    ]
+  };
 %>
 <aside class="sidebar">
-  <a class="brand" href="<%= isPatient ? '/patients/me' : '/dashboard' %>">
+  <a class="brand" href="<%= isPatient ? '/patients/me' : '/dashboard/home' %>">
     <span class="brand-mark"><i class="bi bi-heart-pulse-fill"></i></span>
     <span>
       <strong>Nội trú HIS</strong>
@@ -227,7 +215,7 @@
           <small class="text-white-50">Phòng CNTT</small>
         </div>
       </div>
-      <% adminMenuSections.forEach(section => { %>
+      <% [...adminMenuSections, commonReportSection].forEach(section => { %>
         <div class="nav-section-label"><%= section.label %></div>
         <% section.items.forEach(item => { %>
           <a class="nav-link doctor-nav-link <%= activeMenu === item.key ? 'active' : '' %>" href="<%= item.href %>">
@@ -240,7 +228,7 @@
         <% }) %>
       <% }) %>
     <% } else if (isDoctor) { %>
-      <% doctorMenuSections.forEach(section => { %>
+      <% [...doctorMenuSections, commonReportSection].forEach(section => { %>
         <div class="nav-section-label"><%= section.label %></div>
         <% section.items.forEach(item => { %>
           <a class="nav-link doctor-nav-link <%= activeMenu === item.key ? 'active' : '' %>" href="<%= item.href %>">
@@ -267,7 +255,7 @@
           <small class="text-white-50"><%= currentUser.departmentName || 'Khoa Nội tổng hợp' %></small>
         </div>
       </div>
-      <% nurseMenuSections.forEach(section => { %>
+      <% [...nurseMenuSections, commonReportSection].forEach(section => { %>
         <div class="nav-section-label"><%= section.label %></div>
         <% section.items.forEach(item => { %>
           <a class="nav-link doctor-nav-link <%= activeMenu === item.key ? 'active' : '' %>" href="<%= item.href %>">
@@ -279,6 +267,22 @@
           </a>
         <% }) %>
       <% }) %>
+    <% } else if (isLab) { %>
+      <div class="px-3 py-4 mb-3 border-bottom border-white border-opacity-10">
+        <div>
+          <h6 class="text-white mb-0 fw-bold"><%= currentUser.fullName %></h6>
+          <small class="text-white-50">Viện xét nghiệm</small>
+        </div>
+      </div>
+      <% [...labMenuSections, commonReportSection].forEach(section => { %>
+        <div class="nav-section-label"><%= section.label %></div>
+        <% section.items.forEach(item => { %>
+          <a class="nav-link doctor-nav-link <%= activeMenu === item.key ? 'active' : '' %>" href="<%= item.href %>">
+            <i class="bi <%= item.icon %>"></i>
+            <span><%= item.label %></span>
+          </a>
+        <% }) %>
+      <% }) %>
     <% } else if (isReceptionist) { %>
       <div class="px-3 py-4 mb-3 border-bottom border-white border-opacity-10">
         <div>
@@ -286,7 +290,7 @@
           <small class="text-white-50">Phòng Tiếp nhận</small>
         </div>
       </div>
-      <% cashierMenuSections.forEach(section => { %>
+      <% [...cashierMenuSections, commonReportSection].forEach(section => { %>
         <div class="nav-section-label"><%= section.label %></div>
         <% section.items.forEach(item => { %>
           <a class="nav-link doctor-nav-link <%= activeMenu === item.key ? 'active' : '' %>" href="<%= item.href %>">
@@ -299,7 +303,7 @@
         <% }) %>
       <% }) %>
     <% } else { %>
-      <a class="nav-link <%= activeMenu === 'dashboard' ? 'active' : '' %>" href="/dashboard">
+      <a class="nav-link <%= activeMenu === 'dashboard' ? 'active' : '' %>" href="/dashboard/home">
         <i class="bi bi-grid-1x2-fill"></i>
         <span>Tổng quan</span>
       </a>

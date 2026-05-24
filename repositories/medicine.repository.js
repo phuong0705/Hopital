@@ -138,6 +138,39 @@ async function getMedicines() {
   `);
 }
 
+async function searchMedicines(keyword = '') {
+  await ensureMedicineTables();
+
+  const searchText = String(keyword || '').trim();
+  if (searchText.length < 2) return [];
+
+  return query(`
+    SELECT TOP 10
+      medicine_id AS medicineId,
+      medicine_code AS medicineCode,
+      medicine_name AS medicineName,
+      active_ingredient AS activeIngredient,
+      dosage_form AS dosageForm,
+      strength,
+      route,
+      unit,
+      current_stock AS currentStock
+    FROM MedicineCatalog
+    WHERE status = N'Đang sử dụng'
+      AND (
+        medicine_name LIKE @keyword
+        OR medicine_code LIKE @keyword
+        OR active_ingredient LIKE @keyword
+      )
+    ORDER BY
+      CASE WHEN medicine_name LIKE @prefix THEN 0 ELSE 1 END,
+      medicine_name
+  `, {
+    keyword: `%${searchText}%`,
+    prefix: `${searchText}%`
+  });
+}
+
 async function getMedicineHistory(medicineId) {
   await ensureMedicineTables();
 
@@ -253,6 +286,7 @@ async function updateMedicineStatus(medicineId, status) {
 
 module.exports = {
   getMedicines,
+  searchMedicines,
   createMedicine,
   updateMedicineStatus,
   getMedicineHistory,

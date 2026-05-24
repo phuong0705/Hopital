@@ -41,8 +41,8 @@
             </td>
             <td class="text-wrap-cell"><%= row.reason %></td>
             <td class="text-end">
-              <a href="/nghiep-vu/chan-benh?ticketId=<%= row.ticketId %>" class="btn btn-sm btn-primary">
-                <i class="bi bi-activity me-1"></i> Khám bệnh
+              <a href="/patients/<%= row.patientId %>?activeMenu=doctor-pending-tickets" class="btn btn-sm btn-primary">
+                <i class="bi bi-activity me-1"></i> Chẩn bệnh
               </a>
             </td>
           </tr>

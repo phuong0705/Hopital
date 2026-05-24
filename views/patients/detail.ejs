@@ -3,7 +3,7 @@
     <h2><%= patient.full_name %></h2>
     <p><%= patient.gender %> · <%= format.age(patient.date_of_birth) %> tuổi · <%= patient.phone || 'Chưa có SĐT' %></p>
   </div>
-  <%- include('../partials/badge', { text: patient.admission_status || 'Đang điều trị' }) %>
+  <%- include('../partials/badge', { text: patient.admission_status || patient.appointment_status || 'Chưa nhập viện' }) %>
 </section>
 
 <section class="patient-detail-grid mt-4">
@@ -36,6 +36,26 @@
       </div>
     </div>
   </div>
+
+  <% if (patient.appointment_id && !patient.admission_id) { %>
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Thông tin lịch hẹn</h2>
+        </div>
+      </div>
+      <dl class="info-list compact">
+        <dt>Mã lịch hẹn</dt>
+        <dd><%= patient.appointment_code %></dd>
+        <dt>Thời gian hẹn</dt>
+        <dd><%= format.datetime(patient.appointment_time) %></dd>
+        <dt>Lý do khám</dt>
+        <dd><%= patient.appointment_reason || 'Khám theo lịch hẹn' %></dd>
+        <dt>Trạng thái</dt>
+        <dd><%- include('../partials/badge', { text: patient.appointment_status || 'Chưa khám' }) %></dd>
+      </dl>
+    </div>
+  <% } %>
 
   <div class="panel">
     <div class="panel-header">

@@ -74,12 +74,48 @@ async function updateAdmissionStatus(admissionId, data, doctorId = null) {
 }
 
 async function getPatientDetail(patientId, doctorId = null) {
-  const whereDoctor = doctorId ? 'AND a.doctor_id = @doctorId' : '';
+  if (doctorId) {
+    const rows = await query(`
+      SELECT TOP 1 p.*,
+        a.admission_id, a.admission_date, a.initial_diagnosis, a.initial_condition,
+        a.status AS admission_status, a.priority_level, d.department_name, r.room_code, b.bed_code,
+        doc.full_name AS doctor_name,
+        ap.appointment_id, ap.appointment_code, ap.appointment_time, ap.reason AS appointment_reason,
+        ap.status AS appointment_status
+      FROM Patients p
+      OUTER APPLY (
+        SELECT TOP 1 *
+        FROM Admissions
+        WHERE patient_id = p.patient_id
+          AND doctor_id = @doctorId
+        ORDER BY admission_date DESC
+      ) a
+      OUTER APPLY (
+        SELECT TOP 1 *
+        FROM Appointments
+        WHERE patient_id = p.patient_id
+          AND doctor_id = @doctorId
+          AND status <> N'Đã hủy'
+        ORDER BY appointment_time DESC
+      ) ap
+      LEFT JOIN Departments d ON d.department_id = COALESCE(a.department_id, ap.department_id)
+      LEFT JOIN Rooms r ON r.room_id = a.room_id
+      LEFT JOIN Beds b ON b.bed_id = a.bed_id
+      LEFT JOIN Doctors doc ON doc.doctor_id = COALESCE(a.doctor_id, ap.doctor_id)
+      WHERE p.patient_id = @patientId
+        AND (a.admission_id IS NOT NULL OR ap.appointment_id IS NOT NULL)
+      ORDER BY COALESCE(a.admission_date, ap.appointment_time) DESC
+    `, { patientId, doctorId: Number(doctorId) });
+
+    return rows[0];
+  }
 
   const rows = await query(`
     SELECT TOP 1 p.*, a.admission_id, a.admission_date, a.initial_diagnosis, a.initial_condition,
       a.status AS admission_status, a.priority_level, d.department_name, r.room_code, b.bed_code,
-      doc.full_name AS doctor_name
+      doc.full_name AS doctor_name,
+      NULL AS appointment_id, NULL AS appointment_code, NULL AS appointment_time,
+      NULL AS appointment_reason, NULL AS appointment_status
     FROM Patients p
     LEFT JOIN Admissions a ON a.patient_id = p.patient_id
     LEFT JOIN Departments d ON d.department_id = a.department_id
@@ -87,9 +123,8 @@ async function getPatientDetail(patientId, doctorId = null) {
     LEFT JOIN Beds b ON b.bed_id = a.bed_id
     LEFT JOIN Doctors doc ON doc.doctor_id = a.doctor_id
     WHERE p.patient_id = @patientId
-      ${whereDoctor}
     ORDER BY a.admission_date DESC
-  `, doctorId ? { patientId, doctorId: Number(doctorId) } : { patientId });
+  `, { patientId });
   return rows[0];
 }
 

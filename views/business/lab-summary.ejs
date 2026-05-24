@@ -1,3 +1,7 @@
+<%
+  const canEditLabResult = currentUser && ['ADMIN', 'NURSE', 'LAB'].includes(currentUser.roleCode);
+%>
+
 <section class="module-hero">
   <div>
     <h2>Tổng hợp kết quả xét nghiệm</h2>
@@ -36,9 +40,7 @@
       <tbody>
         <% rows.forEach(row => { %>
           <tr data-search="<%= `${row.patientName} ${row.testType}`.toLowerCase() %>" data-status="<%= row.status %>">
-            <td>
-              <strong><%= row.patientName %></strong>
-            </td>
+            <td><strong><%= row.patientName %></strong></td>
             <td><strong><%= row.testType %></strong></td>
             <td><%= format.datetime(row.orderedDate) %></td>
             <td><%- include('../partials/badge', { text: row.status }) %></td>
@@ -50,14 +52,9 @@
               <% } %>
             </td>
             <td class="text-end">
-              <div class="d-flex justify-content-end gap-1">
-                <a href="/medical-records/<%= row.recordId %>" class="btn btn-sm btn-light" data-bs-toggle="tooltip" title="Xem hồ sơ bệnh án">
-                  <i class="bi bi-journal-medical"></i>
-                </a>
-                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#updateResultModal" data-test-code="<%= row.testCode %>" data-status="<%= row.status %>" data-result="<%= row.resultSummary || '' %>">
-                  <i class="bi bi-pencil-square"></i>
-                </button>
-              </div>
+              <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#updateResultModal" data-test-code="<%= row.testCode %>" data-status="<%= row.status %>" data-result="<%= row.resultSummary || '' %>" data-files="<%= encodeURIComponent(JSON.stringify(row.resultFiles || [])) %>">
+                <i class="bi bi-clipboard2-data me-1"></i>Xem kết quả
+              </button>
             </td>
           </tr>
         <% }) %>
@@ -71,12 +68,11 @@
   </div>
 </section>
 
-<!-- Update Result Modal -->
 <div class="modal fade" id="updateResultModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
-    <div class="modal-content">
+    <div class="modal-content app-modal">
       <div class="modal-header">
-        <h5 class="modal-title">Nhập kết quả xét nghiệm</h5>
+        <h5 class="modal-title">Xem kết quả xét nghiệm</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
@@ -84,7 +80,7 @@
           <input type="hidden" id="testCodeInput" name="testCode">
           <div class="mb-3">
             <label class="form-label">Trạng thái</label>
-            <select class="form-select" id="statusInput" name="status" required>
+            <select class="form-select" id="statusInput" name="status" required <%= canEditLabResult ? '' : 'disabled' %>>
               <option value="Chờ lấy mẫu">Chờ lấy mẫu</option>
               <option value="Đang thực hiện">Đang thực hiện</option>
               <option value="Đã có kết quả">Đã có kết quả</option>
@@ -92,13 +88,23 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Kết quả / Kết luận</label>
-            <textarea class="form-control" id="resultInput" name="resultSummary" rows="4" required></textarea>
+            <textarea class="form-control" id="resultInput" name="resultSummary" rows="4" required <%= canEditLabResult ? '' : 'readonly' %>></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ảnh / tệp kết quả</label>
+            <div class="list-group mb-2" id="resultFilesList"></div>
+            <% if (canEditLabResult) { %>
+              <input class="form-control" id="resultFilesInput" name="resultFiles" type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv">
+              <div class="form-text">Có thể upload nhiều ảnh hoặc tệp kết quả, tối đa 10MB/tệp.</div>
+            <% } %>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-        <button type="button" class="btn btn-primary" id="saveResultBtn">Lưu kết quả</button>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+        <% if (canEditLabResult) { %>
+          <button type="button" class="btn btn-primary" id="saveResultBtn">Lưu kết quả</button>
+        <% } %>
       </div>
     </div>
   </div>
@@ -107,55 +113,125 @@
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const updateResultModal = document.getElementById('updateResultModal');
-    if (updateResultModal) {
-      updateResultModal.addEventListener('show.bs.modal', event => {
-        const button = event.relatedTarget;
-        const testCode = button.getAttribute('data-test-code');
-        const status = button.getAttribute('data-status');
-        const result = button.getAttribute('data-result');
+    const escapeHtml = value => (value || '').toString().replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[char]));
+    const isImageFile = file => {
+      const mimeType = (file.mimeType || '').toLowerCase();
+      const name = (file.originalName || file.fileName || '').toLowerCase();
+      return mimeType.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif)$/i.test(name);
+    };
+    const renderResultFile = file => {
+      const url = escapeHtml(file.url);
+      const name = escapeHtml(file.originalName || file.fileName || 'Tệp kết quả');
+      if (isImageFile(file)) {
+        return `
+          <div class="list-group-item">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-image"></i>
+              <strong class="text-break">${name}</strong>
+            </div>
+            <img src="${url}" alt="${name}" class="img-fluid rounded border bg-light" data-preview-image="${url}" data-preview-title="${name}" role="button" tabindex="0" style="max-height: 360px; width: 100%; object-fit: contain; cursor: zoom-in;">
+          </div>
+        `;
+      }
 
-        document.getElementById('testCodeInput').value = testCode;
-        document.getElementById('statusInput').value = status;
-        document.getElementById('resultInput').value = result;
+      return `
+        <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="${url}" target="_blank" rel="noopener">
+          <span><i class="bi bi-paperclip me-2"></i>${name}</span>
+          <i class="bi bi-box-arrow-up-right"></i>
+        </a>
+      `;
+    };
+
+    updateResultModal?.addEventListener('show.bs.modal', event => {
+      const button = event.relatedTarget;
+      if (!button) return;
+      document.getElementById('testCodeInput').value = button.getAttribute('data-test-code') || '';
+      document.getElementById('statusInput').value = button.getAttribute('data-status') || 'Chờ lấy mẫu';
+      document.getElementById('resultInput').value = button.getAttribute('data-result') || '';
+      const fileInput = document.getElementById('resultFilesInput');
+      if (fileInput) fileInput.value = '';
+
+      const filesList = document.getElementById('resultFilesList');
+      const files = JSON.parse(decodeURIComponent(button.getAttribute('data-files') || '%5B%5D'));
+      filesList.innerHTML = files.length
+        ? files.map(renderResultFile).join('')
+        : '<div class="list-group-item text-muted">Chưa có tệp đính kèm</div>';
+    });
+
+    function openImagePreview(src, title) {
+      const overlay = document.createElement('div');
+      overlay.className = 'position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex align-items-center justify-content-center p-3';
+      overlay.style.zIndex = '2000';
+      overlay.innerHTML = `
+        <div class="bg-white rounded shadow-lg p-3 position-relative" style="max-width: 96vw; max-height: 96vh;">
+          <button type="button" class="btn-close position-absolute top-0 end-0 m-3" aria-label="Đóng"></button>
+          <div class="fw-semibold pe-5 mb-2">${title}</div>
+          <img src="${src}" alt="${title}" class="img-fluid rounded border" style="max-width: 92vw; max-height: 84vh; object-fit: contain;">
+        </div>
+      `;
+      const close = () => {
+        document.removeEventListener('keydown', handleKeydown);
+        overlay.remove();
+      };
+      const handleKeydown = event => {
+        if (event.key === 'Escape') close();
+      };
+      overlay.addEventListener('click', event => {
+        if (event.target === overlay || event.target.closest('.btn-close')) close();
       });
+      document.addEventListener('keydown', handleKeydown);
+      document.body.appendChild(overlay);
     }
+
+    document.getElementById('resultFilesList')?.addEventListener('click', event => {
+      const image = event.target.closest('[data-preview-image]');
+      if (!image) return;
+      openImagePreview(image.dataset.previewImage, image.dataset.previewTitle || 'Ảnh kết quả');
+    });
+
+    document.getElementById('resultFilesList')?.addEventListener('keydown', event => {
+      if (!['Enter', ' '].includes(event.key)) return;
+      const image = event.target.closest('[data-preview-image]');
+      if (!image) return;
+      event.preventDefault();
+      openImagePreview(image.dataset.previewImage, image.dataset.previewTitle || 'Ảnh kết quả');
+    });
 
     const saveResultBtn = document.getElementById('saveResultBtn');
-    if (saveResultBtn) {
-      saveResultBtn.addEventListener('click', async () => {
-        const form = document.getElementById('updateResultForm');
-        if (!form.checkValidity()) {
-          form.reportValidity();
+    saveResultBtn?.addEventListener('click', async () => {
+      const form = document.getElementById('updateResultForm');
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      const testCode = document.getElementById('testCodeInput').value;
+      const formData = new FormData(form);
+
+      try {
+        saveResultBtn.disabled = true;
+        const response = await fetch(`/labtests/${testCode}/result`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await response.json();
+        if (response.ok) {
+          window.location.reload();
           return;
         }
-
-        const testCode = document.getElementById('testCodeInput').value;
-        const status = document.getElementById('statusInput').value;
-        const resultSummary = document.getElementById('resultInput').value;
-
-        try {
-          saveResultBtn.disabled = true;
-          const response = await fetch(`/labtests/${testCode}/result`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ status, resultSummary })
-          });
-
-          const data = await response.json();
-          if (response.ok) {
-            window.location.reload();
-          } else {
-            alert(data.error || 'Có lỗi xảy ra');
-          }
-        } catch (err) {
-          console.error(err);
-          alert('Không thể kết nối đến máy chủ');
-        } finally {
-          saveResultBtn.disabled = false;
-        }
-      });
-    }
+        alert(data.error || 'Có lỗi xảy ra');
+      } catch (error) {
+        console.error(error);
+        alert('Không thể kết nối đến máy chủ');
+      } finally {
+        saveResultBtn.disabled = false;
+      }
+    });
   });
 </script>

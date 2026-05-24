@@ -58,6 +58,8 @@
                 <select name="status" class="form-select form-select-sm">
                   <option <%= row.status === 'Đã đặt' ? 'selected' : '' %>>Đã đặt</option>
                   <option <%= row.status === 'Đã tiếp nhận' ? 'selected' : '' %>>Đã tiếp nhận</option>
+                  <option <%= row.status === 'Chưa khám' ? 'selected' : '' %>>Chưa khám</option>
+                  <option <%= row.status === 'Đã khám' ? 'selected' : '' %>>Đã khám</option>
                   <option <%= row.status === 'Đã hủy' ? 'selected' : '' %>>Đã hủy</option>
                 </select>
                 <button class="btn btn-sm btn-light">Lưu</button>

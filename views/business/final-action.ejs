@@ -1,0 +1,367 @@
+<section class="module-hero">
+  <div>
+    <h2>Kê đơn / nhập viện / chuyển viện / ra viện</h2>
+    <% if (selectedDoctor) { %>
+      <p class="text-muted mb-0"><%= selectedDoctor.fullName %> · <%= selectedDoctor.departmentName || selectedDoctor.specialty || 'Bác sĩ điều trị' %></p>
+    <% } %>
+  </div>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <a class="btn btn-light" href="/patients/reception?activeMenu=doctor-final-action"><i class="bi bi-hospital me-2"></i>Nhập viện</a>
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#finalPrescriptionModal">
+      <i class="bi bi-capsule me-2"></i>Kê đơn
+    </button>
+  </div>
+</section>
+
+<section class="panel module-panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm bệnh nhân, chẩn đoán, bác sĩ, trạng thái" data-module-search="finalActionTable">
+    </div>
+    <select class="form-select" data-module-filter="finalActionTable" data-filter-key="decision">
+      <option value="">Tất cả hướng xử trí</option>
+      <% [...new Set(rows.map(row => row.finalDecision))].forEach(decision => { %>
+        <option><%= decision %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="finalActionTable">
+      <thead>
+        <tr>
+          <th>Bệnh nhân</th>
+          <th>Hồ sơ điều trị</th>
+          <th>Điều kiện xử trí</th>
+          <th>Hướng xử trí</th>
+          <th class="text-end">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => {
+          const location = [row.departmentName, row.roomCode, row.bedCode].filter(Boolean).join(' · ') || 'Chưa xếp giường';
+        %>
+          <tr
+            data-search="<%= `${row.patientCode} ${row.patientName} ${row.diagnosis || ''} ${row.doctorName || ''} ${row.status || ''} ${row.finalDecision}`.toLowerCase() %>"
+            data-decision="<%= row.finalDecision %>">
+            <td>
+              <div class="module-primary">
+                <strong><%= row.patientName %></strong>
+                <small><%= row.patientCode %> · <%= row.gender || '-' %></small>
+              </div>
+            </td>
+            <td class="text-wrap-cell">
+              <div><strong><%= row.recordCode || 'Chưa có HSBA' %></strong></div>
+              <div class="small text-muted"><%= row.diagnosis || 'Chưa cập nhật chẩn đoán' %></div>
+              <div class="small text-muted"><%= location %></div>
+            </td>
+            <td>
+              <div class="d-flex flex-wrap gap-2 mb-2">
+                <%- include('../partials/badge', { text: row.status }) %>
+                <%- include('../partials/badge', { text: row.priorityLevel }) %>
+              </div>
+              <div class="small text-muted">
+                CLS: <strong><%= row.labCount || 0 %></strong>
+                <% if (row.pendingLabCount) { %>
+                  · còn chờ <strong><%= row.pendingLabCount %></strong>
+                <% } %>
+              </div>
+              <div class="small text-muted">
+                Đơn thuốc: <strong><%= row.prescriptionCount || 0 %></strong>
+                <% if (row.latestPrescriptionDate) { %>
+                  · gần nhất <%= format.date(row.latestPrescriptionDate) %>
+                <% } %>
+              </div>
+            </td>
+            <td><%- include('../partials/badge', { text: row.finalDecision }) %></td>
+            <td class="text-end">
+              <div class="table-actions justify-content-end">
+                <% if (row.recordId) { %>
+                  <button class="btn btn-sm btn-primary action-icon" type="button" data-bs-toggle="modal" data-bs-target="#finalPrescriptionModal"
+                    data-record-id="<%= row.recordId %>"
+                    data-patient-name="<%= row.patientName %>"
+                    data-patient-code="<%= row.patientCode %>"
+                    title="Kê đơn">
+                    <i class="bi bi-capsule"></i>
+                  </button>
+                <% } %>
+                <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#finalTransferModal"
+                  data-admission-id="<%= row.admissionId %>"
+                  data-patient-name="<%= row.patientName %>"
+                  data-patient-code="<%= row.patientCode %>"
+                  title="Chuyển viện">
+                  <i class="bi bi-arrow-left-right"></i>
+                </button>
+                <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#finalDischargeModal"
+                  data-admission-id="<%= row.admissionId %>"
+                  data-patient-name="<%= row.patientName %>"
+                  data-patient-code="<%= row.patientCode %>"
+                  data-summary="<%= row.diagnosis || '' %>"
+                  title="Ra viện">
+                  <i class="bi bi-box-arrow-right"></i>
+                </button>
+                <% if (row.recordId) { %>
+                  <a class="btn btn-sm btn-light action-icon" href="/medical-records/<%= row.recordId %>?activeMenu=doctor-medical-records" title="Mở HSBA">
+                    <i class="bi bi-journal-text"></i>
+                  </a>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (!rows.length) { %>
+          <tr>
+            <td colspan="5" class="text-center py-4 text-muted">Chưa có hồ sơ nào cần xử trí.</td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty-inline module-empty d-none" data-empty-for="finalActionTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy hồ sơ phù hợp</strong>
+  </div>
+</section>
+
+<div class="modal fade" id="finalPrescriptionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/nghiep-vu/xu-tri-sau-kham/ke-don" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Kê đơn sau khám</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <div class="modal-patient-preview mb-3" id="finalPrescriptionPreview">
+                <i class="bi bi-capsule"></i>
+                <div>
+                  <strong>Chọn hồ sơ từ danh sách</strong><br>
+                  <span>Đơn thuốc được gắn trực tiếp vào HSBA</span>
+                </div>
+              </div>
+              <label class="form-label">Hồ sơ bệnh án</label>
+              <select name="recordId" class="form-select" id="finalPrescriptionRecordSelect" required>
+                <% activeRecords.forEach(item => { %>
+                  <option value="<%= item.recordId %>"><%= item.patientCode %> - <%= item.patientName %> · <%= item.departmentName %></option>
+                <% }) %>
+              </select>
+            </div>
+            <% if (selectedDoctor) { %>
+              <input type="hidden" name="doctorId" value="<%= selectedDoctor.doctorId %>">
+              <div class="col-md-6">
+                <label class="form-label">Bác sĩ kê</label>
+                <input class="form-control" value="<%= selectedDoctor.fullName %>" disabled>
+              </div>
+            <% } else { %>
+              <div class="col-md-6">
+                <label class="form-label">Bác sĩ kê</label>
+                <select name="doctorId" class="form-select" required>
+                  <% doctors.forEach(doctor => { %>
+                    <option value="<%= doctor.doctorId %>"><%= doctor.fullName %> - <%= doctor.specialty %></option>
+                  <% }) %>
+                </select>
+              </div>
+            <% } %>
+            <div class="col-12">
+              <label class="form-label">Danh sách thuốc</label>
+              <div class="d-flex flex-column gap-3" id="prescriptionItemList">
+                <article class="border rounded-3 p-3 prescription-item-card" data-prescription-item>
+                  <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                    <strong class="prescription-item-title">Thuốc 1</strong>
+                    <button class="btn btn-sm btn-light action-icon d-none" type="button" data-remove-prescription-item data-bs-toggle="tooltip" title="Xóa thuốc">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </div>
+                  <div class="row g-3 align-items-end">
+                    <div class="col-lg-4 col-md-6">
+                      <label class="form-label">Tên thuốc</label>
+                      <input name="medicineName[]" class="form-control" list="medicineSuggestionList" data-medicine-search required>
+                      <input name="dosage[]" type="hidden" value="-">
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                      <label class="form-label">Thời điểm dùng</label>
+                      <input name="frequency[]" type="hidden" value="">
+                      <div class="d-flex flex-wrap gap-2">
+                        <label class="btn btn-light btn-sm border mb-0">
+                          <input class="form-check-input me-1" type="checkbox" value="Sáng" data-dose-time> Sáng
+                        </label>
+                        <label class="btn btn-light btn-sm border mb-0">
+                          <input class="form-check-input me-1" type="checkbox" value="Trưa" data-dose-time> Trưa
+                        </label>
+                        <label class="btn btn-light btn-sm border mb-0">
+                          <input class="form-check-input me-1" type="checkbox" value="Chiều" data-dose-time> Chiều
+                        </label>
+                      </div>
+                    </div>
+                    <div class="col-lg-2 col-md-6">
+                      <label class="form-label">Đường dùng</label>
+                      <select name="route[]" class="form-select" required>
+                        <option>Uống</option>
+                        <option>Tĩnh mạch</option>
+                        <option>Tiêm dưới da</option>
+                        <option>Tiêm bắp</option>
+                        <option>Khí dung</option>
+                      </select>
+                    </div>
+                    <div class="col-lg-1 col-md-3">
+                      <label class="form-label">Số lượng</label>
+                      <input name="quantity[]" type="number" min="1" value="1" class="form-control" required>
+                    </div>
+                    <div class="col-lg-2 col-md-3">
+                      <label class="form-label">Đơn vị</label>
+                      <input name="unit[]" class="form-control" value="viên" required>
+                    </div>
+                    <div class="col-lg-2 col-md-3">
+                      <label class="form-label">Bắt đầu</label>
+                      <input name="startDate[]" type="date" class="form-control" required>
+                    </div>
+                    <div class="col-lg-2 col-md-3">
+                      <label class="form-label">Kết thúc</label>
+                      <input name="endDate[]" type="date" class="form-control" required>
+                    </div>
+                    <div class="col-lg-8">
+                      <label class="form-label">Ghi chú</label>
+                      <input name="itemNote[]" class="form-control">
+                    </div>
+                  </div>
+                </article>
+              </div>
+              <datalist id="medicineSuggestionList"></datalist>
+              <div class="mt-3 text-center">
+                <button class="btn btn-light action-icon" type="button" id="addPrescriptionItemBelowBtn" data-bs-toggle="tooltip" title="Thêm thuốc">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-light" type="button" data-bs-dismiss="modal">Đóng</button>
+          <button class="btn btn-light" type="button" id="printPrescriptionTemplateBtn"><i class="bi bi-printer me-2"></i>In đơn thuốc</button>
+          <button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>Lưu đơn thuốc</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="finalDischargeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/nghiep-vu/xu-tri-sau-kham/ra-vien" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Lập hồ sơ ra viện</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-7">
+              <div class="modal-patient-preview mb-3" id="finalDischargePreview">
+                <i class="bi bi-box-arrow-right"></i>
+                <div>
+                  <strong>Chọn bệnh nhân từ danh sách</strong><br>
+                  <span>Hồ sơ ra viện cập nhật trạng thái lượt điều trị</span>
+                </div>
+              </div>
+              <label class="form-label">Lượt điều trị</label>
+              <select name="admissionId" class="form-select" id="finalDischargeAdmissionSelect" required>
+                <% rows.forEach(row => { %>
+                  <option value="<%= row.admissionId %>"><%= row.patientCode %> - <%= row.patientName %> · <%= row.departmentName %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Ngày ra viện</label>
+              <input name="dischargeDate" id="finalDischargeDateInput" type="datetime-local" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Điều kiện ra viện</label>
+              <textarea name="dischargeCondition" class="form-control" rows="4" required>Ổn định, đủ điều kiện ra viện</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tóm tắt điều trị</label>
+              <textarea name="treatmentSummary" class="form-control" rows="4" id="finalDischargeSummary" required></textarea>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Trạng thái thanh toán</label>
+              <select name="paymentStatus" class="form-select">
+                <option>Chưa thanh toán</option>
+                <option>Một phần</option>
+                <option>Đã thanh toán</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-light" type="button" data-bs-dismiss="modal">Đóng</button>
+          <button class="btn btn-danger" type="submit">Tạo hồ sơ ra viện</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="finalTransferModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <form action="/nghiep-vu/xu-tri-sau-kham/chuyen-vien" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Lập hồ sơ chuyển viện</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-7">
+              <div class="modal-patient-preview mb-3" id="finalTransferPreview">
+                <i class="bi bi-arrow-left-right"></i>
+                <div>
+                  <strong>Chọn bệnh nhân từ danh sách</strong><br>
+                  <span>Chuyển viện được ghi nhận như hồ sơ ra viện dạng chuyển tuyến</span>
+                </div>
+              </div>
+              <label class="form-label">Lượt điều trị</label>
+              <select name="admissionId" class="form-select" id="finalTransferAdmissionSelect" required>
+                <% rows.forEach(row => { %>
+                  <option value="<%= row.admissionId %>"><%= row.patientCode %> - <%= row.patientName %> · <%= row.departmentName %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Ngày chuyển viện</label>
+              <input name="transferDate" id="finalTransferDateInput" type="datetime-local" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Bệnh viện tiếp nhận</label>
+              <input name="transferHospital" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Trạng thái thanh toán</label>
+              <select name="paymentStatus" class="form-select">
+                <option>Chưa thanh toán</option>
+                <option>Một phần</option>
+                <option>Đã thanh toán</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Lý do chuyển viện</label>
+              <textarea name="transferReason" class="form-control" rows="4" required></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tóm tắt điều trị</label>
+              <textarea name="treatmentSummary" class="form-control" rows="4" required></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-light" type="button" data-bs-dismiss="modal">Đóng</button>
+          <button class="btn btn-primary" type="submit">Tạo hồ sơ chuyển viện</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

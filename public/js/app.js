@@ -265,6 +265,223 @@ document.addEventListener('DOMContentLoaded', () => {
     setModalPatientPreview(preview, button, 'Thanh toán xuất viện');
   });
 
+  const setLocalDateTimeValue = (input) => {
+    if (!input || input.value) return;
+    const now = new Date();
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    input.value = local.toISOString().slice(0, 16);
+  };
+
+  const finalPrescriptionModal = document.getElementById('finalPrescriptionModal');
+  finalPrescriptionModal?.addEventListener('show.bs.modal', (event) => {
+    const button = event.relatedTarget;
+    const recordId = button?.dataset.recordId;
+    const select = document.getElementById('finalPrescriptionRecordSelect');
+    const preview = document.getElementById('finalPrescriptionPreview');
+
+    if (select && recordId) select.value = recordId;
+    setModalPatientPreview(preview, button, 'Hồ sơ kê đơn');
+  });
+
+  const prescriptionItemList = document.getElementById('prescriptionItemList');
+  const medicineSuggestionList = document.getElementById('medicineSuggestionList');
+  const medicineSuggestionCache = new Map();
+  let medicineSearchTimer = null;
+
+  const updatePrescriptionFrequencies = () => {
+    if (!prescriptionItemList) return;
+    prescriptionItemList.querySelectorAll('[data-prescription-item]').forEach((card) => {
+      const frequencyInput = card.querySelector('input[name="frequency[]"]');
+      const selectedTimes = Array.from(card.querySelectorAll('[data-dose-time]:checked')).map((input) => input.value);
+      if (frequencyInput) frequencyInput.value = selectedTimes.join(', ');
+    });
+  };
+
+  const populateMedicineSuggestions = (rows) => {
+    if (!medicineSuggestionList) return;
+    medicineSuggestionList.innerHTML = '';
+    medicineSuggestionCache.clear();
+
+    rows.forEach((row) => {
+      medicineSuggestionCache.set(row.medicineName, row);
+      const option = document.createElement('option');
+      option.value = row.medicineName;
+      option.label = [row.medicineCode, row.activeIngredient, row.strength].filter(Boolean).join(' · ');
+      medicineSuggestionList.appendChild(option);
+    });
+  };
+
+  const fetchMedicineSuggestions = (keyword) => {
+    clearTimeout(medicineSearchTimer);
+    if (!keyword || keyword.trim().length < 2) {
+      populateMedicineSuggestions([]);
+      return;
+    }
+
+    medicineSearchTimer = setTimeout(async () => {
+      try {
+        const response = await fetch(`/nghiep-vu/tim-thuoc?keyword=${encodeURIComponent(keyword.trim())}`, {
+          headers: { Accept: 'application/json' }
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        populateMedicineSuggestions(data.rows || []);
+      } catch (error) {
+        populateMedicineSuggestions([]);
+      }
+    }, 220);
+  };
+
+  const applyMedicineSuggestion = (input) => {
+    const item = medicineSuggestionCache.get(input.value);
+    if (!item) return;
+    const card = input.closest('[data-prescription-item]');
+    const dosageInput = card?.querySelector('input[name="dosage[]"]');
+    const routeSelect = card?.querySelector('select[name="route[]"]');
+    const unitInput = card?.querySelector('input[name="unit[]"]');
+
+    if (dosageInput) dosageInput.value = item.strength || item.dosageForm || '-';
+    if (unitInput && item.unit) unitInput.value = item.unit;
+    if (routeSelect && item.route) {
+      const routeOption = Array.from(routeSelect.options).find((option) => option.value === item.route);
+      if (routeOption) routeSelect.value = item.route;
+    }
+  };
+
+  const refreshPrescriptionCards = () => {
+    if (!prescriptionItemList) return;
+    const cards = Array.from(prescriptionItemList.querySelectorAll('[data-prescription-item]'));
+    cards.forEach((card, index) => {
+      const title = card.querySelector('.prescription-item-title');
+      const removeButton = card.querySelector('[data-remove-prescription-item]');
+      if (title) title.textContent = `Thuốc ${index + 1}`;
+      removeButton?.classList.toggle('d-none', cards.length === 1);
+    });
+  };
+
+  const addPrescriptionItem = () => {
+    if (!prescriptionItemList) return;
+    const template = prescriptionItemList.querySelector('[data-prescription-item]');
+    if (!template) return;
+
+    const clone = template.cloneNode(true);
+    clone.querySelectorAll('input').forEach((input) => {
+      input.checked = false;
+      input.value = input.type === 'number' ? '1' : (input.name === 'unit[]' ? 'viên' : (input.name === 'dosage[]' ? '-' : ''));
+    });
+    clone.querySelectorAll('select').forEach((select) => {
+      select.selectedIndex = 0;
+    });
+    prescriptionItemList.appendChild(clone);
+    refreshPrescriptionCards();
+  };
+
+  const resetPrescriptionItems = () => {
+    if (!prescriptionItemList) return;
+    const cards = Array.from(prescriptionItemList.querySelectorAll('[data-prescription-item]'));
+    cards.slice(1).forEach((card) => card.remove());
+    cards[0]?.querySelectorAll('input').forEach((input) => {
+      input.checked = false;
+      input.value = input.type === 'number' ? '1' : (input.name === 'unit[]' ? 'viên' : (input.name === 'dosage[]' ? '-' : ''));
+    });
+    cards[0]?.querySelectorAll('select').forEach((select) => {
+      select.selectedIndex = 0;
+    });
+    refreshPrescriptionCards();
+  };
+
+  document.getElementById('addPrescriptionItemBelowBtn')?.addEventListener('click', addPrescriptionItem);
+  prescriptionItemList?.addEventListener('click', (event) => {
+    const removeButton = event.target.closest('[data-remove-prescription-item]');
+    if (!removeButton) return;
+
+    const cards = prescriptionItemList.querySelectorAll('[data-prescription-item]');
+    if (cards.length <= 1) return;
+    removeButton.closest('[data-prescription-item]')?.remove();
+    refreshPrescriptionCards();
+  });
+  prescriptionItemList?.addEventListener('input', (event) => {
+    const medicineInput = event.target.closest('[data-medicine-search]');
+    if (medicineInput) {
+      fetchMedicineSuggestions(medicineInput.value);
+      applyMedicineSuggestion(medicineInput);
+      return;
+    }
+
+    if (event.target.matches('[data-dose-time]')) {
+      updatePrescriptionFrequencies();
+    }
+  });
+  prescriptionItemList?.addEventListener('change', (event) => {
+    if (event.target.matches('[data-dose-time]')) {
+      updatePrescriptionFrequencies();
+      return;
+    }
+
+    const medicineInput = event.target.closest('[data-medicine-search]');
+    if (medicineInput) applyMedicineSuggestion(medicineInput);
+  });
+  refreshPrescriptionCards();
+
+  document.getElementById('printPrescriptionTemplateBtn')?.addEventListener('click', () => {
+    const form = finalPrescriptionModal?.querySelector('form');
+    if (!form) return;
+
+    updatePrescriptionFrequencies();
+    const formData = new FormData(form);
+    const medicines = formData.getAll('medicineName[]').map((medicineName, index) => ({
+      medicineName,
+      dosage: formData.getAll('dosage[]')[index] || '',
+      frequency: formData.getAll('frequency[]')[index] || '',
+      route: formData.getAll('route[]')[index] || '',
+      quantity: formData.getAll('quantity[]')[index] || '',
+      unit: formData.getAll('unit[]')[index] || '',
+      startDate: formData.getAll('startDate[]')[index] || '',
+      endDate: formData.getAll('endDate[]')[index] || '',
+      note: formData.getAll('itemNote[]')[index] || ''
+    })).filter((item) => item.medicineName);
+
+    const payload = {
+      recordId: formData.get('recordId'),
+      doctorId: formData.get('doctorId'),
+      medicines
+    };
+
+    window.dispatchEvent(new CustomEvent('prescription-template-print-requested', { detail: payload }));
+  });
+  finalPrescriptionModal?.addEventListener('hidden.bs.modal', resetPrescriptionItems);
+  finalPrescriptionModal?.querySelector('form')?.addEventListener('submit', () => {
+    updatePrescriptionFrequencies();
+  });
+
+  const finalDischargeModal = document.getElementById('finalDischargeModal');
+  finalDischargeModal?.addEventListener('show.bs.modal', (event) => {
+    const button = event.relatedTarget;
+    const admissionId = button?.dataset.admissionId;
+    const select = document.getElementById('finalDischargeAdmissionSelect');
+    const preview = document.getElementById('finalDischargePreview');
+    const dischargeDate = document.getElementById('finalDischargeDateInput');
+    const summary = document.getElementById('finalDischargeSummary');
+
+    if (select && admissionId) select.value = admissionId;
+    if (summary && button?.dataset.summary && !summary.value) summary.value = button.dataset.summary;
+    setLocalDateTimeValue(dischargeDate);
+    setModalPatientPreview(preview, button, 'Bệnh nhân ra viện');
+  });
+
+  const finalTransferModal = document.getElementById('finalTransferModal');
+  finalTransferModal?.addEventListener('show.bs.modal', (event) => {
+    const button = event.relatedTarget;
+    const admissionId = button?.dataset.admissionId;
+    const select = document.getElementById('finalTransferAdmissionSelect');
+    const preview = document.getElementById('finalTransferPreview');
+    const transferDate = document.getElementById('finalTransferDateInput');
+
+    if (select && admissionId) select.value = admissionId;
+    setLocalDateTimeValue(transferDate);
+    setModalPatientPreview(preview, button, 'Bệnh nhân chuyển viện');
+  });
+
   const normalizeText = (value) => (value || '').toString().trim().toLowerCase();
 
   const applyModuleFilters = (tableId) => {
@@ -284,7 +501,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const matchesFilters = filters.every((filter) => {
         const value = filter.value;
         const key = filter.dataset.filterKey;
-        return !value || row.dataset[key] === value;
+        const rowValue = row.dataset[key] || '';
+        return !value || rowValue === value || rowValue.split('|').includes(value);
       });
       const visible = matchesKeyword && matchesFilters;
 
@@ -297,9 +515,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const matchesFilters = filters.every((filter) => {
         const value = filter.value;
         const key = filter.dataset.filterKey;
-        return !value || card.dataset[key] === value;
+        const cardValue = card.dataset[key] || '';
+        return !value || cardValue === value || cardValue.split('|').includes(value);
       });
-      card.classList.toggle('d-none', !(matchesKeyword && matchesFilters));
+      const visible = matchesKeyword && matchesFilters;
+      card.classList.toggle('d-none', !visible);
+      if (visible && linkedCards.length) visibleCount += 1;
     });
 
     emptyState?.classList.toggle('d-none', visibleCount > 0);

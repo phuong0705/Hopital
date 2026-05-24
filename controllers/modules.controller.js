@@ -27,13 +27,57 @@ async function medicalRecords(req, res, next) {
   try {
     const doctorId = await getSessionDoctorId(req);
     const rows = await moduleRepository.getMedicalRecords(doctorId);
+    const completionRows = rows.map((row) => {
+      const missingItems = [];
+      if (Number(row.pendingLabCount || 0) > 0) missingItems.push(`${row.pendingLabCount} CLS chưa có kết quả`);
+      if (Number(row.pendingTreatmentCount || 0) > 0) missingItems.push(`${row.pendingTreatmentCount} y lệnh chưa hoàn thành`);
+      if (!row.dischargeId && !['Chờ xuất viện', 'Đã xuất viện'].includes(row.admissionStatus)) {
+        missingItems.push('Chưa có quyết định ra viện/chuyển viện');
+      }
+      if (!row.diagnosis) missingItems.push('Thiếu chẩn đoán');
+
+      const isCompleted = row.status === 'Hoàn tất';
+      const isReady = !isCompleted && missingItems.length === 0;
+
+      return {
+        ...row,
+        missingItems,
+        completionState: isCompleted ? 'Đã hoàn tất' : (isReady ? 'Sẵn sàng hoàn tất' : 'Cần bổ sung')
+      };
+    });
+
+    const stats = {
+      total: completionRows.length,
+      completed: completionRows.filter((row) => row.completionState === 'Đã hoàn tất').length,
+      ready: completionRows.filter((row) => row.completionState === 'Sẵn sàng hoàn tất').length,
+      pending: completionRows.filter((row) => row.completionState === 'Cần bổ sung').length
+    };
+
     res.render('medical-records/index', {
-      title: 'Hồ sơ bệnh án',
-      activeMenu: req.query.activeMenu || 'medical-records',
-      rows
+      title: 'Hoàn tất hồ sơ bệnh án',
+      activeMenu: req.query.activeMenu || (req.session.user.roleCode === 'DOCTOR' ? 'doctor-medical-records' : 'medical-records'),
+      rows: completionRows,
+      stats,
+      canCompleteRecord: req.session.user && ['ADMIN', 'DOCTOR'].includes(req.session.user.roleCode)
     });
   } catch (error) {
     next(error);
+  }
+}
+
+async function completeMedicalRecord(req, res, next) {
+  try {
+    const doctorId = await getSessionDoctorId(req);
+    await moduleRepository.completeMedicalRecord(req.params.id, doctorId);
+    req.flash('success', 'Đã hoàn tất hồ sơ bệnh án.');
+    const returnTo = req.body.returnTo || '/medical-records?activeMenu=doctor-medical-records';
+    return res.redirect(returnTo.startsWith('/') ? returnTo : '/medical-records?activeMenu=doctor-medical-records');
+  } catch (error) {
+    if (error.number === 51008 || error.number === 51007) {
+      req.flash('error', error.message);
+      return res.redirect('/medical-records?activeMenu=doctor-medical-records');
+    }
+    return next(error);
   }
 }
 
@@ -47,7 +91,7 @@ async function medicalRecordDetail(req, res, next) {
 
     return res.render('medical-records/detail', {
       title: `Hồ sơ ${data.record.record_code}`,
-      activeMenu: req.query.activeMenu || 'medical-records',
+      activeMenu: req.query.activeMenu || (req.session.user.roleCode === 'DOCTOR' ? 'doctor-medical-records' : 'medical-records'),
       data
     });
   } catch (error) {
@@ -228,6 +272,7 @@ async function treatments(req, res, next) {
 async function prescriptions(req, res, next) {
   try {
     const doctorId = await getSessionDoctorId(req);
+    const activeMenu = req.query.activeMenu || 'prescriptions';
     const [rows, activeRecords, doctors] = await Promise.all([
       moduleRepository.getPrescriptions(doctorId),
       moduleRepository.getActiveMedicalRecords(doctorId),
@@ -236,12 +281,13 @@ async function prescriptions(req, res, next) {
     const selectedDoctor = doctorId ? await moduleRepository.getDoctorByUser(req.session.user) : null;
 
     res.render('prescriptions/index', {
-      title: 'Thuốc và đơn thuốc',
-      activeMenu: req.query.activeMenu || 'prescriptions',
+      title: activeMenu === 'doctor-prescription-history' ? 'Lịch sử đơn thuốc' : 'Thuốc và đơn thuốc',
+      activeMenu,
       rows,
       activeRecords,
       doctors,
-      selectedDoctor
+      selectedDoctor,
+      showPrescribeAction: activeMenu !== 'doctor-prescription-history'
     });
   } catch (error) {
     next(error);
@@ -255,6 +301,10 @@ async function createPrescription(req, res, next) {
     req.flash('success', 'Kê đơn thuốc thành công.');
     res.redirect('/prescriptions');
   } catch (error) {
+    if (error.message && error.message.startsWith('Vui lòng')) {
+      req.flash('error', error.message);
+      return res.redirect('/prescriptions');
+    }
     next(error);
   }
 }
@@ -262,14 +312,36 @@ async function createPrescription(req, res, next) {
 async function labtests(req, res, next) {
   try {
     const doctorId = await getSessionDoctorId(req);
-    const rows = await moduleRepository.getLabTests(doctorId);
+    const [rows, activeRecords] = await Promise.all([
+      moduleRepository.getLabTests(doctorId),
+      moduleRepository.getMedicalRecords(doctorId)
+    ]);
     res.render('labtests/index', {
       title: 'Xét nghiệm / cận lâm sàng',
       activeMenu: req.query.activeMenu || 'labtests',
-      rows
+      rows,
+      activeRecords
     });
   } catch (error) {
     next(error);
+  }
+}
+
+async function createLabTest(req, res, next) {
+  try {
+    const doctorId = await getSessionDoctorId(req);
+    const { recordId, testType } = req.body;
+
+    if (!recordId || !testType) {
+      req.flash('error', 'Vui lòng chọn hồ sơ bệnh án và nhập loại xét nghiệm.');
+      return res.redirect('/labtests?activeMenu=doctor-lab-orders');
+    }
+
+    await moduleRepository.createLabTest(req.body, doctorId);
+    req.flash('success', 'Đã tạo chỉ định xét nghiệm.');
+    return res.redirect('/labtests?activeMenu=doctor-lab-orders');
+  } catch (error) {
+    return next(error);
   }
 }
 
@@ -277,12 +349,36 @@ async function updateLabTestResult(req, res, next) {
   try {
     const { testCode } = req.params;
     const { status, resultSummary } = req.body;
+    const uploadedFiles = (req.files || []).map((file) => ({
+      originalName: file.originalname,
+      fileName: file.filename,
+      mimeType: file.mimetype,
+      size: file.size,
+      url: `/uploads/lab-results/${file.filename}`,
+      uploadedAt: new Date().toISOString()
+    }));
 
     if (!status || !resultSummary) {
       return res.status(400).json({ error: 'Vui lòng nhập đầy đủ trạng thái và kết quả/kết luận' });
     }
 
-    await moduleRepository.updateLabTestResult(testCode, status, resultSummary);
+    let resultFiles = null;
+    if (uploadedFiles.length) {
+      const currentLabTest = await moduleRepository.getLabTestByCode(testCode);
+      if (!currentLabTest) {
+        return res.status(404).json({ error: 'Không tìm thấy chỉ định xét nghiệm' });
+      }
+
+      let currentFiles = [];
+      try {
+        currentFiles = currentLabTest.resultFilesJson ? JSON.parse(currentLabTest.resultFilesJson) : [];
+      } catch (error) {
+        currentFiles = [];
+      }
+      resultFiles = [...currentFiles, ...uploadedFiles];
+    }
+
+    await moduleRepository.updateLabTestResult(testCode, status, resultSummary, resultFiles);
     res.json({ success: true, message: 'Cập nhật kết quả thành công' });
   } catch (error) {
     console.error('Lỗi khi cập nhật kết quả xét nghiệm:', error);
@@ -483,6 +579,7 @@ async function deleteDoctor(req, res, next) {
 
 module.exports = {
   medicalRecords,
+  completeMedicalRecord,
   medicalRecordDetail,
   nursing,
   departments: makeListAction({
@@ -512,6 +609,7 @@ module.exports = {
   prescriptions,
   createPrescription,
   labtests,
+  createLabTest,
   updateLabTestResult,
   billing,
   createBilling,

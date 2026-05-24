@@ -113,7 +113,8 @@ async function updateStatus(req, res, next) {
     const doctorId = await getSessionDoctorId(req);
     await patientRepository.updateAdmissionStatus(req.params.admissionId, req.body, doctorId);
     req.flash('success', 'Cập nhật tình trạng bệnh nhân thành công.');
-    return res.redirect('/patients/list');
+    const returnTo = req.body.returnTo || '/patients/list';
+    return res.redirect(returnTo.startsWith('/') ? returnTo : '/patients/list');
   } catch (error) {
     return next(error);
   }

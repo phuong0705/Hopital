@@ -6,7 +6,8 @@ const router = express.Router();
 
 router.get('/', (req, res) => {
   if (req.session.user) {
-    return res.redirect(req.session.user.roleCode === 'PATIENT' ? '/patients/me' : '/dashboard');
+    if (req.session.user.roleCode === 'PATIENT') return res.redirect('/patients/me');
+    return res.redirect('/dashboard/home');
   }
 
   return res.render('landing', {

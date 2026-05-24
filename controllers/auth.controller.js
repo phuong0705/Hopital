@@ -54,7 +54,8 @@ async function login(req, res, next) {
     };
 
     req.flash('success', `Xin chào ${user.fullName}. Chúc bạn một ca làm việc hiệu quả.`);
-    return res.redirect(user.roleCode === 'PATIENT' ? '/patients/me' : '/dashboard');
+    if (user.roleCode === 'PATIENT') return res.redirect('/patients/me');
+    return res.redirect('/dashboard/home');
   } catch (error) {
     return next(error);
   }

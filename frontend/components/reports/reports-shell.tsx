@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { EChartsOption } from "echarts";
 import {
   Activity,
   BedDouble,
@@ -23,8 +22,15 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EChartsPanel } from "@/components/reports/echarts-panel";
-import type { DischargeRow, ReportKey, ReportsPayload } from "@/components/reports/types";
+import type {
+  DischargeRow,
+  InpatientRow,
+  MedicineRow,
+  ReportKey,
+  ReportsPayload,
+  RevenueRow,
+  VisitRow
+} from "@/components/reports/types";
 import { compactNumber, formatCurrency, formatDate } from "@/lib/utils";
 
 const tabLabels: Record<ReportKey, string> = {
@@ -287,26 +293,9 @@ function InpatientReport({ payload, query }: { payload: ReportsPayload; query: s
   const filteredRows = rows.filter((row) => row.departmentName.toLowerCase().includes(query.toLowerCase()));
   const chartRows = [...rows].sort((a, b) => numberValue(b.patientCount) - numberValue(a.patientCount));
 
-  const option: EChartsOption = {
-    color: ["#0284c7", "#10b981"],
-    tooltip: { trigger: "axis" },
-    legend: { top: 0 },
-    grid: { left: 48, right: 24, top: 48, bottom: 80 },
-    xAxis: {
-      type: "category",
-      data: chartRows.map((row) => row.departmentName),
-      axisLabel: { rotate: 24 }
-    },
-    yAxis: { type: "value" },
-    series: [
-      { name: "Bệnh nhân", type: "bar", data: chartRows.map((row) => numberValue(row.patientCount)), barMaxWidth: 32 },
-      { name: "Tổng giường", type: "line", smooth: true, data: chartRows.map((row) => numberValue(row.totalBeds)) }
-    ]
-  };
-
   return (
     <div className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
-      <EChartsPanel title="Công suất khoa phòng" description="So sánh bệnh nhân hiện có với tổng số giường" option={option} />
+      <OccupancyPanel rows={chartRows} />
       <Card>
         <CardHeader>
           <CardTitle>Cảnh báo tải giường</CardTitle>
@@ -372,36 +361,9 @@ function RevenueReport({ payload, query }: { payload: ReportsPayload; query: str
   const rows = [...payload.data.revenue].reverse();
   const filteredRows = rows.filter((row) => row.month.toLowerCase().includes(query.toLowerCase()));
 
-  const option: EChartsOption = {
-    color: ["#0284c7", "#10b981", "#f59e0b"],
-    tooltip: {
-      trigger: "axis",
-      valueFormatter: (value) => formatCurrency(Number(value))
-    },
-    legend: { top: 0 },
-    grid: { left: 72, right: 24, top: 48, bottom: 42 },
-    xAxis: { type: "category", data: rows.map((row) => row.month) },
-    yAxis: {
-      type: "value",
-      axisLabel: {
-        formatter: (value: number) => compactNumber(value)
-      }
-    },
-    series: [
-      { name: "Thực thu", type: "bar", stack: "total", data: rows.map((row) => numberValue(row.revenue)), barMaxWidth: 34 },
-      { name: "BHYT hỗ trợ", type: "bar", stack: "total", data: rows.map((row) => numberValue(row.insurance)), barMaxWidth: 34 },
-      {
-        name: "Tổng cộng",
-        type: "line",
-        smooth: true,
-        data: rows.map((row) => numberValue(row.revenue) + numberValue(row.insurance))
-      }
-    ]
-  };
-
   return (
     <div className="grid gap-5">
-      <EChartsPanel title="Dòng tiền viện phí" description="Thực thu và phần BHYT hỗ trợ theo tháng" option={option} height={360} />
+      <RevenuePanel rows={rows} />
       <ReportTable>
         <TableHeader>
           <TableRow>
@@ -430,26 +392,9 @@ function VisitsReport({ payload, query }: { payload: ReportsPayload; query: stri
   const rows = [...payload.data.visits].reverse();
   const filteredRows = rows.filter((row) => formatDate(row.date).includes(query) || String(row.visitCount).includes(query));
 
-  const option: EChartsOption = {
-    color: ["#4f46e5"],
-    tooltip: { trigger: "axis" },
-    grid: { left: 48, right: 24, top: 32, bottom: 56 },
-    xAxis: { type: "category", data: rows.map((row) => formatDate(row.date)), axisLabel: { rotate: 24 } },
-    yAxis: { type: "value" },
-    series: [
-      {
-        name: "Lượt khám",
-        type: "line",
-        smooth: true,
-        areaStyle: { opacity: 0.16 },
-        data: rows.map((row) => numberValue(row.visitCount))
-      }
-    ]
-  };
-
   return (
     <div className="grid gap-5">
-      <EChartsPanel title="Lượt tiếp nhận 30 ngày" description="Theo ngày nhập viện/tiếp nhận gần nhất" option={option} height={360} />
+      <VisitsPanel rows={rows} />
       <ReportTable>
         <TableHeader>
           <TableRow>
@@ -481,28 +426,12 @@ function VisitsReport({ payload, query }: { payload: ReportsPayload; query: stri
 function MedicinesReport({ payload, query }: { payload: ReportsPayload; query: string }) {
   const rows = payload.data.medicines;
   const filteredRows = rows.filter((row) => row.medicineName.toLowerCase().includes(query.toLowerCase()));
-  const topRows = rows.slice(0, 12).reverse();
+  const topRows = rows.slice(0, 12);
   const maxUsed = Math.max(...rows.map((row) => numberValue(row.totalUsed)), 1);
-
-  const option: EChartsOption = {
-    color: ["#0f766e"],
-    tooltip: { trigger: "axis" },
-    grid: { left: 130, right: 24, top: 24, bottom: 28 },
-    xAxis: { type: "value" },
-    yAxis: { type: "category", data: topRows.map((row) => row.medicineName) },
-    series: [
-      {
-        name: "Số lượng",
-        type: "bar",
-        data: topRows.map((row) => numberValue(row.totalUsed)),
-        barMaxWidth: 28
-      }
-    ]
-  };
 
   return (
     <div className="grid gap-5">
-      <EChartsPanel title="Top thuốc sử dụng" description="Xếp hạng theo tổng số lượng đã dùng" option={option} height={420} />
+      <MedicineUsagePanel rows={topRows} />
       <ReportTable>
         <TableHeader>
           <TableRow>
@@ -547,25 +476,9 @@ function DischargesReport({ payload, query }: { payload: ReportsPayload; query: 
     return acc;
   }, {});
 
-  const option: EChartsOption = {
-    color: ["#10b981", "#f59e0b", "#ef4444", "#0284c7"],
-    tooltip: { trigger: "item" },
-    legend: { bottom: 0 },
-    series: [
-      {
-        name: "Thanh toán",
-        type: "pie",
-        radius: ["45%", "68%"],
-        center: ["50%", "44%"],
-        avoidLabelOverlap: true,
-        data: Object.entries(byPayment).map(([name, value]) => ({ name, value }))
-      }
-    ]
-  };
-
   return (
     <div className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
-      <EChartsPanel title="Trạng thái thanh toán" description="Tỷ trọng hồ sơ xuất viện theo trạng thái" option={option} height={360} />
+      <PaymentStatusPanel rows={Object.entries(byPayment)} />
       <ReportTable className="xl:col-span-1">
         <TableHeader>
           <TableRow>
@@ -592,6 +505,201 @@ function DischargesReport({ payload, query }: { payload: ReportsPayload; query: 
         </TableBody>
       </ReportTable>
     </div>
+  );
+}
+
+function percentValue(value: number, total: number) {
+  if (!total) return 0;
+  return Math.max(0, Math.min(100, Math.round((value / total) * 100)));
+}
+
+function EmptyReportState() {
+  return (
+    <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+      Chưa có dữ liệu phù hợp với bộ lọc hiện tại.
+    </div>
+  );
+}
+
+function OccupancyPanel({ rows }: { rows: InpatientRow[] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Công suất khoa phòng</CardTitle>
+        <CardDescription>So sánh bệnh nhân hiện có với tổng số giường</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {rows.length ? (
+          rows.map((row) => {
+            const occupancy = percentValue(numberValue(row.patientCount), numberValue(row.totalBeds));
+            return (
+              <div key={row.departmentName} className="rounded-md border p-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{row.departmentName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {row.patientCount}/{row.totalBeds} giường đang sử dụng
+                    </p>
+                  </div>
+                  <Badge variant={occupancy > 90 ? "danger" : occupancy > 75 ? "warning" : "success"}>
+                    {occupancy}%
+                  </Badge>
+                </div>
+                <Progress
+                  value={occupancy}
+                  indicatorClassName={occupancy > 90 ? "bg-rose-500" : occupancy > 75 ? "bg-amber-500" : "bg-sky-600"}
+                />
+              </div>
+            );
+          })
+        ) : (
+          <EmptyReportState />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RevenuePanel({ rows }: { rows: RevenueRow[] }) {
+  const maxTotal = Math.max(...rows.map((row) => numberValue(row.revenue) + numberValue(row.insurance)), 1);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Dòng tiền viện phí</CardTitle>
+        <CardDescription>Thực thu và phần BHYT hỗ trợ theo tháng</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {rows.length ? (
+          rows.map((row) => {
+            const revenue = numberValue(row.revenue);
+            const insurance = numberValue(row.insurance);
+            const total = revenue + insurance;
+            const totalWidth = percentValue(total, maxTotal);
+            const revenueShare = percentValue(revenue, total);
+            const insuranceShare = Math.max(0, 100 - revenueShare);
+            return (
+              <div key={row.month} className="rounded-md border p-3">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-semibold">{row.month}</span>
+                  <span className="text-sm font-bold">{formatCurrency(total)}</span>
+                </div>
+                <div className="h-3 rounded-full bg-muted">
+                  <div className="flex h-3 overflow-hidden rounded-full" style={{ width: `${totalWidth}%` }}>
+                    <div className="bg-sky-600" style={{ width: `${revenueShare}%` }} />
+                    <div className="bg-emerald-500" style={{ width: `${insuranceShare}%` }} />
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span>Thực thu: {formatCurrency(revenue)}</span>
+                  <span>BHYT: {formatCurrency(insurance)}</span>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <EmptyReportState />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function VisitsPanel({ rows }: { rows: VisitRow[] }) {
+  const maxVisits = Math.max(...rows.map((row) => numberValue(row.visitCount)), 1);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Lượt tiếp nhận 30 ngày</CardTitle>
+        <CardDescription>Theo ngày nhập viện/tiếp nhận gần nhất</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {rows.length ? (
+          rows.map((row) => {
+            const value = numberValue(row.visitCount);
+            return (
+              <div key={row.date} className="rounded-md border p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold">{formatDate(row.date)}</span>
+                  <span className="text-lg font-extrabold">{compactNumber(value)}</span>
+                </div>
+                <Progress value={percentValue(value, maxVisits)} indicatorClassName="bg-indigo-600" />
+              </div>
+            );
+          })
+        ) : (
+          <div className="sm:col-span-2 xl:col-span-3">
+            <EmptyReportState />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MedicineUsagePanel({ rows }: { rows: MedicineRow[] }) {
+  const maxUsed = Math.max(...rows.map((row) => numberValue(row.totalUsed)), 1);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Top thuốc sử dụng</CardTitle>
+        <CardDescription>Xếp hạng theo tổng số lượng đã dùng</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {rows.length ? (
+          rows.map((row) => {
+            const value = numberValue(row.totalUsed);
+            return (
+              <div key={row.medicineName} className="rounded-md border p-3">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-semibold">{row.medicineName}</span>
+                  <span className="text-sm font-bold">{compactNumber(value)}</span>
+                </div>
+                <Progress value={percentValue(value, maxUsed)} indicatorClassName="bg-teal-600" />
+                <p className="mt-2 text-xs text-muted-foreground">{row.prescriptionCount} đơn thuốc</p>
+              </div>
+            );
+          })
+        ) : (
+          <EmptyReportState />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PaymentStatusPanel({ rows }: { rows: Array<[string, number]> }) {
+  const total = rows.reduce((sum, [, value]) => sum + value, 0);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Trạng thái thanh toán</CardTitle>
+        <CardDescription>Tỷ trọng hồ sơ xuất viện theo trạng thái</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {rows.length ? (
+          rows.map(([status, count]) => {
+            const value = percentValue(count, total);
+            return (
+              <div key={status} className="rounded-md border p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <Badge variant={paymentVariant(status)}>{status}</Badge>
+                  <span className="text-sm font-bold">
+                    {count} hồ sơ · {value}%
+                  </span>
+                </div>
+                <Progress value={value} indicatorClassName={value > 60 ? "bg-sky-600" : "bg-emerald-500"} />
+              </div>
+            );
+          })
+        ) : (
+          <EmptyReportState />
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -7,6 +7,9 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content app-modal">
       <form id="patientStatusForm" action="/patients/0/status" method="post">
+        <% if (locals.returnTo) { %>
+          <input type="hidden" name="returnTo" value="<%= returnTo %>">
+        <% } %>
         <div class="modal-header">
           <h5 class="modal-title">Cập nhật tình trạng</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

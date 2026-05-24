@@ -1,22 +1,114 @@
-<section class="panel">
-  <div class="panel-header">
-    <div><h2>Hồ sơ bệnh án</h2></div>
+<section class="module-hero">
+  <div>
+    <h2>Hoàn tất hồ sơ bệnh án</h2>
   </div>
-  <div class="table-responsive">
-    <table class="table app-table">
-      <thead><tr><th>Bệnh nhân</th><th>Chẩn đoán nhập viện</th><th>Dấu hiệu sinh tồn</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead>
+  <div class="module-actions">
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+    <button class="btn btn-light" type="button" data-export-table="medicalRecordsCompletionTable" data-filename="hoan-tat-ho-so-benh-an.csv">
+      <i class="bi bi-filetype-csv me-2"></i>CSV
+    </button>
+  </div>
+</section>
+
+<section class="panel module-panel mt-4">
+  <div class="module-toolbar">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" type="search" placeholder="Tìm bệnh nhân, mã HSBA, chẩn đoán, bác sĩ" data-module-search="medicalRecordsCompletionTable">
+    </div>
+    <select class="form-select" data-module-filter="medicalRecordsCompletionTable" data-filter-key="state">
+      <option value="">Tất cả trạng thái</option>
+      <% [...new Set(rows.map(row => row.completionState))].forEach(state => { %>
+        <option><%= state %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table" id="medicalRecordsCompletionTable">
+      <thead>
+        <tr>
+          <th>Hồ sơ</th>
+          <th>Bệnh nhân</th>
+          <th>Điều kiện chốt</th>
+          <th>Kết luận lượt điều trị</th>
+          <th>Trạng thái</th>
+          <th class="text-end no-export">Thao tác</th>
+        </tr>
+      </thead>
       <tbody>
-        <% rows.forEach(row => { %>
-          <tr>
-            <td><%= row.patientName %></td>
-            <td class="text-wrap-cell"><%= row.diagnosis %></td>
-            <td><%= row.vitalSigns %></td>
-            <td><%- include('../partials/badge', { text: row.status }) %></td>
-            <td><%= format.date(row.createdAt) %></td>
-            <td><a class="btn btn-sm btn-primary" href="/medical-records/<%= row.recordId %>">Chi tiết</a></td>
+        <% rows.forEach(row => {
+          const location = [row.departmentName, row.roomCode, row.bedCode].filter(Boolean).join(' · ') || 'Chưa xếp giường';
+          const canSubmitComplete = canCompleteRecord && row.completionState === 'Sẵn sàng hoàn tất';
+        %>
+          <tr
+            data-search="<%= `${row.recordCode} ${row.patientCode} ${row.patientName} ${row.diagnosis || ''} ${row.doctorName || ''} ${row.completionState}`.toLowerCase() %>"
+            data-state="<%= row.completionState %>">
+            <td>
+              <div class="module-primary">
+                <strong><%= row.recordCode %></strong>
+                <small>Tạo ngày <%= format.date(row.createdAt) %></small>
+              </div>
+            </td>
+            <td class="text-wrap-cell">
+              <div><strong><%= row.patientName %></strong></div>
+              <div class="small text-muted"><%= row.patientCode %> · <%= location %></div>
+              <div class="small text-muted"><%= row.doctorName || 'Chưa gán bác sĩ' %></div>
+            </td>
+            <td class="text-wrap-cell">
+              <div class="d-flex flex-wrap gap-2 mb-2">
+                <span class="badge bg-light text-dark border">CLS <%= Number(row.labCount || 0) - Number(row.pendingLabCount || 0) %>/<%= row.labCount || 0 %></span>
+                <span class="badge bg-light text-dark border">Y lệnh <%= Number(row.treatmentCount || 0) - Number(row.pendingTreatmentCount || 0) %>/<%= row.treatmentCount || 0 %></span>
+                <span class="badge bg-light text-dark border">Đơn thuốc <%= row.prescriptionCount || 0 %></span>
+              </div>
+              <% if (row.missingItems.length) { %>
+                <div class="small text-muted"><%= row.missingItems.join(' · ') %></div>
+              <% } else { %>
+                <div class="small text-success fw-semibold">Đủ điều kiện hành chính và chuyên môn</div>
+              <% } %>
+            </td>
+            <td class="text-wrap-cell">
+              <div><%= row.dischargeId ? 'Đã có hồ sơ ra viện/chuyển viện' : row.admissionStatus %></div>
+              <% if (row.dischargeDate) { %>
+                <small class="text-muted"><%= format.datetime(row.dischargeDate) %> · <%= row.dischargePaymentStatus || 'Chưa cập nhật thanh toán' %></small>
+              <% } else { %>
+                <small class="text-muted">Nhập viện <%= format.datetime(row.admissionDate) %></small>
+              <% } %>
+            </td>
+            <td>
+              <div class="d-flex flex-column gap-2 align-items-start">
+                <%- include('../partials/badge', { text: row.completionState }) %>
+                <%- include('../partials/badge', { text: row.status }) %>
+              </div>
+            </td>
+            <td class="text-end no-export">
+              <div class="table-actions justify-content-end">
+                <a class="btn btn-sm btn-light action-icon" href="/medical-records/<%= row.recordId %>?activeMenu=doctor-medical-records" data-bs-toggle="tooltip" title="Xem HSBA">
+                  <i class="bi bi-journal-text"></i>
+                </a>
+                <% if (canCompleteRecord) { %>
+                  <form action="/medical-records/<%= row.recordId %>/complete" method="post" class="d-inline">
+                    <input type="hidden" name="returnTo" value="/medical-records?activeMenu=doctor-medical-records">
+                    <button class="btn btn-sm <%= canSubmitComplete ? 'btn-primary' : 'btn-light' %> action-icon" type="submit" <%= canSubmitComplete ? '' : 'disabled' %> data-bs-toggle="tooltip" title="Hoàn tất HSBA">
+                      <i class="bi bi-check2-square"></i>
+                    </button>
+                  </form>
+                <% } %>
+              </div>
+            </td>
           </tr>
         <% }) %>
+        <% if (!rows.length) { %>
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">Chưa có hồ sơ bệnh án trong phạm vi phụ trách.</td>
+          </tr>
+        <% } %>
       </tbody>
     </table>
+  </div>
+
+  <div class="empty-inline module-empty d-none" data-empty-for="medicalRecordsCompletionTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy hồ sơ phù hợp</strong>
   </div>
 </section>

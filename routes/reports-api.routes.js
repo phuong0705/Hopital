@@ -4,11 +4,11 @@ const moduleRepository = require('../repositories/module.repository');
 const router = express.Router();
 
 const reportAccess = {
-  inpatient: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST'],
-  revenue: ['ADMIN', 'RECEPTIONIST'],
-  visits: ['ADMIN', 'RECEPTIONIST'],
-  medicines: ['ADMIN', 'DOCTOR', 'NURSE'],
-  discharges: ['ADMIN', 'DOCTOR', 'RECEPTIONIST']
+  inpatient: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'LAB'],
+  revenue: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'LAB'],
+  visits: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'LAB'],
+  medicines: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'LAB'],
+  discharges: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'LAB']
 };
 
 function canViewReport(roleCode, reportKey) {
@@ -22,7 +22,7 @@ function requireApiAuth(req, res, next) {
     });
   }
 
-  if (!['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST'].includes(req.session.user.roleCode)) {
+  if (!['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'LAB'].includes(req.session.user.roleCode)) {
     return res.status(403).json({
       message: 'Tài khoản không có quyền xem báo cáo.'
     });

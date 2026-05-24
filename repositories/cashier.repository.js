@@ -168,7 +168,7 @@ async function createAppointment(data, userId) {
     VALUES (
       CONCAT('LH', FORMAT(SYSDATETIME(), 'yyMMddHHmmss')),
       @patientId, @patientName, @phone, @departmentId, @doctorId,
-      @appointmentTime, NULLIF(@reason, ''), N'Đã đặt', @createdBy
+      @appointmentTime, NULLIF(@reason, ''), N'Chưa khám', @createdBy
     );
   `, {
     patientId: data.patientId ? Number(data.patientId) : null,
@@ -185,7 +185,7 @@ async function createAppointment(data, userId) {
 async function updateAppointmentStatus(appointmentId, status) {
   await ensureCashierTables();
 
-  const allowedStatuses = ['Đã đặt', 'Đã tiếp nhận', 'Đã hủy'];
+  const allowedStatuses = ['Đã đặt', 'Đã tiếp nhận', 'Chưa khám', 'Đã khám', 'Đã hủy'];
   const nextStatus = allowedStatuses.includes(status) ? status : 'Đã đặt';
 
   await execute(`
@@ -194,6 +194,25 @@ async function updateAppointmentStatus(appointmentId, status) {
     WHERE appointment_id = @appointmentId
   `, {
     appointmentId: Number(appointmentId),
+    status: nextStatus
+  });
+}
+
+async function updateDoctorAppointmentStatus(appointmentId, doctorId, status) {
+  await ensureCashierTables();
+
+  const allowedStatuses = ['Chưa khám', 'Đã khám'];
+  const nextStatus = allowedStatuses.includes(status) ? status : 'Chưa khám';
+
+  await execute(`
+    UPDATE Appointments
+    SET status = @status
+    WHERE appointment_id = @appointmentId
+      AND doctor_id = @doctorId
+      AND status <> N'Đã hủy'
+  `, {
+    appointmentId: Number(appointmentId),
+    doctorId: Number(doctorId),
     status: nextStatus
   });
 }
@@ -369,6 +388,7 @@ module.exports = {
   getAppointmentsByDoctor,
   createAppointment,
   updateAppointmentStatus,
+  updateDoctorAppointmentStatus,
   getQueue,
   getPrintableDocuments,
   getAdjustments,

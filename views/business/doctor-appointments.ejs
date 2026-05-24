@@ -17,6 +17,8 @@
       <option value="">Tất cả trạng thái</option>
       <option>Đã đặt</option>
       <option>Đã tiếp nhận</option>
+      <option>Chưa khám</option>
+      <option>Đã khám</option>
     </select>
   </div>
 
@@ -49,12 +51,17 @@
             <td><%- include('../partials/badge', { text: row.status }) %></td>
             <td class="text-end">
               <div class="d-flex justify-content-end gap-1">
-                <a href="/nghiep-vu/lap-phieu-kham?patientId=<%= row.patientId %>&reason=<%= encodeURIComponent(row.reason || '') %>" class="btn btn-sm btn-light" title="Lập phiếu khám">
-                  <i class="bi bi-file-earmark-plus"></i>
-                </a>
-                <a href="/nghiep-vu/chan-benh?patientId=<%= row.patientId %>" class="btn btn-sm btn-light" title="Chẩn bệnh">
-                  <i class="bi bi-activity"></i>
-                </a>
+                <% if (row.status !== 'Đã khám') { %>
+                  <a href="/patients/<%= row.patientId %>?activeMenu=doctor-today-appointments" class="btn btn-sm btn-light">
+                    <i class="bi bi-activity me-1"></i>Chẩn bệnh
+                  </a>
+                <% } %>
+                <form action="/nghiep-vu/lich-hen-kham-hom-nay/<%= row.appointmentId %>/status" method="post" class="d-inline">
+                  <input type="hidden" name="status" value="Đã khám">
+                  <button class="btn btn-sm <%= row.status === 'Đã khám' ? 'btn-success' : 'btn-light' %>" type="submit" title="Đã khám">
+                    Đã khám
+                  </button>
+                </form>
               </div>
             </td>
           </tr>
