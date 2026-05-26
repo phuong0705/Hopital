@@ -19,23 +19,30 @@ const config = {
   }
 };
 
-const poolPromise = new sql.ConnectionPool(config)
-  .connect()
-  .then((pool) => {
-    console.log('Ket noi SQL Server thanh cong');
-    return pool;
-  })
-  .catch((err) => {
-    console.error('Loi ket noi SQL Server:', err);
-    throw err;
-  });
+let poolPromise;
 
 function getPool() {
+  if (!poolPromise) {
+    poolPromise = new sql.ConnectionPool(config)
+      .connect()
+      .then((pool) => {
+        console.log('Ket noi SQL Server thanh cong');
+        return pool;
+      })
+      .catch((err) => {
+        poolPromise = null;
+        console.error('Loi ket noi SQL Server:', err);
+        throw err;
+      });
+  }
+
   return poolPromise;
 }
 
 module.exports = {
   sql,
-  poolPromise,
-  getPool
+  getPool,
+  get poolPromise() {
+    return getPool();
+  }
 };
