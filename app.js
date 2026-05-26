@@ -65,6 +65,9 @@ app.use(flash());
 app.use(exposeUser);
 
 app.locals.format = formatters;
+app.locals.databaseStatusLabel = process.env.DB_SERVER && process.env.DB_SERVER.includes('database.windows.net')
+  ? 'Azure SQL Database'
+  : 'SQL Server';
 
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.originalUrl}`);
