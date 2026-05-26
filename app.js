@@ -8,7 +8,8 @@ const expressLayouts = require('express-ejs-layouts');
 require('dotenv').config();
 
 const routes = require('./routes');
-const { exposeUser, requireAuth } = require('./middlewares/auth.middleware');
+const authController = require('./controllers/auth.controller');
+const { exposeUser, requireAuth, redirectIfAuthenticated } = require('./middlewares/auth.middleware');
 const { requireRole } = require('./middlewares/role.middleware');
 const formatters = require('./services/formatters');
 const { proxyToReportsFrontend } = require('./services/frontendProxy');
@@ -64,12 +65,25 @@ app.use(exposeUser);
 
 app.locals.format = formatters;
 
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.originalUrl}`);
+  next();
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     message: 'Backend dang hoat dong'
   });
 });
+
+app.get('/login', redirectIfAuthenticated, authController.showLogin);
+app.post('/login', redirectIfAuthenticated, authController.login);
+app.get('/register', redirectIfAuthenticated, authController.showRegister);
+app.post('/register', redirectIfAuthenticated, authController.register);
+app.get('/forgot-password', redirectIfAuthenticated, authController.showForgotPassword);
+app.post('/forgot-password', redirectIfAuthenticated, authController.resetPassword);
+app.post('/logout', authController.logout);
 
 app.use('/_next', proxyToReportsFrontend);
 app.use('/reports', requireAuth, requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), proxyToReportsFrontend);
