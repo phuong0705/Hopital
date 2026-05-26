@@ -1,12 +1,11 @@
 import { cookies } from "next/headers";
 import { ReportsShell } from "@/components/reports/reports-shell";
 import type { ReportsPayload } from "@/components/reports/types";
-
-const apiBaseUrl = process.env.REPORTS_API_BASE_URL || "http://localhost:3003";
+import { API_URL } from "@/lib/api";
 
 async function getReports(): Promise<ReportsPayload | null> {
   const cookieStore = await cookies();
-  const response = await fetch(`${apiBaseUrl}/api/reports/summary`, {
+  const response = await fetch(`${API_URL}/api/reports/summary`, {
     headers: {
       Cookie: cookieStore.toString()
     },
@@ -25,5 +24,5 @@ export default async function ReportsPage({
 }) {
   const [payload, params] = await Promise.all([getReports(), searchParams]);
 
-  return <ReportsShell initialPayload={payload} initialTab={params.tab} apiBaseUrl={apiBaseUrl} />;
+  return <ReportsShell initialPayload={payload} initialTab={params.tab} apiBaseUrl={API_URL} />;
 }

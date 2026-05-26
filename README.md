@@ -35,15 +35,16 @@ npm install
 -- sql/schema-and-seed.sql
 ```
 
-3. Tao file `.env` tu `.env.example`. Mac dinh project dung Windows Authentication:
+3. Tao file `.env` tu `.env.example`. Project dung driver `mssql` va SQL Server Authentication:
 
 ```env
 PORT=3003
 NODE_ENV=development
-DB_AUTH=windows
 DB_SERVER=localhost
-DB_DATABASE=QuanLyKhamChuaBenhNoiTru
-DB_ODBC_DRIVER=ODBC Driver 17 for SQL Server
+DB_NAME=QuanLyKhamChuaBenhNoiTru
+DB_USER=sa
+DB_PASSWORD=mat_khau_sql_server
+DB_PORT=1433
 DB_ENCRYPT=false
 DB_TRUST_SERVER_CERTIFICATE=true
 SESSION_SECRET=doi_chuoi_bi_mat_that_manh
@@ -53,14 +54,6 @@ Neu dung SQL Server Express, doi server thanh:
 
 ```env
 DB_SERVER=localhost\SQLEXPRESS
-```
-
-Neu muon quay lai SQL Login, bo `DB_AUTH=windows` va them:
-
-```env
-DB_USER=sa
-DB_PASSWORD=mat_khau_sql_server
-DB_PORT=1433
 ```
 
 4. Chay ung dung:

@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: ql-noi-tru-api
+    runtime: node
+    rootDir: .
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: REPORTS_FRONTEND_URL
+        sync: false
+      - key: REPORTS_FRONTEND_INTERNAL_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SERVER
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_PORT
+        value: 1433
+      - key: DB_ENCRYPT
+        value: true
+      - key: DB_TRUST_SERVER_CERTIFICATE
+        value: false

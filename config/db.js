@@ -1,63 +1,41 @@
 require('dotenv').config();
 
-const isWindowsAuth = (process.env.DB_AUTH || '').toLowerCase() === 'windows';
-const sql = isWindowsAuth ? require('mssql/msnodesqlv8') : require('mssql');
-const server = process.env.DB_SERVER || 'localhost';
-const database = process.env.DB_DATABASE || 'QuanLyKhamChuaBenhNoiTru';
-const odbcDriver = process.env.DB_ODBC_DRIVER || 'ODBC Driver 17 for SQL Server';
-const encrypt = process.env.DB_ENCRYPT === 'true' ? 'Yes' : 'No';
-const trustServerCertificate = process.env.DB_TRUST_SERVER_CERTIFICATE !== 'false';
+const sql = require('mssql');
 
-const poolOptions = {
-  max: 10,
-  min: 0,
-  idleTimeoutMillis: 30000
+const config = {
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  server: process.env.DB_SERVER,
+  database: process.env.DB_NAME,
+  port: Number(process.env.DB_PORT) || 1433,
+  options: {
+    encrypt: process.env.DB_ENCRYPT === 'true',
+    trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === 'true'
+  },
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000
+  }
 };
 
-function buildWindowsAuthConnectionString() {
-  const parts = [
-    `Driver={${odbcDriver}}`,
-    `Server=${server}`,
-    `Database=${database}`,
-    'Trusted_Connection=Yes'
-  ];
-
-  if (process.env.DB_ENCRYPT === 'true') {
-    parts.push(`Encrypt=${encrypt}`);
-    parts.push(trustServerCertificate ? 'TrustServerCertificate=Yes' : 'TrustServerCertificate=No');
-  }
-
-  return parts.join(';') + ';';
-}
-
-const dbConfig = isWindowsAuth
-  ? {
-      connectionString: buildWindowsAuthConnectionString(),
-      pool: poolOptions
-    }
-  : {
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      server,
-      database,
-      port: Number(process.env.DB_PORT || 1433),
-      options: {
-        encrypt: process.env.DB_ENCRYPT === 'true',
-        trustServerCertificate
-      },
-      pool: poolOptions
-    };
-
-let poolPromise;
+const poolPromise = new sql.ConnectionPool(config)
+  .connect()
+  .then((pool) => {
+    console.log('Ket noi SQL Server thanh cong');
+    return pool;
+  })
+  .catch((err) => {
+    console.error('Loi ket noi SQL Server:', err);
+    throw err;
+  });
 
 function getPool() {
-  if (!poolPromise) {
-    poolPromise = sql.connect(dbConfig);
-  }
   return poolPromise;
 }
 
 module.exports = {
   sql,
+  poolPromise,
   getPool
 };

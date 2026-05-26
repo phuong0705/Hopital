@@ -1,11 +1,10 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-
-const apiBaseUrl = process.env.REPORTS_API_BASE_URL || "http://localhost:3003";
+import { API_URL } from "@/lib/api";
 
 export async function GET() {
   const cookieStore = await cookies();
-  const response = await fetch(`${apiBaseUrl}/api/reports/summary`, {
+  const response = await fetch(`${API_URL}/api/reports/summary`, {
     headers: {
       Cookie: cookieStore.toString()
     },

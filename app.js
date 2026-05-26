@@ -1,5 +1,6 @@
 const path = require('path');
 const express = require('express');
+const cors = require('cors');
 const session = require('express-session');
 const flash = require('connect-flash');
 const methodOverride = require('method-override');
@@ -14,11 +15,35 @@ const { proxyToReportsFrontend } = require('./services/frontendProxy');
 
 const app = express();
 const PORT = process.env.PORT || 3003;
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  process.env.REPORTS_FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:3011'
+]
+  .filter(Boolean)
+  .map((origin) => {
+    try {
+      return new URL(origin).origin;
+    } catch (error) {
+      return origin;
+    }
+  });
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.set('layout', 'layouts/main');
 
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 app.use(expressLayouts);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/vendor/framer-motion', express.static(path.join(__dirname, 'node_modules', 'framer-motion', 'dist')));
@@ -38,6 +63,13 @@ app.use(flash());
 app.use(exposeUser);
 
 app.locals.format = formatters;
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Backend dang hoat dong'
+  });
+});
 
 app.use('/_next', proxyToReportsFrontend);
 app.use('/reports', requireAuth, requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), proxyToReportsFrontend);
