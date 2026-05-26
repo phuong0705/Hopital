@@ -3,6 +3,7 @@ const patientRepository = require('../repositories/patient.repository');
 const cashierRepository = require('../repositories/cashier.repository');
 const examRepository = require('../repositories/exam.repository');
 const moduleRepository = require('../repositories/module.repository');
+const nurseAssignmentRepository = require('../repositories/nurse-assignment.repository');
 
 function requireAuth(req, res, next) {
   if (!req.session.user) {
@@ -39,6 +40,23 @@ async function exposeUser(req, res, next) {
   if (req.session.user) {
     try {
       res.locals.unreadCount = await patientRepository.getUnreadNotificationCount(req.session.user.userId);
+
+      if (req.session.user.roleCode === 'NURSE') {
+        const supervisor = await nurseAssignmentRepository.getNurseSupervisor(req.session.user.userId);
+        if (supervisor) {
+          res.locals.currentUser = {
+            ...req.session.user,
+            departmentId: req.session.user.departmentId || supervisor.departmentId,
+            departmentName: req.session.user.departmentName || supervisor.departmentName,
+            nurseSupervisorName: supervisor.doctorName,
+            nurseSupervisorDoctorId: supervisor.doctorId,
+            supervisorDepartmentName: supervisor.departmentName
+          };
+          res.locals.nurseSupervisor = supervisor;
+        } else {
+          res.locals.nurseSupervisor = null;
+        }
+      }
       
       if (req.session.user.roleCode === 'DOCTOR') {
         const doctor = await moduleRepository.getDoctorByUser(req.session.user);

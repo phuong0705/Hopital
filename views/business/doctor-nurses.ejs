@@ -1,0 +1,116 @@
+<section class="page-hero mb-4">
+  <div>
+    <span class="eyebrow">Nhân sự phụ trách</span>
+    <h1>Quản lý điều dưỡng</h1>
+    <p><%= doctor.doctorName || doctor.fullName %> · <%= doctor.departmentName || 'Chưa phân khoa' %></p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <button class="btn btn-outline-primary" type="button" onclick="window.print()">
+      <i class="bi bi-printer me-2"></i>In
+    </button>
+  </div>
+</section>
+
+<section class="content-panel mb-4">
+  <div class="row g-3 align-items-end">
+    <div class="col-lg-8">
+      <label class="form-label fw-semibold" for="nurseUserId">Phân công điều dưỡng</label>
+      <form class="d-flex flex-column flex-md-row gap-2" method="post" action="/nghiep-vu/quan-ly-dieu-duong/phan-cong">
+        <select class="form-select" id="nurseUserId" name="nurseUserId" <%= availableNurses.length ? '' : 'disabled' %>>
+          <% if (availableNurses.length) { %>
+            <% availableNurses.forEach(nurse => { %>
+              <option value="<%= nurse.nurseUserId %>">
+                <%= nurse.nurseName %> · <%= nurse.departmentName || 'Chưa phân khoa' %> · <%= nurse.username %>
+              </option>
+            <% }) %>
+          <% } else { %>
+            <option>Không còn điều dưỡng chưa phân công</option>
+          <% } %>
+        </select>
+        <button class="btn btn-primary text-nowrap" type="submit" <%= availableNurses.length ? '' : 'disabled' %>>
+          <i class="bi bi-person-plus me-2"></i>Thêm phụ trách
+        </button>
+      </form>
+    </div>
+    <div class="col-lg-4">
+      <div class="border rounded-3 p-3 bg-light">
+        <div class="text-muted small">Điều dưỡng đang phụ trách</div>
+        <div class="fs-3 fw-bold text-primary"><%= assignedNurses.length %></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="content-panel">
+  <div class="d-flex flex-column flex-lg-row gap-3 justify-content-between align-items-lg-center mb-3">
+    <div>
+      <h2 class="h4 mb-1">Danh sách điều dưỡng của bác sĩ</h2>
+      <p class="text-muted mb-0">Điều dưỡng được phân công sẽ thấy bác sĩ và khoa phụ trách ở tài khoản điều dưỡng.</p>
+    </div>
+    <div class="input-group" style="max-width: 360px;">
+      <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+      <input class="form-control" id="nurseSearch" type="search" placeholder="Tìm điều dưỡng, khoa, tài khoản">
+    </div>
+  </div>
+
+  <div class="nurse-assignment-list" id="nurseAssignmentList">
+    <% assignedNurses.forEach(nurse => { %>
+      <article
+        class="border rounded-3 p-3 mb-3 nurse-assignment-card"
+        data-search="<%= `${nurse.nurseName} ${nurse.username || ''} ${nurse.email || ''} ${nurse.departmentName || ''}`.toLowerCase() %>"
+      >
+        <div class="row g-3 align-items-center">
+          <div class="col-lg-4">
+            <div class="d-flex align-items-center gap-3">
+              <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
+                <i class="bi bi-person-badge fs-5"></i>
+              </div>
+              <div>
+                <h3 class="h5 mb-1"><%= nurse.nurseName %></h3>
+                <div class="text-muted small">@<%= nurse.username || 'chưa có tài khoản' %></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-3">
+            <div class="text-muted small">Khoa phụ trách</div>
+            <strong><%= nurse.departmentName || doctor.departmentName || 'Chưa phân khoa' %></strong>
+          </div>
+          <div class="col-lg-2">
+            <div class="text-muted small">Trạng thái</div>
+            <span class="badge bg-success-subtle text-success border border-success-subtle"><%= nurse.status %></span>
+          </div>
+          <div class="col-lg-2">
+            <div class="text-muted small">Từ ngày</div>
+            <strong><%= nurse.assignedAt ? format.date(nurse.assignedAt) : '-' %></strong>
+          </div>
+          <div class="col-lg-1 text-lg-end">
+            <form method="post" action="/nghiep-vu/quan-ly-dieu-duong/<%= nurse.assignmentId %>/ngung-phu-trach" onsubmit="return confirm('Ngừng phụ trách điều dưỡng này?');">
+              <button class="btn btn-outline-danger btn-sm" type="submit" title="Ngừng phụ trách">
+                <i class="bi bi-person-dash"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+
+  <% if (!assignedNurses.length) { %>
+    <div class="empty-inline">Bác sĩ chưa phụ trách điều dưỡng nào.</div>
+  <% } %>
+</section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('nurseSearch');
+    const cards = Array.from(document.querySelectorAll('.nurse-assignment-card'));
+    if (!input) return;
+
+    input.addEventListener('input', () => {
+      const keyword = input.value.trim().toLowerCase();
+      cards.forEach((card) => {
+        card.classList.toggle('d-none', keyword && !card.dataset.search.includes(keyword));
+      });
+    });
+  });
+</script>

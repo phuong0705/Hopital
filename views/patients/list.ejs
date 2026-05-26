@@ -7,6 +7,7 @@
   const canUpdateStatus = ['ADMIN', 'DOCTOR', 'NURSE'].includes(roleCode);
   const canTransfer = ['ADMIN', 'NURSE', 'RECEPTIONIST'].includes(roleCode);
   const canDischarge = ['ADMIN', 'DOCTOR', 'RECEPTIONIST'].includes(roleCode);
+  const canCreateAdmission = ['ADMIN', 'RECEPTIONIST'].includes(roleCode);
 %>
 
 <section class="patient-list-hero">
@@ -25,9 +26,11 @@
     <button class="btn btn-light" type="button" id="exportPatientsBtn" data-table="patientsTable" data-filename="benh-nhan-noi-tru.csv">
       <i class="bi bi-filetype-csv me-2"></i>CSV
     </button>
-    <a href="/patients/reception" class="btn btn-primary">
-      Tiếp nhận mới
-    </a>
+    <% if (canCreateAdmission) { %>
+      <a href="/patients/reception" class="btn btn-primary">
+        Tiếp nhận mới
+      </a>
+    <% } %>
   </div>
 </section>
 

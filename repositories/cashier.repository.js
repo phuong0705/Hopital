@@ -84,9 +84,18 @@ async function getCashierSidebarCounts() {
 async function getAppointmentDependencies() {
   const [patients, departments, doctors] = await Promise.all([
     query(`
-      SELECT TOP 100 patient_id AS patientId, patient_code AS patientCode, full_name AS fullName, phone
-      FROM Patients
-      ORDER BY created_at DESC
+      SELECT TOP 100 p.patient_id AS patientId, p.patient_code AS patientCode, p.full_name AS fullName, p.phone,
+        latestDischarge.dischargeDate AS latestDischargeDate
+      FROM Patients p
+      OUTER APPLY (
+        SELECT TOP 1 d.discharge_date AS dischargeDate
+        FROM Admissions a
+        INNER JOIN Discharges d ON d.admission_id = a.admission_id
+        WHERE a.patient_id = p.patient_id
+        ORDER BY d.discharge_date DESC, d.discharge_id DESC
+      ) latestDischarge
+      WHERE latestDischarge.dischargeDate IS NOT NULL
+      ORDER BY p.created_at DESC
     `),
     query(`
       SELECT department_id AS departmentId, department_name AS departmentName
@@ -113,12 +122,21 @@ async function getAppointments() {
       a.patient_id AS patientId, COALESCE(p.patient_code, N'BN mới') AS patientCode,
       a.patient_name AS patientName, a.phone, dep.department_name AS departmentName,
       doc.full_name AS doctorName, a.appointment_time AS appointmentTime,
-      a.reason, a.status, u.full_name AS createdBy, a.created_at AS createdAt
+      a.reason, a.status, u.full_name AS createdBy, a.created_at AS createdAt,
+      latestDischarge.dischargeDate AS latestDischargeDate,
+      CASE WHEN latestDischarge.dischargeDate IS NULL THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END AS hasDischarge
     FROM Appointments a
     LEFT JOIN Patients p ON p.patient_id = a.patient_id
     LEFT JOIN Departments dep ON dep.department_id = a.department_id
     LEFT JOIN Doctors doc ON doc.doctor_id = a.doctor_id
     LEFT JOIN Users u ON u.user_id = a.created_by
+    OUTER APPLY (
+      SELECT TOP 1 d.discharge_date AS dischargeDate
+      FROM Admissions adm
+      INNER JOIN Discharges d ON d.admission_id = adm.admission_id
+      WHERE adm.patient_id = a.patient_id
+      ORDER BY d.discharge_date DESC, d.discharge_id DESC
+    ) latestDischarge
     ORDER BY
       CASE WHEN a.status = N'Đã đặt' THEN 0 ELSE 1 END,
       a.appointment_time DESC
@@ -133,12 +151,21 @@ async function getAppointmentsByDoctor(doctorId) {
       a.patient_id AS patientId, COALESCE(p.patient_code, N'BN mới') AS patientCode,
       a.patient_name AS patientName, a.phone, dep.department_name AS departmentName,
       doc.full_name AS doctorName, a.appointment_time AS appointmentTime,
-      a.reason, a.status, u.full_name AS createdBy, a.created_at AS createdAt
+      a.reason, a.status, u.full_name AS createdBy, a.created_at AS createdAt,
+      latestDischarge.dischargeDate AS latestDischargeDate,
+      CASE WHEN latestDischarge.dischargeDate IS NULL THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END AS hasDischarge
     FROM Appointments a
     LEFT JOIN Patients p ON p.patient_id = a.patient_id
     LEFT JOIN Departments dep ON dep.department_id = a.department_id
     LEFT JOIN Doctors doc ON doc.doctor_id = a.doctor_id
     LEFT JOIN Users u ON u.user_id = a.created_by
+    OUTER APPLY (
+      SELECT TOP 1 d.discharge_date AS dischargeDate
+      FROM Admissions adm
+      INNER JOIN Discharges d ON d.admission_id = adm.admission_id
+      WHERE adm.patient_id = a.patient_id
+      ORDER BY d.discharge_date DESC, d.discharge_id DESC
+    ) latestDischarge
     WHERE a.doctor_id = @doctorId
       AND a.status <> N'Đã hủy'
     ORDER BY 
@@ -154,8 +181,28 @@ async function createAppointment(data, userId) {
     DECLARE @patientName NVARCHAR(150) = COALESCE(NULLIF(@inputPatientName, ''), N'Bệnh nhân chưa định danh');
     DECLARE @phone VARCHAR(30) = NULLIF(@inputPhone, '');
 
+    IF @patientId IS NULL
+    BEGIN
+      THROW 51032, N'Chỉ được đặt lịch tái khám cho bệnh nhân đã xuất viện. Bệnh nhân mới cần đi qua tiếp nhận khám.', 1;
+    END;
+
     IF @patientId IS NOT NULL
     BEGIN
+      IF NOT EXISTS (SELECT 1 FROM Patients WHERE patient_id = @patientId)
+      BEGIN
+        THROW 51031, N'Không tìm thấy hồ sơ bệnh nhân.', 1;
+      END;
+
+      IF NOT EXISTS (
+        SELECT 1
+        FROM Admissions adm
+        INNER JOIN Discharges dis ON dis.admission_id = adm.admission_id
+        WHERE adm.patient_id = @patientId
+      )
+      BEGIN
+        THROW 51032, N'Chỉ bệnh nhân đã xuất viện mới được đặt lịch tái khám.', 1;
+      END;
+
       SELECT @patientName = full_name, @phone = COALESCE(NULLIF(phone, ''), @phone)
       FROM Patients
       WHERE patient_id = @patientId;
@@ -182,6 +229,76 @@ async function createAppointment(data, userId) {
   });
 }
 
+async function createReceptionVisit(data, userId) {
+  await ensureCashierTables();
+
+  const appointmentTime = data.appointmentTime || data.admissionDate
+    ? new Date(data.appointmentTime || data.admissionDate)
+    : new Date();
+
+  const rows = await query(`
+    SET XACT_ABORT ON;
+    BEGIN TRANSACTION;
+
+    DECLARE @patientId INT;
+    DECLARE @patientCode VARCHAR(30) = NULLIF(@patientCodeInput, '');
+
+    IF @patientCode IS NULL
+    BEGIN
+      DECLARE @nextPatientNumber INT = ISNULL((
+        SELECT MAX(TRY_CONVERT(INT, SUBSTRING(patient_code, 3, 20)))
+        FROM Patients
+        WHERE patient_code LIKE 'BN%'
+      ), 240000) + 1;
+      SET @patientCode = CONCAT('BN', @nextPatientNumber);
+    END;
+
+    INSERT INTO Patients (
+      patient_code, full_name, date_of_birth, gender, identity_number, phone, address,
+      health_insurance_no, emergency_contact_name, emergency_contact_phone
+    )
+    VALUES (
+      @patientCode, @fullName, @dateOfBirth, @gender, NULLIF(@identityNumber, ''),
+      NULLIF(@phone, ''), NULLIF(@address, ''), NULLIF(@healthInsuranceNo, ''),
+      NULLIF(@emergencyContactName, ''), NULLIF(@emergencyContactPhone, '')
+    );
+
+    SET @patientId = SCOPE_IDENTITY();
+
+    DECLARE @appointmentCode VARCHAR(40) = CONCAT('LH', FORMAT(SYSDATETIME(), 'yyMMddHHmmssfff'));
+
+    INSERT INTO Appointments (
+      appointment_code, patient_id, patient_name, phone, department_id, doctor_id,
+      appointment_time, reason, status, created_by
+    )
+    OUTPUT INSERTED.appointment_id AS appointmentId, INSERTED.appointment_code AS appointmentCode
+    VALUES (
+      @appointmentCode, @patientId, @fullName, NULLIF(@phone, ''), @departmentId, @doctorId,
+      @appointmentTime, NULLIF(@reason, ''), N'Đã tiếp nhận', @createdBy
+    );
+
+    COMMIT TRANSACTION;
+  `, {
+    patientCodeInput: data.patientCode || '',
+    fullName: data.fullName,
+    dateOfBirth: data.dateOfBirth ? new Date(`${data.dateOfBirth}T00:00:00`) : null,
+    gender: data.gender,
+    identityNumber: data.identityNumber || '',
+    phone: data.phone || '',
+    address: data.address || '',
+    healthInsuranceNo: data.healthInsuranceNo || '',
+    emergencyContactName: data.emergencyContactName || '',
+    emergencyContactPhone: data.emergencyContactPhone || '',
+    departmentId: Number(data.departmentId),
+    doctorId: Number(data.doctorId),
+    appointmentTime,
+    reason: data.reason || data.initialDiagnosis || '',
+    createdBy: Number(userId)
+  });
+
+  return rows[0];
+}
+
 async function updateAppointmentStatus(appointmentId, status) {
   await ensureCashierTables();
 
@@ -201,15 +318,86 @@ async function updateAppointmentStatus(appointmentId, status) {
 async function updateDoctorAppointmentStatus(appointmentId, doctorId, status) {
   await ensureCashierTables();
 
-  const allowedStatuses = ['Chưa khám', 'Đã khám'];
+  const allowedStatuses = ['Đã đặt', 'Đã tiếp nhận', 'Chưa khám', 'Đã khám'];
   const nextStatus = allowedStatuses.includes(status) ? status : 'Chưa khám';
 
   await execute(`
+    SET XACT_ABORT ON;
+    BEGIN TRANSACTION;
+
+    DECLARE @AppointmentCode VARCHAR(40);
+    DECLARE @PatientId INT;
+    DECLARE @DepartmentId INT;
+    DECLARE @AssignedDoctorId INT;
+    DECLARE @AppointmentTime DATETIME2;
+    DECLARE @Reason NVARCHAR(500);
+    DECLARE @AdmissionId INT;
+    DECLARE @RecordCode VARCHAR(40);
+
+    SELECT
+      @AppointmentCode = appointment_code,
+      @PatientId = patient_id,
+      @DepartmentId = department_id,
+      @AssignedDoctorId = doctor_id,
+      @AppointmentTime = appointment_time,
+      @Reason = reason
+    FROM Appointments
+    WHERE appointment_id = @appointmentId
+      AND doctor_id = @doctorId
+      AND status <> N'Đã hủy';
+
+    IF @AppointmentCode IS NULL
+    BEGIN
+      THROW 51033, N'Không tìm thấy lịch hẹn thuộc phạm vi phụ trách.', 1;
+    END;
+
     UPDATE Appointments
     SET status = @status
     WHERE appointment_id = @appointmentId
       AND doctor_id = @doctorId
-      AND status <> N'Đã hủy'
+      AND status <> N'Đã hủy';
+
+    IF @status = N'Đã khám'
+    BEGIN
+      IF @PatientId IS NULL OR @DepartmentId IS NULL OR @AssignedDoctorId IS NULL
+      BEGIN
+        THROW 51034, N'Lịch hẹn thiếu bệnh nhân, khoa hoặc bác sĩ để mở hồ sơ khám.', 1;
+      END;
+
+      SET @RecordCode = CONCAT('HSK', @AppointmentCode);
+
+      IF NOT EXISTS (SELECT 1 FROM MedicalRecords WHERE record_code = @RecordCode)
+      BEGIN
+        INSERT INTO Admissions (
+          patient_id, department_id, doctor_id, admission_date, initial_diagnosis,
+          initial_condition, status, priority_level
+        )
+        VALUES (
+          @PatientId, @DepartmentId, @AssignedDoctorId, COALESCE(@AppointmentTime, SYSDATETIME()),
+          COALESCE(NULLIF(@Reason, N''), N'Khám bệnh'),
+          N'Đã khám, chờ chỉ định cận lâm sàng hoặc hướng xử trí',
+          N'Đã khám',
+          N'Trung bình'
+        );
+
+        SET @AdmissionId = SCOPE_IDENTITY();
+
+        INSERT INTO MedicalRecords (
+          record_code, patient_id, admission_id, diagnosis_on_admission, medical_history,
+          allergies, vital_signs, doctor_notes, status
+        )
+        VALUES (
+          @RecordCode, @PatientId, @AdmissionId,
+          COALESCE(NULLIF(@Reason, N''), N'Khám bệnh'),
+          N'Chưa ghi nhận', N'Chưa ghi nhận',
+          N'Mạch: --; Huyết áp: --; Nhiệt độ: --; SpO2: --',
+          N'Hồ sơ được mở sau khi bác sĩ hoàn tất khám.',
+          N'Đã khám'
+        );
+      END;
+    END;
+
+    COMMIT TRANSACTION;
   `, {
     appointmentId: Number(appointmentId),
     doctorId: Number(doctorId),
@@ -387,6 +575,7 @@ module.exports = {
   getAppointments,
   getAppointmentsByDoctor,
   createAppointment,
+  createReceptionVisit,
   updateAppointmentStatus,
   updateDoctorAppointmentStatus,
   getQueue,

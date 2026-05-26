@@ -9,11 +9,14 @@ async function findUserByLogin(login) {
       u.password_hash AS passwordHash,
       u.full_name AS fullName,
       u.patient_id AS patientId,
+      u.department_id AS departmentId,
+      d.department_name AS departmentName,
       u.status,
       r.role_code AS roleCode,
       r.role_name AS roleName
     FROM Users u
     INNER JOIN Roles r ON r.role_id = u.role_id
+    LEFT JOIN Departments d ON d.department_id = u.department_id
     WHERE (u.username = @login OR u.email = @login)
   `, { login });
 

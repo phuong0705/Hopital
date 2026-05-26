@@ -1,6 +1,7 @@
 const patientRepository = require('../repositories/patient.repository');
 const moduleRepository = require('../repositories/module.repository');
 const dashboardRepository = require('../repositories/dashboard.repository');
+const nurseAssignmentRepository = require('../repositories/nurse-assignment.repository');
 
 async function getSessionDoctor(req) {
   if (!req.session.user || req.session.user.roleCode !== 'DOCTOR') return null;
@@ -118,12 +119,14 @@ function buildNurseShiftBlocks(treatments) {
 
 async function nurseShift(req, res, next) {
   try {
-    const userDepartment = req.session.user.departmentName || '';
+    const nurseSupervisor = await nurseAssignmentRepository.getNurseSupervisor(req.session.user.userId);
+    const userDepartment = nurseSupervisor?.departmentName || req.session.user.departmentName || '';
+    const nurseDoctorId = nurseSupervisor?.doctorId || -1;
     const [patientsRaw, worklistRaw, treatmentsRaw, labsRaw, bedsRaw, dutyRowsRaw] = await Promise.all([
-      patientRepository.getInpatients(),
-      moduleRepository.getNursingWorklist(),
-      moduleRepository.getTreatments(),
-      moduleRepository.getLabTests(),
+      patientRepository.getInpatients({ doctorId: nurseDoctorId }),
+      moduleRepository.getNursingWorklist(nurseDoctorId),
+      moduleRepository.getTreatments(nurseDoctorId),
+      moduleRepository.getLabTests(nurseDoctorId),
       moduleRepository.getBeds(),
       moduleRepository.getDoctorDuties()
     ]);
@@ -181,6 +184,7 @@ async function nurseShift(req, res, next) {
       title: 'Dashboard ca trực điều dưỡng',
       activeMenu: req.query.activeMenu || 'nurse-dashboard',
       userDepartment,
+      nurseSupervisor,
       patients,
       worklist,
       pendingTreatments,

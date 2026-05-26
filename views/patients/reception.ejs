@@ -1,130 +1,118 @@
 <section class="reception-hero">
   <div>
-    <h2>Tiếp nhận bệnh nhân</h2>
+    <h2>Tiếp nhận bệnh nhân khám</h2>
+    <p class="mb-0">Tạo hồ sơ hành chính và đưa bệnh nhân vào hàng chờ khám của bác sĩ.</p>
   </div>
-  <a href="/patients" class="btn btn-light"><i class="bi bi-arrow-left me-2"></i>Danh sách bệnh nhân</a>
+  <a href="/thu-ngan/hang-cho" class="btn btn-light"><i class="bi bi-arrow-left me-2"></i>Hàng chờ</a>
 </section>
 
 <form action="/patients/reception" method="post" class="reception-layout mt-4">
-    <section class="panel">
-      <div class="section-heading">
-        <span><i class="bi bi-person-vcard"></i></span>
-        <div>
-          <h3>Thông tin hành chính</h3>
-        </div>
+  <section class="panel">
+    <div class="section-heading">
+      <span><i class="bi bi-person-vcard"></i></span>
+      <div>
+        <h3>Thông tin hành chính</h3>
       </div>
+    </div>
 
-      <div class="form-grid">
-        <input type="hidden" name="patientCode" value="BN<%= Date.now().toString().slice(-6) %>">
-        <div class="span-2">
-          <label class="form-label">Họ tên</label>
-          <input name="fullName" class="form-control" placeholder="Nguyễn Văn A" required>
-        </div>
-        <div>
-          <label class="form-label">Ngày sinh</label>
-          <input name="dateOfBirth" type="date" class="form-control" required>
-        </div>
-        <div>
-          <label class="form-label">Giới tính</label>
-          <select name="gender" class="form-select" required>
-            <option>Nam</option>
-            <option>Nữ</option>
-            <option>Khác</option>
-          </select>
-        </div>
-        <div>
-          <label class="form-label">CCCD</label>
-          <input name="identityNumber" class="form-control" placeholder="012345678901">
-        </div>
-        <div>
-          <label class="form-label">Số điện thoại</label>
-          <input name="phone" class="form-control" placeholder="09xxxxxxxx">
-        </div>
+    <div class="form-grid">
+      <input type="hidden" name="patientCode" value="BN<%= Date.now().toString().slice(-6) %>">
+      <div class="span-2">
+        <label class="form-label">Họ tên</label>
+        <input name="fullName" class="form-control" placeholder="Nguyễn Văn A" required>
       </div>
-    </section>
+      <div>
+        <label class="form-label">Ngày sinh</label>
+        <input name="dateOfBirth" type="date" class="form-control" required>
+      </div>
+      <div>
+        <label class="form-label">Giới tính</label>
+        <select name="gender" class="form-select" required>
+          <option>Nam</option>
+          <option>Nữ</option>
+          <option>Khác</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">CCCD</label>
+        <input name="identityNumber" class="form-control" placeholder="012345678901">
+      </div>
+      <div>
+        <label class="form-label">Số điện thoại</label>
+        <input name="phone" class="form-control" placeholder="09xxxxxxxx">
+      </div>
+    </div>
+  </section>
 
-    <section class="panel">
-      <div class="section-heading">
-        <span><i class="bi bi-shield-check"></i></span>
-        <div>
-          <h3>Bảo hiểm & liên hệ</h3>
-        </div>
+  <section class="panel">
+    <div class="section-heading">
+      <span><i class="bi bi-shield-check"></i></span>
+      <div>
+        <h3>Bảo hiểm & liên hệ</h3>
       </div>
+    </div>
 
-      <div class="form-grid">
-        <div>
-          <label class="form-label">Số BHYT</label>
-          <input name="healthInsuranceNo" class="form-control" placeholder="Mã thẻ BHYT">
-        </div>
-        <div>
-          <label class="form-label">Người thân liên hệ</label>
-          <input name="emergencyContactName" class="form-control" placeholder="Họ tên người thân">
-        </div>
-        <div>
-          <label class="form-label">SĐT người thân</label>
-          <input name="emergencyContactPhone" class="form-control" placeholder="09xxxxxxxx">
-        </div>
-        <div class="span-3">
-          <label class="form-label">Địa chỉ</label>
-          <input name="address" class="form-control" placeholder="Số nhà, phường/xã, quận/huyện, tỉnh/thành">
-        </div>
+    <div class="form-grid">
+      <div>
+        <label class="form-label">Số BHYT</label>
+        <input name="healthInsuranceNo" class="form-control" placeholder="Mã thẻ BHYT">
       </div>
-    </section>
+      <div>
+        <label class="form-label">Người thân liên hệ</label>
+        <input name="emergencyContactName" class="form-control" placeholder="Họ tên người thân">
+      </div>
+      <div>
+        <label class="form-label">SĐT người thân</label>
+        <input name="emergencyContactPhone" class="form-control" placeholder="09xxxxxxxx">
+      </div>
+      <div class="span-3">
+        <label class="form-label">Địa chỉ</label>
+        <input name="address" class="form-control" placeholder="Số nhà, phường/xã, quận/huyện, tỉnh/thành">
+      </div>
+    </div>
+  </section>
 
-    <section class="panel reception-wide">
-      <div class="section-heading">
-        <span><i class="bi bi-hospital"></i></span>
-        <div>
-          <h3>Thông tin nhập viện</h3>
-        </div>
+  <section class="panel reception-wide">
+    <div class="section-heading">
+      <span><i class="bi bi-stethoscope"></i></span>
+      <div>
+        <h3>Thông tin khám bệnh</h3>
       </div>
+    </div>
 
-      <div class="form-grid">
-        <div class="span-2">
-          <label class="form-label">Khoa tiếp nhận</label>
-          <select name="departmentId" class="form-select" required>
-            <% departments.forEach(department => { %>
-              <option value="<%= department.departmentId %>"><%= department.departmentName %></option>
-            <% }) %>
-          </select>
-        </div>
-        <div class="span-2">
-          <label class="form-label">Bác sĩ phụ trách</label>
-          <select name="doctorId" class="form-select" required>
-            <% doctors.forEach(doctor => { %>
-              <option value="<%= doctor.doctorId %>"><%= doctor.fullName %> - <%= doctor.specialty %></option>
-            <% }) %>
-          </select>
-        </div>
-        <div>
-          <label class="form-label">Ngày nhập viện</label>
-          <input name="admissionDate" type="datetime-local" class="form-control" value="<%= defaultAdmissionDate %>" required>
-        </div>
-        <div>
-          <label class="form-label">Mức độ ưu tiên</label>
-          <select name="priorityLevel" class="form-select">
-            <option>Trung bình</option>
-            <option>Thấp</option>
-            <option>Cao</option>
-            <option>Nguy cấp</option>
-          </select>
-        </div>
-        <div class="span-3">
-          <label class="form-label">Chẩn đoán ban đầu</label>
-          <textarea name="initialDiagnosis" class="form-control" rows="4" placeholder="Nhập chẩn đoán hoặc lý do nhập viện" required></textarea>
-        </div>
-        <div class="span-3">
-          <label class="form-label">Tình trạng ban đầu</label>
-          <textarea name="initialCondition" class="form-control" rows="4" placeholder="Mạch, huyết áp, nhiệt độ, triệu chứng chính"></textarea>
-        </div>
+    <div class="form-grid">
+      <div class="span-2">
+        <label class="form-label">Khoa khám</label>
+        <select name="departmentId" class="form-select" required>
+          <% departments.forEach(department => { %>
+            <option value="<%= department.departmentId %>"><%= department.departmentName %></option>
+          <% }) %>
+        </select>
       </div>
-    </section>
+      <div class="span-2">
+        <label class="form-label">Bác sĩ khám</label>
+        <select name="doctorId" class="form-select" required>
+          <% doctors.forEach(doctor => { %>
+            <option value="<%= doctor.doctorId %>"><%= doctor.fullName %> - <%= doctor.specialty %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Thời gian tiếp nhận</label>
+        <input name="appointmentTime" type="datetime-local" class="form-control" value="<%= defaultAdmissionDate %>" required>
+      </div>
+      <div class="span-3">
+        <label class="form-label">Lý do khám</label>
+        <textarea name="reason" class="form-control" rows="4" placeholder="Triệu chứng chính hoặc nhu cầu khám" required></textarea>
+      </div>
+    </div>
+  </section>
 
   <div class="reception-save-card reception-wide">
-    <strong>Lưu phiếu tiếp nhận</strong>
+    <strong>Lưu phiếu tiếp nhận khám</strong>
     <div class="reception-actions">
-      <a href="/patients" class="btn btn-light">Hủy</a>
-      <button class="btn btn-primary btn-lg"><i class="bi bi-save me-2"></i>Lưu tiếp nhận</button>
+      <a href="/thu-ngan/hang-cho" class="btn btn-light">Hủy</a>
+      <button class="btn btn-primary btn-lg"><i class="bi bi-save me-2"></i>Đưa vào hàng chờ khám</button>
     </div>
   </div>
 </form>

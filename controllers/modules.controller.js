@@ -1,5 +1,6 @@
 ﻿const moduleRepository = require('../repositories/module.repository');
 
+const nurseAssignmentRepository = require('../repositories/nurse-assignment.repository');
 const adminRepository = require('../repositories/admin.repository');
 
 function makeListAction(options) {
@@ -23,6 +24,29 @@ async function getSessionDoctorId(req) {
   return doctor ? doctor.doctorId : -1;
 }
 
+async function getCareScopeDoctorId(req) {
+  if (!req.session.user) return null;
+  if (req.session.user.roleCode === 'DOCTOR') return getSessionDoctorId(req);
+  if (req.session.user.roleCode === 'NURSE') {
+    const supervisor = await nurseAssignmentRepository.getNurseSupervisor(req.session.user.userId);
+    return supervisor ? supervisor.doctorId : -1;
+  }
+  return null;
+}
+
+async function getCareScopeDepartmentId(req) {
+  if (!req.session.user) return null;
+  if (req.session.user.roleCode === 'DOCTOR') {
+    const doctor = await moduleRepository.getDoctorByUser(req.session.user);
+    return doctor ? doctor.departmentId : -1;
+  }
+  if (req.session.user.roleCode === 'NURSE') {
+    const supervisor = await nurseAssignmentRepository.getNurseSupervisor(req.session.user.userId);
+    return supervisor ? supervisor.departmentId : -1;
+  }
+  return null;
+}
+
 async function medicalRecords(req, res, next) {
   try {
     const doctorId = await getSessionDoctorId(req);
@@ -38,9 +62,13 @@ async function medicalRecords(req, res, next) {
 
       const isCompleted = row.status === 'Hoàn tất';
       const isReady = !isCompleted && missingItems.length === 0;
+      const recordAdmissionState = row.dischargeId || row.admissionStatus === 'Đã xuất viện'
+        ? 'Đã xuất viện'
+        : 'Đang nhập viện';
 
       return {
         ...row,
+        recordAdmissionState,
         missingItems,
         completionState: isCompleted ? 'Đã hoàn tất' : (isReady ? 'Sẵn sàng hoàn tất' : 'Cần bổ sung')
       };
@@ -50,11 +78,13 @@ async function medicalRecords(req, res, next) {
       total: completionRows.length,
       completed: completionRows.filter((row) => row.completionState === 'Đã hoàn tất').length,
       ready: completionRows.filter((row) => row.completionState === 'Sẵn sàng hoàn tất').length,
-      pending: completionRows.filter((row) => row.completionState === 'Cần bổ sung').length
+      pending: completionRows.filter((row) => row.completionState === 'Cần bổ sung').length,
+      admitted: completionRows.filter((row) => row.recordAdmissionState === 'Đang nhập viện').length,
+      discharged: completionRows.filter((row) => row.recordAdmissionState === 'Đã xuất viện').length
     };
 
     res.render('medical-records/index', {
-      title: 'Hoàn tất hồ sơ bệnh án',
+      title: 'Hồ sơ bệnh án',
       activeMenu: req.query.activeMenu || (req.session.user.roleCode === 'DOCTOR' ? 'doctor-medical-records' : 'medical-records'),
       rows: completionRows,
       stats,
@@ -125,7 +155,8 @@ async function settings(req, res, next) {
 
 async function nursing(req, res, next) {
   try {
-    const rows = await moduleRepository.getNursingWorklist();
+    const doctorId = await getCareScopeDoctorId(req);
+    const rows = await moduleRepository.getNursingWorklist(doctorId);
     res.render('nursing/index', {
       title: 'Điều dưỡng',
       activeMenu: req.query.activeMenu || 'nursing',
@@ -138,31 +169,98 @@ async function nursing(req, res, next) {
 
 async function beds(req, res, next) {
   try {
+    const doctorId = await getCareScopeDoctorId(req);
+    const departmentId = await getCareScopeDepartmentId(req);
+    if (departmentId) {
+      await moduleRepository.ensureDepartmentRoomSeed(departmentId, 10, 4);
+      await moduleRepository.reconcileBedOccupancy(departmentId);
+    }
     const [rows, activeAdmissions, availableBeds] = await Promise.all([
-      moduleRepository.getBeds(),
-      moduleRepository.getActiveAdmissions(),
-      moduleRepository.getAvailableBeds()
+      moduleRepository.getBeds(departmentId),
+      moduleRepository.getActiveAdmissions(doctorId),
+      moduleRepository.getAvailableBeds(departmentId)
     ]);
+    const bedRequests = activeAdmissions.filter((item) => !item.roomCode || !item.bedCode || item.status === 'Chờ xếp giường');
+    const roomRows = Object.values(rows.reduce((map, row) => {
+      if (!map[row.roomId]) {
+        map[row.roomId] = {
+          roomId: row.roomId,
+          roomCode: row.roomCode,
+          departmentName: row.departmentName,
+          roomType: row.roomType,
+          totalBeds: 0,
+          usedBeds: 0,
+          availableBeds: 0,
+          statuses: new Set()
+        };
+      }
+
+      map[row.roomId].totalBeds += 1;
+      if (row.patientName || row.status === 'Đang sử dụng') map[row.roomId].usedBeds += 1;
+      if (row.status === 'Trống') map[row.roomId].availableBeds += 1;
+      map[row.roomId].statuses.add(row.status);
+      return map;
+    }, {})).map((room) => ({
+      ...room,
+      status: `${room.usedBeds}/${room.totalBeds} đang dùng · ${room.availableBeds} trống`,
+      statusList: Array.from(room.statuses).join(' | ')
+    }));
 
     res.render('beds/index', {
       title: 'Quản lí giường bệnh',
       activeMenu: req.query.activeMenu || 'beds',
-      rows,
+      rows: roomRows,
       activeAdmissions,
-      availableBeds
+      availableBeds,
+      bedRequests
     });
   } catch (error) {
     next(error);
   }
 }
 
+async function roomDetail(req, res, next) {
+  try {
+    const departmentId = await getCareScopeDepartmentId(req);
+    const data = await moduleRepository.getRoomDetail(req.params.id, departmentId);
+    if (!data) {
+      return res.status(404).render('errors/404', {
+        title: 'Không tìm thấy phòng',
+        activeMenu: req.query.activeMenu || 'nurse-beds'
+      });
+    }
+
+    return res.render('beds/detail', {
+      title: `Phòng ${data.room.roomCode}`,
+      activeMenu: req.query.activeMenu || 'nurse-beds',
+      data
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function transferBed(req, res, next) {
   try {
-    await moduleRepository.transferBed(req.body);
+    const doctorId = await getCareScopeDoctorId(req);
+    const departmentId = await getCareScopeDepartmentId(req);
+    await moduleRepository.transferBed(req.body, doctorId, departmentId);
     req.flash('success', 'Chuyển phòng / giường thành công.');
     res.redirect('/beds');
   } catch (error) {
     next(error);
+  }
+}
+
+async function updateRoomBedStatus(req, res, next) {
+  try {
+    const departmentId = await getCareScopeDepartmentId(req);
+    await moduleRepository.updateRoomBedStatus(req.params.id, req.body.status, departmentId);
+    await moduleRepository.reconcileBedOccupancy(departmentId);
+    req.flash('success', 'Đã cập nhật trạng thái phòng.');
+    return res.redirect('/beds?activeMenu=nurse-beds');
+  } catch (error) {
+    return next(error);
   }
 }
 
@@ -226,7 +324,8 @@ async function createDischarge(req, res, next) {
 
 async function updateTreatmentStatus(req, res, next) {
   try {
-    await moduleRepository.updateTreatmentStatus(req.params.id, req.body);
+    const doctorId = await getCareScopeDoctorId(req);
+    await moduleRepository.updateTreatmentStatus(req.params.id, req.body, doctorId);
     req.flash('success', 'Cập nhật y lệnh thành công.');
     res.redirect('/treatments');
   } catch (error) {
@@ -238,6 +337,7 @@ async function treatments(req, res, next) {
   try {
     const roleCode = req.session.user ? req.session.user.roleCode : '';
     const isDoctor = roleCode === 'DOCTOR';
+    const isNurse = roleCode === 'NURSE';
     let selectedDoctor = null;
     let selectedDoctorId = req.query.doctorId ? Number(req.query.doctorId) : null;
     let doctors = [];
@@ -245,6 +345,15 @@ async function treatments(req, res, next) {
     if (isDoctor) {
       selectedDoctor = await moduleRepository.getDoctorByUser(req.session.user);
       selectedDoctorId = selectedDoctor ? selectedDoctor.doctorId : null;
+    } else if (isNurse) {
+      const supervisor = await nurseAssignmentRepository.getNurseSupervisor(req.session.user.userId);
+      selectedDoctorId = supervisor ? supervisor.doctorId : -1;
+      selectedDoctor = supervisor ? {
+        doctorId: supervisor.doctorId,
+        fullName: supervisor.doctorName,
+        specialty: 'Bác sĩ phụ trách',
+        departmentName: supervisor.departmentName
+      } : null;
     } else {
       doctors = await moduleRepository.getTreatmentDoctorsOverview();
       if (!selectedDoctorId && doctors.length) {
@@ -262,7 +371,7 @@ async function treatments(req, res, next) {
       doctors,
       selectedDoctor,
       selectedDoctorId,
-      isDoctor
+      isDoctor: isDoctor || isNurse
     });
   } catch (error) {
     next(error);
@@ -311,10 +420,11 @@ async function createPrescription(req, res, next) {
 
 async function labtests(req, res, next) {
   try {
-    const doctorId = await getSessionDoctorId(req);
+    const doctorId = await getCareScopeDoctorId(req);
+    await moduleRepository.ensureExamMedicalRecordsForCompletedAppointments(doctorId);
     const [rows, activeRecords] = await Promise.all([
       moduleRepository.getLabTests(doctorId),
-      moduleRepository.getMedicalRecords(doctorId)
+      moduleRepository.getClinicalOrderRecords(doctorId)
     ]);
     res.render('labtests/index', {
       title: 'Xét nghiệm / cận lâm sàng',
@@ -378,7 +488,8 @@ async function updateLabTestResult(req, res, next) {
       resultFiles = [...currentFiles, ...uploadedFiles];
     }
 
-    await moduleRepository.updateLabTestResult(testCode, status, resultSummary, resultFiles);
+    const doctorId = req.session.user.roleCode === 'NURSE' ? await getCareScopeDoctorId(req) : null;
+    await moduleRepository.updateLabTestResult(testCode, status, resultSummary, resultFiles, doctorId);
     res.json({ success: true, message: 'Cập nhật kết quả thành công' });
   } catch (error) {
     console.error('Lỗi khi cập nhật kết quả xét nghiệm:', error);
@@ -599,7 +710,9 @@ module.exports = {
   updateBed,
   deleteBed,
   beds,
+  roomDetail,
   transferBed,
+  updateRoomBedStatus,
   doctors,
   createDoctor,
   updateDoctor,

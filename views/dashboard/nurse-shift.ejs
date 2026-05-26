@@ -12,12 +12,13 @@
       <span>Cập nhật <%= format.datetime(generatedAt) %></span>
     </div>
     <h1>Dashboard ca trực</h1>
-    <p><%= currentUser.fullName %> · <%= userDepartment || currentUser.departmentName || 'Toàn viện' %></p>
+    <p>
+      <%= currentUser.fullName %> ·
+      BS phụ trách: <%= nurseSupervisor?.doctorName || currentUser.nurseSupervisorName || 'Chưa phân công' %> ·
+      Khoa: <%= userDepartment || currentUser.supervisorDepartmentName || currentUser.departmentName || 'Chưa phân khoa' %>
+    </p>
   </div>
   <div class="nurse-shift-actions">
-    <a class="btn btn-light" href="/nghiep-vu/giao-ban-dieu-duong?activeMenu=nurse-handoff">
-      <i class="bi bi-chat-dots me-2"></i>Giao ban
-    </a>
     <button class="btn btn-primary" type="button" onclick="window.location.reload()">
       <i class="bi bi-arrow-clockwise me-2"></i>Làm mới
     </button>

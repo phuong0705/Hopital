@@ -91,20 +91,12 @@
           <div class="row g-3">
             <div class="col-12">
               <label class="form-label">Bệnh nhân đã có hồ sơ</label>
-              <select name="patientId" class="form-select">
-                <option value="">Bệnh nhân mới / nhập thủ công</option>
+              <select name="patientId" class="form-select" required>
+                <option value="">Chọn bệnh nhân đã xuất viện</option>
                 <% patients.forEach(patient => { %>
                   <option value="<%= patient.patientId %>"><%= patient.patientCode %> · <%= patient.fullName %> · <%= patient.phone || 'Chưa có SĐT' %></option>
                 <% }) %>
               </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Tên bệnh nhân mới</label>
-              <input name="patientName" class="form-control" placeholder="Bỏ trống nếu đã chọn hồ sơ">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Số điện thoại</label>
-              <input name="phone" class="form-control" placeholder="SĐT liên hệ">
             </div>
             <div class="col-md-6">
               <label class="form-label">Khoa khám</label>

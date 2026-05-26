@@ -1,8 +1,23 @@
 const { query, execute } = require('./base.repository');
 
 async function getInpatients(filters = {}) {
-  const where = ["a.status <> N'Đã hủy'"];
+  const inpatientStatuses = [
+    'Chờ xếp giường',
+    'Đang điều trị',
+    'Theo dõi',
+    'Ổn định',
+    'Chờ xuất viện'
+  ];
+  const where = filters.status
+    ? ["a.status <> N'Đã hủy'"]
+    : [`a.status IN (${inpatientStatuses.map((_, index) => `@inpatientStatus${index}`).join(', ')})`];
   const params = {};
+
+  if (!filters.status) {
+    inpatientStatuses.forEach((status, index) => {
+      params[`inpatientStatus${index}`] = status;
+    });
+  }
 
   if (filters.keyword) {
     where.push('(p.patient_code LIKE @keyword OR p.full_name LIKE @keyword OR p.identity_number LIKE @keyword)');
@@ -30,7 +45,7 @@ async function getInpatients(filters = {}) {
       p.full_name AS fullName, p.date_of_birth AS dateOfBirth, p.gender, p.phone, p.identity_number AS identityNumber,
       a.initial_diagnosis AS diagnosis,
       d.department_name AS departmentName, r.room_code AS roomCode, b.bed_code AS bedCode,
-      doc.full_name AS doctorName, a.admission_date AS admissionDate, a.status, a.priority_level AS priorityLevel,
+      a.doctor_id AS doctorId, doc.full_name AS doctorName, a.admission_date AS admissionDate, a.status, a.priority_level AS priorityLevel,
       mr.record_id AS recordId, mr.vital_signs AS vitalSigns
     FROM Admissions a
     INNER JOIN Patients p ON p.patient_id = a.patient_id
@@ -65,6 +80,11 @@ async function updateAdmissionStatus(admissionId, data, doctorId = null) {
         priority_level = @priorityLevel
     WHERE admission_id = @admissionId
       ${whereDoctor};
+
+    IF @@ROWCOUNT = 0
+    BEGIN
+      THROW 51014, N'Không tìm thấy bệnh nhân thuộc phạm vi phụ trách.', 1;
+    END;
 
     UPDATE MedicalRecords
     SET status = @status,
@@ -322,6 +342,22 @@ async function createSupportRequest(data) {
 async function createBooking(data) {
   await execute(`
     DECLARE @patientName NVARCHAR(150);
+
+    IF NOT EXISTS (SELECT 1 FROM Patients WHERE patient_id = @patientId)
+    BEGIN
+      THROW 51031, N'Không tìm thấy hồ sơ bệnh nhân.', 1;
+    END;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM Admissions adm
+      INNER JOIN Discharges dis ON dis.admission_id = adm.admission_id
+      WHERE adm.patient_id = @patientId
+    )
+    BEGIN
+      THROW 51032, N'Chỉ bệnh nhân đã xuất viện mới được đặt lịch tái khám.', 1;
+    END;
+
     SELECT @patientName = full_name FROM Patients WHERE patient_id = @patientId;
 
     INSERT INTO FollowUpBookings (patient_id, requested_date, requested_time, department_id, doctor_id, reason)

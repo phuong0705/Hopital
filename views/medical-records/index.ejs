@@ -1,6 +1,6 @@
 <section class="module-hero">
   <div>
-    <h2>Hoàn tất hồ sơ bệnh án</h2>
+    <h2>Hồ sơ bệnh án</h2>
   </div>
   <div class="module-actions">
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
@@ -22,6 +22,11 @@
         <option><%= state %></option>
       <% }) %>
     </select>
+    <select class="form-select" data-module-filter="medicalRecordsCompletionTable" data-filter-key="admissionState">
+      <option value="">Tất cả hồ sơ</option>
+      <option>Đang nhập viện</option>
+      <option>Đã xuất viện</option>
+    </select>
   </div>
 
   <div class="module-table-wrap">
@@ -30,6 +35,7 @@
         <tr>
           <th>Hồ sơ</th>
           <th>Bệnh nhân</th>
+          <th>Phân loại</th>
           <th>Điều kiện chốt</th>
           <th>Kết luận lượt điều trị</th>
           <th>Trạng thái</th>
@@ -43,7 +49,8 @@
         %>
           <tr
             data-search="<%= `${row.recordCode} ${row.patientCode} ${row.patientName} ${row.diagnosis || ''} ${row.doctorName || ''} ${row.completionState}`.toLowerCase() %>"
-            data-state="<%= row.completionState %>">
+            data-state="<%= row.completionState %>"
+            data-admission-state="<%= row.recordAdmissionState %>">
             <td>
               <div class="module-primary">
                 <strong><%= row.recordCode %></strong>
@@ -55,6 +62,7 @@
               <div class="small text-muted"><%= row.patientCode %> · <%= location %></div>
               <div class="small text-muted"><%= row.doctorName || 'Chưa gán bác sĩ' %></div>
             </td>
+            <td><%- include('../partials/badge', { text: row.recordAdmissionState }) %></td>
             <td class="text-wrap-cell">
               <div class="d-flex flex-wrap gap-2 mb-2">
                 <span class="badge bg-light text-dark border">CLS <%= Number(row.labCount || 0) - Number(row.pendingLabCount || 0) %>/<%= row.labCount || 0 %></span>
@@ -100,7 +108,7 @@
         <% }) %>
         <% if (!rows.length) { %>
           <tr>
-            <td colspan="6" class="text-center py-4 text-muted">Chưa có hồ sơ bệnh án trong phạm vi phụ trách.</td>
+            <td colspan="7" class="text-center py-4 text-muted">Chưa có hồ sơ bệnh án trong phạm vi phụ trách.</td>
           </tr>
         <% } %>
       </tbody>

@@ -257,12 +257,12 @@
                     <input class="form-control" id="labPatientCodeFilter" placeholder="Lọc theo mã bệnh nhân">
                   </div>
                   <div class="col-md-6">
-                    <input class="form-control" id="labAdmissionDateFilter" type="date" aria-label="Lọc theo ngày nhập viện">
+                    <input class="form-control" id="labAdmissionDateFilter" type="date" aria-label="Lọc theo ngày khám hoặc nhập viện">
                   </div>
                 </div>
                 <select class="form-select" name="recordId" id="labRecordSelect" required>
                   <% activeRecords.forEach(record => { %>
-                    <option value="<%= record.recordId %>"><%= record.patientCode %> · <%= record.patientName %> · <%= record.recordCode %></option>
+                    <option value="<%= record.recordId %>"><%= record.patientCode %> · <%= record.patientName %> · <%= record.recordCode %> · <%= record.clinicalSource || 'Hồ sơ' %></option>
                   <% }) %>
                 </select>
               </div>
@@ -279,7 +279,9 @@
                       <dd id="labPreviewPatientCode"><%= activeRecords[0].patientCode %></dd>
                       <dt>Khoa điều trị</dt>
                       <dd id="labPreviewDepartment"><%= activeRecords[0].departmentName || 'Chưa cập nhật' %></dd>
-                      <dt>Ngày nhập viện</dt>
+                      <dt>Loại hồ sơ</dt>
+                      <dd id="labPreviewSource"><%= activeRecords[0].clinicalSource || 'Hồ sơ' %></dd>
+                      <dt>Ngày khám/nhập viện</dt>
                       <dd id="labPreviewAdmissionDate"><%= activeRecords[0].admissionDate ? format.date(activeRecords[0].admissionDate) : 'Chưa cập nhật' %></dd>
                       <dt>Chẩn đoán</dt>
                       <dd id="labPreviewDiagnosis"><%= activeRecords[0].diagnosis || 'Chưa cập nhật' %></dd>
@@ -326,6 +328,7 @@
       patient: document.getElementById('labPreviewPatient'),
       record: document.getElementById('labPreviewRecord'),
       patientCode: document.getElementById('labPreviewPatientCode'),
+      source: document.getElementById('labPreviewSource'),
       department: document.getElementById('labPreviewDepartment'),
       admissionDate: document.getElementById('labPreviewAdmissionDate'),
       diagnosis: document.getElementById('labPreviewDiagnosis'),
@@ -364,7 +367,7 @@
       filteredRecords.forEach(record => {
         const option = document.createElement('option');
         option.value = record.recordId;
-        option.textContent = `${record.patientCode || 'BN'} · ${record.patientName || 'Chưa cập nhật'} · ${record.recordCode || 'HSBA'}`;
+        option.textContent = `${record.patientCode || 'BN'} · ${record.patientName || 'Chưa cập nhật'} · ${record.recordCode || 'HSBA'} · ${record.clinicalSource || 'Hồ sơ'}`;
         select.appendChild(option);
       });
 
@@ -378,6 +381,7 @@
         fields.patient.textContent = 'Không tìm thấy hồ sơ phù hợp';
         fields.record.textContent = 'HSBA';
         fields.patientCode.textContent = 'Chưa cập nhật';
+        fields.source.textContent = 'Hồ sơ';
         fields.department.textContent = 'Chưa cập nhật';
         fields.admissionDate.textContent = 'Chưa cập nhật';
         fields.diagnosis.textContent = 'Chưa cập nhật';
@@ -389,6 +393,7 @@
       fields.patient.textContent = selected.patientName || 'Chưa cập nhật';
       fields.record.textContent = selected.recordCode || 'HSBA';
       fields.patientCode.textContent = selected.patientCode || 'Chưa cập nhật';
+      fields.source.textContent = selected.clinicalSource || 'Hồ sơ';
       fields.department.textContent = selected.departmentName || 'Chưa cập nhật';
       fields.admissionDate.textContent = toDisplayDate(selected.admissionDate);
       fields.diagnosis.textContent = selected.diagnosis || 'Chưa cập nhật';

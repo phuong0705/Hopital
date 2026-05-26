@@ -1,3 +1,7 @@
+<%
+  const arrangedRows = rows.filter(row => row.roomCode && row.bedCode);
+%>
+
 <section class="module-hero">
   <div>
     <h2>Kê đơn / nhập viện / chuyển viện / ra viện</h2>
@@ -7,10 +11,6 @@
   </div>
   <div class="module-actions">
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
-    <a class="btn btn-light" href="/patients/reception?activeMenu=doctor-final-action"><i class="bi bi-hospital me-2"></i>Nhập viện</a>
-    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#finalPrescriptionModal">
-      <i class="bi bi-capsule me-2"></i>Kê đơn
-    </button>
   </div>
 </section>
 
@@ -28,7 +28,106 @@
     </select>
   </div>
 
-  <div class="module-table-wrap">
+  <div class="d-flex flex-column gap-3">
+    <% rows.forEach(row => {
+      const hasAssignedBed = Boolean(row.roomCode && row.bedCode);
+      const isWaitingBed = row.finalDecision === 'Chờ điều dưỡng xếp giường';
+      const location = [row.departmentName, row.roomCode, row.bedCode].filter(Boolean).join(' · ') || 'Chưa xếp buồng/giường';
+    %>
+      <article
+        class="border rounded-3 bg-white p-3"
+        data-table-row="finalActionTable"
+        data-search="<%= `${row.patientCode} ${row.patientName} ${row.diagnosis || ''} ${row.doctorName || ''} ${row.status || ''} ${row.finalDecision}`.toLowerCase() %>"
+        data-decision="<%= row.finalDecision %>">
+        <div class="d-flex flex-column flex-xl-row align-items-xl-center gap-3 justify-content-between">
+          <div class="d-flex align-items-start gap-3 flex-grow-1">
+            <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width: 52px; height: 52px;">
+              <i class="bi bi-person-vcard fs-4"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <h5 class="mb-0"><%= row.patientName %></h5>
+                <span class="module-soft-pill"><%= row.patientCode %> · <%= row.gender || '-' %></span>
+                <%- include('../partials/badge', { text: row.finalDecision }) %>
+              </div>
+              <div class="row g-2 text-muted small">
+                <div class="col-md-3">
+                  <span class="fw-semibold text-dark">Hồ sơ:</span>
+                  <%= row.recordCode || 'Chưa có HSBA' %>
+                </div>
+                <div class="col-md-3">
+                  <span class="fw-semibold text-dark">Khoa/Buồng/Giường:</span>
+                  <%= location %>
+                </div>
+                <div class="col-md-3">
+                  <span class="fw-semibold text-dark">Bác sĩ:</span>
+                  <%= row.doctorName || '-' %>
+                </div>
+                <div class="col-md-3">
+                  <span class="fw-semibold text-dark">Đơn thuốc:</span>
+                  <%= row.prescriptionCount || 0 %>
+                  <% if (row.latestPrescriptionDate) { %>
+                    · <%= format.date(row.latestPrescriptionDate) %>
+                  <% } %>
+                </div>
+              </div>
+              <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                <%- include('../partials/badge', { text: row.status }) %>
+                <%- include('../partials/badge', { text: row.priorityLevel }) %>
+                <span class="text-muted small"><%= row.diagnosis || 'Chưa cập nhật chẩn đoán' %></span>
+              </div>
+            </div>
+          </div>
+          <div class="d-flex flex-wrap gap-2 flex-shrink-0 justify-content-xl-end">
+            <% if (row.recordId) { %>
+              <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#finalPrescriptionModal"
+                data-record-id="<%= row.recordId %>"
+                data-patient-name="<%= row.patientName %>"
+                data-patient-code="<%= row.patientCode %>">
+                <i class="bi bi-capsule me-2"></i>Kê đơn
+              </button>
+            <% } %>
+
+            <% if (!hasAssignedBed) { %>
+              <% if (isWaitingBed) { %>
+                <button class="btn btn-light" type="button" disabled>
+                  <i class="bi bi-hourglass-split me-2"></i>Chờ xếp giường
+                </button>
+              <% } else { %>
+                <form action="/nghiep-vu/xu-tri-sau-kham/nhap-vien" method="post" class="d-inline">
+                  <input type="hidden" name="admissionId" value="<%= row.admissionId %>">
+                  <button class="btn btn-light" type="submit">
+                    <i class="bi bi-hospital me-2"></i>Nhập viện
+                  </button>
+                </form>
+              <% } %>
+            <% } else { %>
+              <button class="btn btn-light" type="button" data-bs-toggle="modal" data-bs-target="#finalTransferModal"
+                data-admission-id="<%= row.admissionId %>"
+                data-patient-name="<%= row.patientName %>"
+                data-patient-code="<%= row.patientCode %>">
+                <i class="bi bi-arrow-left-right me-2"></i>Chuyển viện
+              </button>
+              <button class="btn btn-light" type="button" data-bs-toggle="modal" data-bs-target="#finalDischargeModal"
+                data-admission-id="<%= row.admissionId %>"
+                data-patient-name="<%= row.patientName %>"
+                data-patient-code="<%= row.patientCode %>"
+                data-summary="<%= row.diagnosis || '' %>">
+                <i class="bi bi-box-arrow-right me-2"></i>Ra viện
+              </button>
+              <% if (row.recordId) { %>
+                <a class="btn btn-light" href="/medical-records/<%= row.recordId %>?activeMenu=doctor-medical-records">
+                  <i class="bi bi-journal-text me-2"></i>Chi tiết HSBA
+                </a>
+              <% } %>
+            <% } %>
+          </div>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+
+  <div class="module-table-wrap visually-hidden">
     <table class="table app-table module-table" id="finalActionTable">
       <thead>
         <tr>
@@ -120,7 +219,7 @@
     </table>
   </div>
 
-  <div class="empty-inline module-empty d-none" data-empty-for="finalActionTable">
+  <div class="empty-inline module-empty <%= rows.length ? 'd-none' : '' %>" data-empty-for="finalActionTable">
     <i class="bi bi-search"></i>
     <strong>Không tìm thấy hồ sơ phù hợp</strong>
   </div>
@@ -270,7 +369,7 @@
               </div>
               <label class="form-label">Lượt điều trị</label>
               <select name="admissionId" class="form-select" id="finalDischargeAdmissionSelect" required>
-                <% rows.forEach(row => { %>
+                <% arrangedRows.forEach(row => { %>
                   <option value="<%= row.admissionId %>"><%= row.patientCode %> - <%= row.patientName %> · <%= row.departmentName %></option>
                 <% }) %>
               </select>
@@ -326,7 +425,7 @@
               </div>
               <label class="form-label">Lượt điều trị</label>
               <select name="admissionId" class="form-select" id="finalTransferAdmissionSelect" required>
-                <% rows.forEach(row => { %>
+                <% arrangedRows.forEach(row => { %>
                   <option value="<%= row.admissionId %>"><%= row.patientCode %> - <%= row.patientName %> · <%= row.departmentName %></option>
                 <% }) %>
               </select>

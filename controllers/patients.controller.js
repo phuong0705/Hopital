@@ -1,6 +1,8 @@
 const patientRepository = require('../repositories/patient.repository');
 const lookupRepository = require('../repositories/lookup.repository');
 const moduleRepository = require('../repositories/module.repository');
+const nurseAssignmentRepository = require('../repositories/nurse-assignment.repository');
+const cashierRepository = require('../repositories/cashier.repository');
 
 async function receptionForm(req, res, next) {
   try {
@@ -23,9 +25,9 @@ async function receptionForm(req, res, next) {
 
 async function createAdmission(req, res, next) {
   try {
-    await patientRepository.createAdmission(req.body);
-    req.flash('success', 'Tiếp nhận bệnh nhân nội trú thành công.');
-    res.redirect('/patients/list');
+    const appointment = await cashierRepository.createReceptionVisit(req.body, req.session.user.userId);
+    req.flash('success', `Đã tiếp nhận bệnh nhân vào hàng chờ khám ${appointment.appointmentCode}.`);
+    res.redirect('/thu-ngan/hang-cho');
   } catch (error) {
     next(error);
   }
@@ -43,9 +45,19 @@ async function getSessionDoctorId(req) {
   return doctor ? doctor.doctorId : -1;
 }
 
+async function getCareScopeDoctorId(req) {
+  if (!req.session.user) return null;
+  if (req.session.user.roleCode === 'DOCTOR') return getSessionDoctorId(req);
+  if (req.session.user.roleCode === 'NURSE') {
+    const supervisor = await nurseAssignmentRepository.getNurseSupervisor(req.session.user.userId);
+    return supervisor ? supervisor.doctorId : -1;
+  }
+  return null;
+}
+
 async function doctorOverview(req, res, next) {
   try {
-    const doctorId = await getSessionDoctorId(req);
+    const doctorId = await getCareScopeDoctorId(req);
     const doctors = await moduleRepository.getDoctors();
     
     res.render('patients/index', {
@@ -62,7 +74,7 @@ async function doctorOverview(req, res, next) {
 
 async function list(req, res, next) {
   try {
-    const doctorId = await getSessionDoctorId(req);
+    const doctorId = await getCareScopeDoctorId(req);
     const filters = {
       ...req.query,
       ...(doctorId ? { doctorId } : {})
@@ -93,7 +105,7 @@ async function list(req, res, next) {
 
 async function detail(req, res, next) {
   try {
-    const doctorId = await getSessionDoctorId(req);
+    const doctorId = await getCareScopeDoctorId(req);
     const patient = await patientRepository.getPatientDetail(req.params.id, doctorId);
     if (!patient) {
       return res.status(404).render('errors/404', { title: 'Không tìm thấy', activeMenu: req.query.activeMenu || 'patients' });
@@ -110,7 +122,7 @@ async function detail(req, res, next) {
 
 async function updateStatus(req, res, next) {
   try {
-    const doctorId = await getSessionDoctorId(req);
+    const doctorId = await getCareScopeDoctorId(req);
     await patientRepository.updateAdmissionStatus(req.params.admissionId, req.body, doctorId);
     req.flash('success', 'Cập nhật tình trạng bệnh nhân thành công.');
     const returnTo = req.body.returnTo || '/patients/list';
@@ -214,9 +226,23 @@ async function submitBooking(req, res, next) {
       reason: req.body.reason
     });
 
+    await cashierRepository.createAppointment({
+      patientId,
+      departmentId: req.body.departmentId,
+      doctorId: req.body.doctorId,
+      appointmentTime: `${req.body.requestedDate}T${req.body.requestedTime || '08:00'}`,
+      reason: req.body.reason
+    }, req.session.user.userId);
+
     req.flash('success', 'Yêu cầu đặt lịch tái khám đã được gửi thành công.');
     return res.redirect('/patients/me/booking');
   } catch (error) {
+    if ([51031, 51032].includes(error.number)) {
+      req.flash('error', error.number === 51031
+        ? 'Không tìm thấy hồ sơ bệnh nhân.'
+        : 'Chỉ bệnh nhân đã xuất viện mới được đặt lịch tái khám.');
+      return res.redirect('/patients/me/booking');
+    }
     return next(error);
   }
 }

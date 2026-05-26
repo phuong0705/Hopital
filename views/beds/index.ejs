@@ -3,6 +3,12 @@
     <h2>Quản lí giường bệnh</h2>
   </div>
   <div class="module-actions">
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#bedRequestsModal">
+      <i class="bi bi-hospital me-2"></i>Yêu cầu xếp phòng/giường
+      <% if (typeof bedRequests !== 'undefined' && bedRequests.length) { %>
+        <span class="badge bg-light text-primary ms-2"><%= bedRequests.length %></span>
+      <% } %>
+    </button>
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
     <button class="btn btn-light" type="button" data-export-table="bedsTable" data-filename="giuong-benh.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
   </div>
@@ -34,30 +40,41 @@
     <table class="table app-table module-table beds-table" id="bedsTable">
       <thead>
         <tr>
-          <th></th>
-          <th>Khoa / phòng</th>
+          <th>Mã phòng</th>
+          <th>Khoa</th>
+          <th>Loại giường</th>
           <th>Trạng thái</th>
-          <th>Bệnh nhân</th>
-          <th>Bắt đầu dùng</th>
+          <th>Chi tiết</th>
           <th class="text-end no-export">Hành động</th>
+          <th class="text-end no-export">Cập nhật trạng thái</th>
         </tr>
       </thead>
       <tbody>
         <% rows.forEach(row => { %>
-          <tr data-search="<%= `${row.bedCode} ${row.roomCode} ${row.departmentName} ${row.patientName || ''}`.toLowerCase() %>" data-status="<%= row.status %>" data-department="<%= row.departmentName %>">
-            <td></td>
-            <td>
-              <div class="module-primary">
-                <strong><%= row.departmentName %></strong>
-              </div>
-            </td>
+          <tr data-search="<%= `${row.roomCode} ${row.departmentName} ${row.roomType} ${row.statusList || ''}`.toLowerCase() %>" data-status="<%= row.statusList || row.status %>" data-department="<%= row.departmentName %>">
+            <td><strong><%= row.roomCode %></strong></td>
+            <td><%= row.departmentName %></td>
+            <td><%= row.roomType %></td>
             <td><%- include('../partials/badge', { text: row.status }) %></td>
-            <td><%= row.patientName || 'Không có' %></td>
-            <td><%= row.startDate ? format.date(row.startDate) : '-' %></td>
+            <td>
+              <a class="btn btn-sm btn-light" href="/beds/rooms/<%= row.roomId %>?activeMenu=nurse-beds">
+                <i class="bi bi-door-open me-1"></i>Chi tiết phòng
+              </a>
+            </td>
             <td class="text-end no-export">
               <button class="btn btn-sm btn-light" type="button" data-bs-toggle="modal" data-bs-target="#transferModal">
-                Chuyển giường
+                Xếp/chuyển giường
               </button>
+            </td>
+            <td class="text-end no-export">
+              <form class="d-flex justify-content-end gap-2" method="POST" action="/beds/rooms/<%= row.roomId %>/status">
+                <select class="form-select form-select-sm" name="status" aria-label="Chọn trạng thái phòng" style="max-width: 170px;">
+                  <% ['Trống', 'Chờ vệ sinh', 'Bảo trì', 'Cách ly'].forEach(status => { %>
+                    <option value="<%= status %>"><%= status %></option>
+                  <% }) %>
+                </select>
+                <button class="btn btn-sm btn-primary" type="submit">Lưu</button>
+              </form>
             </td>
           </tr>
         <% }) %>
@@ -70,5 +87,53 @@
     <strong>Không tìm thấy giường phù hợp</strong>
   </div>
 </section>
+
+<div class="modal fade" id="bedRequestsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Yêu cầu xếp phòng/giường từ bác sĩ phụ trách</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <% if (typeof bedRequests !== 'undefined' && bedRequests.length) { %>
+          <div class="list-group list-group-flush">
+            <% bedRequests.forEach(item => { %>
+              <div class="list-group-item px-0">
+                <div class="d-flex flex-column flex-md-row gap-3 justify-content-between align-items-md-center">
+                  <div>
+                    <strong><%= item.patientName %></strong>
+                    <div class="text-muted small">
+                      <%= item.patientCode %> · <%= item.departmentName %> · <%= item.doctorName || 'Bác sĩ phụ trách' %>
+                    </div>
+                    <div class="mt-2">
+                      <%- include('../partials/badge', { text: item.status || 'Chờ xếp giường' }) %>
+                    </div>
+                  </div>
+                  <button class="btn btn-primary" type="button"
+                    data-bs-toggle="modal"
+                    data-bs-target="#transferModal"
+                    data-admission-id="<%= item.admissionId %>"
+                    data-patient-name="<%= item.patientName %>"
+                    data-patient-code="<%= item.patientCode %>">
+                    <i class="bi bi-hospital me-2"></i>Xếp giường
+                  </button>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <div class="empty-inline">
+            <i class="bi bi-check2-circle"></i>
+            <strong>Chưa có yêu cầu xếp phòng/giường mới.</strong>
+          </div>
+        <% } %>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <%- include('../partials/action-modals') %>

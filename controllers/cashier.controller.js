@@ -24,6 +24,12 @@ async function createAppointment(req, res, next) {
     req.flash('success', 'Đã tạo lịch hẹn khám.');
     return res.redirect('/thu-ngan/dat-lich-hen-kham');
   } catch (error) {
+    if ([51031, 51032].includes(error.number)) {
+      req.flash('error', error.number === 51031
+        ? 'Không tìm thấy hồ sơ bệnh nhân.'
+        : 'Chỉ được đặt lịch tái khám cho bệnh nhân đã xuất viện. Bệnh nhân mới cần đi qua tiếp nhận khám.');
+      return res.redirect('/thu-ngan/dat-lich-hen-kham');
+    }
     return next(error);
   }
 }

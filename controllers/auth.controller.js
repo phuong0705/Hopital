@@ -49,6 +49,8 @@ async function login(req, res, next) {
       username: user.username,
       fullName: user.fullName,
       patientId: user.patientId,
+      departmentId: user.departmentId,
+      departmentName: user.departmentName,
       roleCode: user.roleCode,
       roleName: user.roleName
     };

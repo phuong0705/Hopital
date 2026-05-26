@@ -30,6 +30,24 @@ document.addEventListener('DOMContentLoaded', () => {
     new bootstrap.Tooltip(element);
   });
 
+  const syncTransferBeds = (roomSelect, bedSelect) => {
+    if (!roomSelect || !bedSelect) return;
+
+    const selectedRoom = roomSelect.value;
+    let firstVisible = null;
+
+    Array.from(bedSelect.options).forEach((option) => {
+      const match = option.dataset.room === selectedRoom;
+      option.hidden = !match;
+      option.disabled = !match;
+      if (match && !firstVisible) firstVisible = option;
+    });
+
+    if (firstVisible && (!bedSelect.value || bedSelect.selectedOptions[0]?.disabled)) {
+      bedSelect.value = firstVisible.value;
+    }
+  };
+
   setTimeout(() => {
     document.querySelectorAll('.app-alert').forEach((alert) => {
       alert.style.transition = 'opacity .25s ease, transform .25s ease';
@@ -229,10 +247,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const button = event.relatedTarget;
     const admissionId = button?.dataset.admissionId;
     const select = document.getElementById('transferAdmissionSelect');
+    const roomSelect = document.getElementById('transferRoomSelect');
+    const bedSelect = document.getElementById('transferBedSelect');
     const preview = document.getElementById('transferPatientPreview');
 
     if (select && admissionId) select.value = admissionId;
+    syncTransferBeds(roomSelect, bedSelect);
     setModalPatientPreview(preview, button, 'Bệnh nhân chuyển phòng');
+  });
+
+  const transferRoomSelect = document.getElementById('transferRoomSelect');
+  transferRoomSelect?.addEventListener('change', () => {
+    syncTransferBeds(transferRoomSelect, document.getElementById('transferBedSelect'));
   });
 
   const dischargeModal = document.getElementById('dischargeModal');

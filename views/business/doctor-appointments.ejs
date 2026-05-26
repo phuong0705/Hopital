@@ -1,6 +1,6 @@
 <section class="module-hero">
   <div>
-    <h2>Danh sách lịch hẹn khám</h2>
+    <h2>Tái khám</h2>
   </div>
   <div class="module-actions">
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In danh sách</button>
@@ -51,15 +51,11 @@
             <td><%- include('../partials/badge', { text: row.status }) %></td>
             <td class="text-end">
               <div class="d-flex justify-content-end gap-1">
-                <% if (row.status !== 'Đã khám') { %>
-                  <a href="/patients/<%= row.patientId %>?activeMenu=doctor-today-appointments" class="btn btn-sm btn-light">
-                    <i class="bi bi-activity me-1"></i>Chẩn bệnh
-                  </a>
-                <% } %>
                 <form action="/nghiep-vu/lich-hen-kham-hom-nay/<%= row.appointmentId %>/status" method="post" class="d-inline">
-                  <input type="hidden" name="status" value="Đã khám">
-                  <button class="btn btn-sm <%= row.status === 'Đã khám' ? 'btn-success' : 'btn-light' %>" type="submit" title="Đã khám">
-                    Đã khám
+                  <input type="hidden" name="status" value="Đã tiếp nhận">
+                  <input type="hidden" name="returnTo" value="/nghiep-vu/tai-kham?activeMenu=doctor-follow-up">
+                  <button class="btn btn-sm btn-primary" type="submit" title="Đưa vào tiếp nhận khám">
+                    Tiếp nhận khám
                   </button>
                 </form>
               </div>

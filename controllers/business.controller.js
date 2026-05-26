@@ -14,6 +14,7 @@ const supplyRepository = require('../repositories/supply.repository');
 const backupRepository = require('../repositories/backup.repository');
 const cashierRepository = require('../repositories/cashier.repository');
 const formTemplateRepository = require('../repositories/form-template.repository');
+const nurseAssignmentRepository = require('../repositories/nurse-assignment.repository');
 
 function containsKeyword(value, keywords) {
   const normalized = normalizeText(value);
@@ -49,6 +50,25 @@ async function getSessionDoctor(req) {
 async function getSessionDoctorId(req) {
   const doctor = await getSessionDoctor(req);
   return doctor ? doctor.doctorId : -1;
+}
+
+async function getNurseScopeDoctorId(req) {
+  if (!req.session.user || req.session.user.roleCode !== 'NURSE') return null;
+  const supervisor = await nurseAssignmentRepository.getNurseSupervisor(req.session.user.userId);
+  return supervisor ? supervisor.doctorId : -1;
+}
+
+async function getNurseScopeDepartmentId(req) {
+  if (!req.session.user || req.session.user.roleCode !== 'NURSE') return null;
+  const supervisor = await nurseAssignmentRepository.getNurseSupervisor(req.session.user.userId);
+  return supervisor ? supervisor.departmentId : -1;
+}
+
+async function getStaffScopeDoctorId(req) {
+  if (!req.session.user) return null;
+  if (req.session.user.roleCode === 'DOCTOR') return getSessionDoctorId(req);
+  if (req.session.user.roleCode === 'NURSE') return getNurseScopeDoctorId(req);
+  return null;
 }
 
 function showBusiness(req, res) {
@@ -424,7 +444,8 @@ async function imagingProcedureOrders(req, res, next) {
 
 async function clinicalLookup(req, res, next) {
   try {
-    const patients = await patientRepository.getInpatients();
+    const scopeDoctorId = await getStaffScopeDoctorId(req);
+    const patients = await patientRepository.getInpatients(scopeDoctorId ? { doctorId: scopeDoctorId } : {});
     res.render('business/clinical-lookup', {
       title: 'Tra cứu dữ liệu khám',
       activeMenu: req.query.activeMenu || 'clinical-lookup',
@@ -437,8 +458,8 @@ async function clinicalLookup(req, res, next) {
 
 async function examResults(req, res, next) {
   try {
-    const doctorId = await getSessionDoctorId(req);
-    const rows = await moduleRepository.getLabTests(doctorId === -1 ? null : doctorId);
+    const doctorId = await getStaffScopeDoctorId(req);
+    const rows = await moduleRepository.getLabTests(doctorId);
     res.render('business/exam-results', {
       title: 'Theo dõi kết quả khám',
       activeMenu: req.query.activeMenu || 'exam-results',
@@ -451,8 +472,8 @@ async function examResults(req, res, next) {
 
 async function lengthOfStay(req, res, next) {
   try {
-    const doctorId = await getSessionDoctorId(req);
-    const rows = await moduleRepository.getLengthOfStay(doctorId === -1 ? null : doctorId);
+    const doctorId = await getStaffScopeDoctorId(req);
+    const rows = await moduleRepository.getLengthOfStay(doctorId);
     res.render('business/length-of-stay', {
       title: 'Theo dõi thời gian nằm viện',
       activeMenu: req.query.activeMenu || 'length-of-stay',
@@ -501,8 +522,8 @@ async function procedureSchedule(req, res, next) {
 
 async function labSummary(req, res, next) {
   try {
-    const doctorId = await getSessionDoctorId(req);
-    const rows = await moduleRepository.getLabTests(doctorId === -1 ? null : doctorId);
+    const doctorId = await getStaffScopeDoctorId(req);
+    const rows = await moduleRepository.getLabTests(doctorId);
     res.render('business/lab-summary', {
       title: 'Tổng hợp kết quả xét nghiệm',
       activeMenu: req.query.activeMenu || 'lab-summary',
@@ -516,12 +537,14 @@ async function labSummary(req, res, next) {
 async function doctorTodayAppointments(req, res, next) {
   try {
     const doctorId = await getSessionDoctorId(req);
-    const rows = await cashierRepository.getAppointmentsByDoctor(doctorId === -1 ? 0 : doctorId);
-    
+    const rows = (await cashierRepository.getAppointmentsByDoctor(doctorId === -1 ? 0 : doctorId))
+      .filter((row) => ['Đã đặt', 'Chưa khám'].includes(row.status));
+    const followUpRows = rows.filter((row) => row.hasDischarge);
+
     res.render('business/doctor-appointments', {
-      title: 'Lịch hẹn khám hôm nay',
-      activeMenu: req.query.activeMenu || 'doctor-today-appointments',
-      rows
+      title: 'Tái khám',
+      activeMenu: req.query.activeMenu || 'doctor-follow-up',
+      rows: followUpRows
     });
   } catch (error) {
     next(error);
@@ -536,11 +559,12 @@ async function doctorReceptionExam(req, res, next) {
       return res.redirect('/dashboard');
     }
 
-    const [appointments, patients, activeAdmissions] = await Promise.all([
+    const [appointmentRows, patients, activeAdmissions] = await Promise.all([
       cashierRepository.getAppointmentsByDoctor(doctor.doctorId),
       patientRepository.getInpatients({ doctorId: doctor.doctorId }),
       moduleRepository.getActiveAdmissions(doctor.doctorId)
     ]);
+    const appointments = appointmentRows.filter((row) => row.status === 'Đã tiếp nhận');
 
     return res.render('business/doctor-reception-exam', {
       title: 'Tiếp nhận & khám bệnh',
@@ -608,7 +632,73 @@ function finalActionRedirect() {
   return '/nghiep-vu/xu-tri-sau-kham?activeMenu=doctor-final-action';
 }
 
+async function doctorNurseManagement(req, res, next) {
+  try {
+    const doctor = await getSessionDoctor(req);
+    if (!doctor) {
+      req.flash('error', 'Không tìm thấy hồ sơ bác sĩ để quản lý điều dưỡng.');
+      return res.redirect('/dashboard/home');
+    }
+
+    const data = await nurseAssignmentRepository.getDoctorNurseManagement(doctor.doctorId);
+    return res.render('business/doctor-nurses', {
+      title: 'Quản lý điều dưỡng',
+      activeMenu: req.query.activeMenu || 'doctor-nurse-management',
+      doctor: data.doctor || doctor,
+      assignedNurses: data.assignedNurses,
+      availableNurses: data.availableNurses
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function assignDoctorNurse(req, res, next) {
+  try {
+    const doctor = await getSessionDoctor(req);
+    if (!doctor) {
+      req.flash('error', 'Không tìm thấy hồ sơ bác sĩ để phân công điều dưỡng.');
+      return res.redirect('/dashboard/home');
+    }
+
+    if (!req.body.nurseUserId) {
+      req.flash('warning', 'Vui lòng chọn điều dưỡng cần phân công.');
+      return res.redirect('/nghiep-vu/quan-ly-dieu-duong?activeMenu=doctor-nurse-management');
+    }
+
+    await nurseAssignmentRepository.assignNurseToDoctor({
+      doctorId: doctor.doctorId,
+      nurseUserId: req.body.nurseUserId
+    });
+
+    req.flash('success', 'Đã phân công điều dưỡng cho bác sĩ phụ trách.');
+    return res.redirect('/nghiep-vu/quan-ly-dieu-duong?activeMenu=doctor-nurse-management');
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function stopDoctorNurseAssignment(req, res, next) {
+  try {
+    const doctor = await getSessionDoctor(req);
+    if (!doctor) {
+      req.flash('error', 'Không tìm thấy hồ sơ bác sĩ để cập nhật phân công.');
+      return res.redirect('/dashboard/home');
+    }
+
+    await nurseAssignmentRepository.stopNurseAssignment(req.params.id, doctor.doctorId);
+    req.flash('success', 'Đã ngừng phụ trách điều dưỡng này.');
+    return res.redirect('/nghiep-vu/quan-ly-dieu-duong?activeMenu=doctor-nurse-management');
+  } catch (error) {
+    return next(error);
+  }
+}
+
 function buildFinalActionDecision(row) {
+  const hasAssignedBed = Boolean(row.roomCode && row.bedCode);
+  if (!hasAssignedBed) {
+    return statusEquals(row.status, 'Chờ xếp giường') ? 'Chờ điều dưỡng xếp giường' : 'Cần nhập viện';
+  }
   if (row.dischargeId) return 'Đã lập hồ sơ ra viện';
   if (statusEquals(row.status, 'Chờ xuất viện')) return 'Hoàn tất ra viện';
   if (Number(row.pendingLabCount || 0) > 0) return 'Chờ đủ kết quả';
@@ -635,6 +725,7 @@ async function finalAction(req, res, next) {
 
     const stats = {
       total: decisionRows.length,
+      waitingBed: decisionRows.filter((row) => row.finalDecision === 'Chờ điều dưỡng xếp giường').length,
       readyDischarge: decisionRows.filter((row) => row.finalDecision === 'Cân nhắc ra viện' || row.finalDecision === 'Hoàn tất ra viện').length,
       waitingResults: decisionRows.filter((row) => row.finalDecision === 'Chờ đủ kết quả').length,
       withoutPrescription: decisionRows.filter((row) => Number(row.prescriptionCount || 0) === 0).length
@@ -649,6 +740,18 @@ async function finalAction(req, res, next) {
       selectedDoctor: doctor,
       stats
     });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function requestFinalAdmission(req, res, next) {
+  try {
+    const rawDoctorId = await getSessionDoctorId(req);
+    const doctorId = getDoctorScopeId(rawDoctorId);
+    await moduleRepository.requestAdmissionBed(req.body.admissionId, doctorId);
+    req.flash('success', 'Đã gửi yêu cầu nhập viện. Điều dưỡng sẽ tiếp nhận và xếp buồng/giường.');
+    return res.redirect(finalActionRedirect());
   } catch (error) {
     return next(error);
   }
@@ -914,7 +1017,8 @@ async function restoreData(req, res, next) {
 // Nursing Module Logic
 async function nurseHandoff(req, res, next) {
   try {
-    const patients = await patientRepository.getInpatients();
+    const nurseDoctorId = await getNurseScopeDoctorId(req);
+    const patients = await patientRepository.getInpatients(nurseDoctorId ? { doctorId: nurseDoctorId } : {});
     const dutyRows = await moduleRepository.getDoctorDuties();
     const departmentTeam = dutyRows.filter((row) => row.departmentName === (req.session.user.departmentName || 'Khoa Nội tổng hợp'));
     
@@ -932,7 +1036,8 @@ async function nurseHandoff(req, res, next) {
 
 async function nurseVitals(req, res, next) {
   try {
-    const rows = await patientRepository.getInpatients();
+    const nurseDoctorId = await getNurseScopeDoctorId(req);
+    const rows = await patientRepository.getInpatients(nurseDoctorId ? { doctorId: nurseDoctorId } : {});
     res.render('business/nurse-vitals', {
       title: 'Theo dõi sinh hiệu',
       activeMenu: req.query.activeMenu || 'nurse-vitals',
@@ -946,8 +1051,9 @@ async function nurseVitals(req, res, next) {
 async function saveNurseVitals(req, res, next) {
   try {
     const { admissionId, pulse, temperature, bp, respiratory } = req.body;
+    const nurseDoctorId = await getNurseScopeDoctorId(req);
     const vitalsString = `Mạch: ${pulse} l/p, T°: ${temperature} °C, HA: ${bp} mmHg, NT: ${respiratory} l/p`;
-    await moduleRepository.updateNurseVitals(admissionId, vitalsString);
+    await moduleRepository.updateNurseVitals(admissionId, vitalsString, nurseDoctorId);
     req.flash('success', 'Cập nhật sinh hiệu bệnh nhân thành công.');
     res.redirect('/nghiep-vu/theo-doi-sinh-hieu');
   } catch (error) {
@@ -957,7 +1063,8 @@ async function saveNurseVitals(req, res, next) {
 
 async function nurseNotes(req, res, next) {
   try {
-    const rows = await patientRepository.getInpatients();
+    const nurseDoctorId = await getNurseScopeDoctorId(req);
+    const rows = await patientRepository.getInpatients(nurseDoctorId ? { doctorId: nurseDoctorId } : {});
     res.render('business/nurse-notes', {
       title: 'Ghi chú điều dưỡng',
       activeMenu: req.query.activeMenu || 'nurse-notes',
@@ -971,7 +1078,8 @@ async function nurseNotes(req, res, next) {
 async function saveNurseNote(req, res, next) {
   try {
     const { admissionId, note } = req.body;
-    await moduleRepository.updateNurseNotes(admissionId, note);
+    const nurseDoctorId = await getNurseScopeDoctorId(req);
+    await moduleRepository.updateNurseNotes(admissionId, note, nurseDoctorId);
     req.flash('success', 'Đã lưu ghi chú diễn biến chăm sóc.');
     res.redirect('/nghiep-vu/ghi-chu-dieu-duong');
   } catch (error) {
@@ -981,7 +1089,12 @@ async function saveNurseNote(req, res, next) {
 
 async function roomStatusUpdate(req, res, next) {
   try {
-    const rows = await moduleRepository.getBeds();
+    const departmentId = await getNurseScopeDepartmentId(req);
+    if (departmentId) {
+      await moduleRepository.ensureDepartmentRoomSeed(departmentId, 10, 4);
+      await moduleRepository.reconcileBedOccupancy(departmentId);
+    }
+    const rows = await moduleRepository.getBeds(departmentId);
     res.render('business/room-status', {
       title: 'Cập nhật trạng thái phòng',
       activeMenu: req.query.activeMenu || 'nurse-room-status',
@@ -994,7 +1107,8 @@ async function roomStatusUpdate(req, res, next) {
 
 async function updateBedStatus(req, res, next) {
   try {
-    await moduleRepository.updateBedStatus(req.params.id, req.body.status);
+    const departmentId = await getNurseScopeDepartmentId(req);
+    await moduleRepository.updateBedStatus(req.params.id, req.body.status, departmentId);
     req.flash('success', 'Cập nhật trạng thái giường thành công.');
     res.redirect('/nghiep-vu/cap-nhat-trang-thai-phong');
   } catch (error) {
@@ -1108,7 +1222,11 @@ module.exports = {
   doctorReceptionExam,
   updateDoctorAppointmentStatus,
   pendingExamTickets,
+  doctorNurseManagement,
+  assignDoctorNurse,
+  stopDoctorNurseAssignment,
   finalAction,
+  requestFinalAdmission,
   createFinalPrescription,
   createFinalDischarge,
   createFinalTransfer,

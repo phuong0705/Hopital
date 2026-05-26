@@ -279,6 +279,15 @@ async function getDepartmentStaff(departmentId) {
 
 async function createRoom(data) {
   await execute(`
+    IF (
+      SELECT COUNT(*)
+      FROM Rooms
+      WHERE department_id = @departmentId
+    ) >= 100
+    BEGIN
+      THROW 51016, N'Mỗi khoa chỉ được tối đa 100 phòng.', 1;
+    END;
+
     INSERT INTO Rooms (department_id, room_code, room_name, floor_no, room_type)
     VALUES (@departmentId, @roomCode, @roomName, @floorNo, @roomType)
   `, {
@@ -310,6 +319,15 @@ async function deleteRoom(roomId) {
 
 async function createBed(data) {
   await execute(`
+    IF (
+      SELECT COUNT(*)
+      FROM Beds
+      WHERE room_id = @roomId
+    ) >= 4
+    BEGIN
+      THROW 51017, N'Mỗi phòng chỉ được tối đa 4 giường.', 1;
+    END;
+
     INSERT INTO Beds (room_id, bed_code, status, note)
     VALUES (@roomId, @bedCode, @status, @note)
   `, {
@@ -337,28 +355,147 @@ async function deleteBed(bedId) {
   await execute(`DELETE FROM Beds WHERE bed_id = @bedId`, { bedId: Number(bedId) });
 }
 
-async function getBeds() {
+async function getBeds(departmentId = null) {
+  const whereDepartment = departmentId ? 'WHERE r.department_id = @departmentId' : '';
+
   return query(`
-    SELECT b.bed_id AS bedId, b.bed_code AS bedCode, r.room_code AS roomCode, d.department_name AS departmentName,
-      r.room_type AS roomType, b.status, p.full_name AS patientName, a.admission_date AS startDate
+    SELECT b.bed_id AS bedId, b.bed_code AS bedCode, r.room_id AS roomId,
+      r.room_code AS roomCode, r.room_name AS roomName, d.department_id AS departmentId,
+      d.department_name AS departmentName, r.room_type AS roomType, b.status,
+      p.patient_code AS patientCode, p.full_name AS patientName, a.admission_date AS startDate
     FROM Beds b
     INNER JOIN Rooms r ON r.room_id = b.room_id
     INNER JOIN Departments d ON d.department_id = r.department_id
-    LEFT JOIN Admissions a ON a.bed_id = b.bed_id AND a.status = N'Đang điều trị'
+    LEFT JOIN Admissions a ON a.bed_id = b.bed_id AND a.status IN (N'Chờ xếp giường', N'Đang điều trị', N'Theo dõi', N'Ổn định', N'Chờ xuất viện')
     LEFT JOIN Patients p ON p.patient_id = a.patient_id
+    ${whereDepartment}
     ORDER BY d.department_name, r.room_code, b.bed_code
-  `);
+  `, departmentId ? { departmentId: Number(departmentId) } : {});
 }
 
-async function getAvailableBeds() {
+async function getRoomDetail(roomId, departmentId = null) {
+  const whereDepartment = departmentId ? 'AND r.department_id = @departmentId' : '';
+  const params = { roomId: Number(roomId) };
+  if (departmentId) params.departmentId = Number(departmentId);
+
+  const roomRows = await query(`
+    SELECT r.room_id AS roomId, r.room_code AS roomCode, r.room_name AS roomName,
+      r.floor_no AS floorNo, r.room_type AS roomType, r.status,
+      d.department_id AS departmentId, d.department_name AS departmentName
+    FROM Rooms r
+    INNER JOIN Departments d ON d.department_id = r.department_id
+    WHERE r.room_id = @roomId
+      ${whereDepartment}
+  `, params);
+
+  if (!roomRows.length) return null;
+
+  const beds = await query(`
+    SELECT b.bed_id AS bedId, b.bed_code AS bedCode, b.status, b.note,
+      p.patient_code AS patientCode, p.full_name AS patientName,
+      a.admission_id AS admissionId, a.admission_date AS admissionDate
+    FROM Beds b
+    INNER JOIN Rooms r ON r.room_id = b.room_id
+    LEFT JOIN Admissions a ON a.bed_id = b.bed_id AND a.status IN (N'Chờ xếp giường', N'Đang điều trị', N'Theo dõi', N'Ổn định', N'Chờ xuất viện')
+    LEFT JOIN Patients p ON p.patient_id = a.patient_id
+    WHERE b.room_id = @roomId
+      ${whereDepartment}
+    ORDER BY b.bed_code
+  `, params);
+
+  return {
+    room: roomRows[0],
+    beds
+  };
+}
+
+async function ensureDepartmentRoomSeed(departmentId, targetRooms = 10, bedsPerRoom = 4) {
+  await execute(`
+    DECLARE @departmentId INT = @inputDepartmentId;
+    DECLARE @targetRooms INT = @inputTargetRooms;
+    DECLARE @bedsPerRoom INT = @inputBedsPerRoom;
+
+    IF @targetRooms > 100
+      THROW 51018, N'Mỗi khoa chỉ được tối đa 100 phòng.', 1;
+
+    IF @bedsPerRoom > 4
+      THROW 51019, N'Mỗi phòng chỉ được tối đa 4 giường.', 1;
+
+    DECLARE @roomCount INT = (
+      SELECT COUNT(*)
+      FROM Rooms
+      WHERE department_id = @departmentId
+    );
+
+    DECLARE @nextIndex INT = @roomCount + 1;
+    WHILE @roomCount < @targetRooms
+    BEGIN
+      DECLARE @roomCode NVARCHAR(30) = CONCAT(N'A', FORMAT(@nextIndex, '000'));
+      WHILE EXISTS (SELECT 1 FROM Rooms WHERE department_id = @departmentId AND room_code = @roomCode)
+      BEGIN
+        SET @nextIndex += 1;
+        SET @roomCode = CONCAT(N'A', FORMAT(@nextIndex, '000'));
+      END;
+
+      INSERT INTO Rooms (department_id, room_code, room_name, floor_no, room_type, status)
+      VALUES (@departmentId, @roomCode, CONCAT(N'Phòng ', @roomCode), 1, N'Thường', N'Hoạt động');
+
+      SET @roomCount += 1;
+      SET @nextIndex += 1;
+    END;
+
+    DECLARE @roomId INT, @roomCodeCursor NVARCHAR(30), @bedCount INT, @bedIndex INT, @bedCode NVARCHAR(30);
+    DECLARE room_cursor CURSOR LOCAL FAST_FORWARD FOR
+      SELECT TOP (@targetRooms) room_id, room_code
+      FROM Rooms
+      WHERE department_id = @departmentId
+      ORDER BY room_code;
+
+    OPEN room_cursor;
+    FETCH NEXT FROM room_cursor INTO @roomId, @roomCodeCursor;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+      SELECT @bedCount = COUNT(*) FROM Beds WHERE room_id = @roomId;
+      SET @bedIndex = @bedCount + 1;
+
+      WHILE @bedCount < @bedsPerRoom
+      BEGIN
+        SET @bedCode = CONCAT(@roomCodeCursor, N'-', FORMAT(@bedIndex, '00'));
+
+        IF NOT EXISTS (SELECT 1 FROM Beds WHERE bed_code = @bedCode)
+        BEGIN
+          INSERT INTO Beds (room_id, bed_code, status, note)
+          VALUES (@roomId, @bedCode, N'Trống', N'Seed theo workflow 4 giường/phòng');
+          SET @bedCount += 1;
+        END;
+
+        SET @bedIndex += 1;
+      END;
+
+      FETCH NEXT FROM room_cursor INTO @roomId, @roomCodeCursor;
+    END;
+
+    CLOSE room_cursor;
+    DEALLOCATE room_cursor;
+  `, {
+    inputDepartmentId: Number(departmentId),
+    inputTargetRooms: Number(targetRooms),
+    inputBedsPerRoom: Number(bedsPerRoom)
+  });
+}
+
+async function getAvailableBeds(departmentId = null) {
+  const whereDepartment = departmentId ? 'AND r.department_id = @departmentId' : '';
+
   return query(`
     SELECT b.bed_id AS bedId, b.bed_code AS bedCode, r.room_code AS roomCode, d.department_name AS departmentName
     FROM Beds b
     INNER JOIN Rooms r ON r.room_id = b.room_id
     INNER JOIN Departments d ON d.department_id = r.department_id
     WHERE b.status = N'Trống'
+      ${whereDepartment}
     ORDER BY d.department_name, r.room_code, b.bed_code
-  `);
+  `, departmentId ? { departmentId: Number(departmentId) } : {});
 }
 
 async function getActiveAdmissions(doctorId = null) {
@@ -366,46 +503,158 @@ async function getActiveAdmissions(doctorId = null) {
 
   return query(`
     SELECT a.admission_id AS admissionId, p.patient_code AS patientCode, p.full_name AS patientName,
-      d.department_name AS departmentName, r.room_code AS roomCode, b.bed_code AS bedCode
+      d.department_name AS departmentName, r.room_code AS roomCode, b.bed_code AS bedCode,
+      a.status, a.admission_date AS admissionDate, doc.full_name AS doctorName
     FROM Admissions a
     INNER JOIN Patients p ON p.patient_id = a.patient_id
     INNER JOIN Departments d ON d.department_id = a.department_id
+    LEFT JOIN Doctors doc ON doc.doctor_id = a.doctor_id
     LEFT JOIN Rooms r ON r.room_id = a.room_id
     LEFT JOIN Beds b ON b.bed_id = a.bed_id
-    WHERE a.status IN (N'Đang điều trị', N'Theo dõi', N'Ổn định', N'Chờ xuất viện')
+    WHERE a.status IN (N'Chờ xếp giường', N'Đang điều trị', N'Theo dõi', N'Ổn định', N'Chờ xuất viện')
       ${whereDoctor}
-    ORDER BY a.admission_date DESC
+    ORDER BY CASE WHEN a.room_id IS NULL OR a.bed_id IS NULL THEN 0 ELSE 1 END, a.admission_date DESC
   `, doctorId ? { doctorId: Number(doctorId) } : {});
 }
 
-async function transferBed(data) {
-  await execute(`
-    DECLARE @oldBedId INT, @newRoomId INT, @newDepartmentId INT;
+async function transferBed(data, doctorId = null, departmentId = null) {
+  const whereDoctor = doctorId ? 'AND doctor_id = @doctorId' : '';
+  const whereDepartment = departmentId ? 'AND r.department_id = @departmentId' : '';
+  const params = {
+    admissionId: Number(data.admissionId),
+    bedId: Number(data.bedId)
+  };
+  if (doctorId) params.doctorId = Number(doctorId);
+  if (departmentId) params.departmentId = Number(departmentId);
 
-    SELECT @oldBedId = bed_id
+  await execute(`
+    DECLARE @oldBedId INT, @patientId INT, @newRoomId INT, @newDepartmentId INT;
+
+    SELECT @oldBedId = bed_id, @patientId = patient_id
     FROM Admissions
-    WHERE admission_id = @admissionId;
+    WHERE admission_id = @admissionId
+      ${whereDoctor};
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM Admissions
+      WHERE admission_id = @admissionId
+        ${whereDoctor}
+    )
+    BEGIN
+      THROW 51009, N'Không tìm thấy lượt điều trị thuộc phạm vi phụ trách.', 1;
+    END;
+
+    IF EXISTS (
+      SELECT 1
+      FROM Admissions
+      WHERE patient_id = @patientId
+        AND admission_id <> @admissionId
+        AND bed_id IS NOT NULL
+        AND status IN (N'Chờ xếp giường', N'Đang điều trị', N'Theo dõi', N'Ổn định', N'Chờ xuất viện')
+    )
+    BEGIN
+      THROW 51020, N'Bệnh nhân này đang có giường active khác. Vui lòng hoàn tất/chuyển lượt điều trị cũ trước.', 1;
+    END;
 
     SELECT @newRoomId = r.room_id, @newDepartmentId = r.department_id
     FROM Beds b
     INNER JOIN Rooms r ON r.room_id = b.room_id
-    WHERE b.bed_id = @bedId AND b.status = N'Trống';
+    WHERE b.bed_id = @bedId AND b.status = N'Trống'
+      ${whereDepartment}
 
     IF @newRoomId IS NULL
     BEGIN
       THROW 51000, N'Giường được chọn không còn trống.', 1;
     END;
 
+    IF EXISTS (
+      SELECT 1
+      FROM Admissions
+      WHERE bed_id = @bedId
+        AND admission_id <> @admissionId
+        AND status IN (N'Chờ xếp giường', N'Đang điều trị', N'Theo dõi', N'Ổn định', N'Chờ xuất viện')
+    )
+    BEGIN
+      THROW 51021, N'Giường đã có bệnh nhân khác trong lượt điều trị active.', 1;
+    END;
+
     UPDATE Admissions
-    SET bed_id = @bedId, room_id = @newRoomId, department_id = @newDepartmentId
+    SET bed_id = @bedId,
+        room_id = @newRoomId,
+        department_id = @newDepartmentId,
+        status = N'Đang điều trị'
+    WHERE admission_id = @admissionId;
+
+    UPDATE MedicalRecords
+    SET status = N'Đang điều trị',
+        updated_at = SYSDATETIME()
     WHERE admission_id = @admissionId;
 
     UPDATE Beds SET status = N'Trống' WHERE bed_id = @oldBedId;
     UPDATE Beds SET status = N'Đang sử dụng' WHERE bed_id = @bedId;
-  `, {
-    admissionId: Number(data.admissionId),
-    bedId: Number(data.bedId)
-  });
+  `, params);
+}
+
+async function reconcileBedOccupancy(departmentId = null) {
+  const whereDepartment = departmentId ? 'AND r.department_id = @departmentId' : '';
+
+  return execute(`
+    UPDATE b
+    SET b.status = CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM Admissions a
+        WHERE a.bed_id = b.bed_id
+          AND a.status IN (N'Chờ xếp giường', N'Đang điều trị', N'Theo dõi', N'Ổn định', N'Chờ xuất viện')
+      ) THEN N'Đang sử dụng'
+      WHEN b.status = N'Đang sử dụng' THEN N'Trống'
+      ELSE b.status
+    END
+    FROM Beds b
+    INNER JOIN Rooms r ON r.room_id = b.room_id
+    WHERE 1 = 1
+      ${whereDepartment};
+  `, departmentId ? { departmentId: Number(departmentId) } : {});
+}
+
+async function requestAdmissionBed(admissionId, doctorId = null) {
+  const whereDoctor = doctorId ? 'AND doctor_id = @doctorId' : '';
+  const params = { admissionId: Number(admissionId) };
+  if (doctorId) params.doctorId = Number(doctorId);
+
+  await execute(`
+    IF NOT EXISTS (
+      SELECT 1
+      FROM Admissions
+      WHERE admission_id = @admissionId
+        ${whereDoctor}
+        AND status NOT IN (N'Đã hủy', N'Đã xuất viện')
+    )
+    BEGIN
+      THROW 51009, N'Không tìm thấy lượt điều trị phù hợp để gửi nhập viện.', 1;
+    END;
+
+    IF EXISTS (
+      SELECT 1
+      FROM Admissions
+      WHERE admission_id = @admissionId
+        AND room_id IS NOT NULL
+        AND bed_id IS NOT NULL
+    )
+    BEGIN
+      THROW 51010, N'Bệnh nhân đã được xếp buồng/giường.', 1;
+    END;
+
+    UPDATE Admissions
+    SET status = N'Chờ xếp giường'
+    WHERE admission_id = @admissionId;
+
+    UPDATE MedicalRecords
+    SET status = N'Chờ xếp giường',
+        updated_at = SYSDATETIME()
+    WHERE admission_id = @admissionId;
+  `, params);
 }
 
 async function getDoctors() {
@@ -581,28 +830,42 @@ async function getTreatments(doctorId) {
   `, doctorId ? { doctorId: Number(doctorId) } : {});
 }
 
-async function updateTreatmentStatus(scheduleId, data) {
+async function updateTreatmentStatus(scheduleId, data, doctorId = null) {
   const allowedStatuses = ['Chưa thực hiện', 'Đang thực hiện', 'Hoàn thành'];
   const status = allowedStatuses.includes(data.status) ? data.status : 'Chưa thực hiện';
-
-  await execute(`
-    UPDATE TreatmentSchedules
-    SET status = @status,
-        note = NULLIF(@note, '')
-    WHERE schedule_id = @scheduleId
-  `, {
+  const whereDoctor = doctorId ? 'AND a.doctor_id = @doctorId' : '';
+  const params = {
     scheduleId: Number(scheduleId),
     status,
     note: data.note || ''
-  });
+  };
+  if (doctorId) params.doctorId = Number(doctorId);
+
+  await execute(`
+    UPDATE ts
+    SET ts.status = @status,
+        ts.note = NULLIF(@note, '')
+    FROM TreatmentSchedules ts
+    INNER JOIN MedicalRecords mr ON mr.record_id = ts.record_id
+    INNER JOIN Admissions a ON a.admission_id = mr.admission_id
+    WHERE ts.schedule_id = @scheduleId
+      ${whereDoctor};
+
+    IF @@ROWCOUNT = 0
+    BEGIN
+      THROW 51010, N'Không tìm thấy y lệnh thuộc phạm vi phụ trách.', 1;
+    END;
+  `, params);
 }
 
-async function getNursingWorklist() {
+async function getNursingWorklist(doctorId = null) {
+  const whereDoctor = doctorId ? 'AND a.doctor_id = @doctorId' : '';
+
   return query(`
     SELECT TOP 20 a.admission_id AS admissionId, p.patient_id AS patientId,
       p.patient_code AS patientCode, p.full_name AS patientName,
       d.department_name AS departmentName, r.room_code AS roomCode, b.bed_code AS bedCode,
-      a.priority_level AS priorityLevel, mr.vital_signs AS vitalSigns,
+      a.doctor_id AS doctorId, a.priority_level AS priorityLevel, mr.vital_signs AS vitalSigns,
       ts.scheduled_time AS scheduledTime, ts.treatment_content AS treatmentContent,
       ts.status AS treatmentStatus, ts.assignee_name AS assigneeName
     FROM Admissions a
@@ -620,8 +883,9 @@ async function getNursingWorklist() {
         ts.scheduled_time
     ) ts
     WHERE a.status IN (N'Đang điều trị', N'Theo dõi', N'Ổn định')
+      ${whereDoctor}
     ORDER BY CASE a.priority_level WHEN N'Nguy cấp' THEN 0 WHEN N'Cao' THEN 1 ELSE 2 END, a.admission_date DESC
-  `);
+  `, doctorId ? { doctorId: Number(doctorId) } : {});
 }
 
 async function getPrescriptions(doctorId = null) {
@@ -733,6 +997,101 @@ async function getActiveMedicalRecords(doctorId = null) {
     WHERE a.status IN (N'Đang điều trị', N'Theo dõi', N'Ổn định', N'Chờ xuất viện')
       ${whereDoctor}
     ORDER BY a.admission_date DESC
+  `, doctorId ? { doctorId: Number(doctorId) } : {});
+}
+
+async function getClinicalOrderRecords(doctorId = null) {
+  const whereDoctor = doctorId ? 'AND a.doctor_id = @doctorId' : '';
+
+  return query(`
+    SELECT mr.record_id AS recordId, mr.record_code AS recordCode, p.full_name AS patientName,
+      p.patient_code AS patientCode, mr.diagnosis_on_admission AS diagnosis,
+      mr.vital_signs AS vitalSigns, mr.doctor_notes AS doctorNotes, mr.status, mr.created_at AS createdAt,
+      a.admission_id AS admissionId, a.admission_date AS admissionDate, a.status AS admissionStatus,
+      d.department_name AS departmentName, r.room_code AS roomCode, b.bed_code AS bedCode,
+      doc.full_name AS doctorName,
+      CASE WHEN a.status = N'Đã khám' THEN N'Đã khám' ELSE N'Đã nhập viện' END AS clinicalSource
+    FROM MedicalRecords mr
+    INNER JOIN Patients p ON p.patient_id = mr.patient_id
+    INNER JOIN Admissions a ON a.admission_id = mr.admission_id
+    INNER JOIN Departments d ON d.department_id = a.department_id
+    LEFT JOIN Doctors doc ON doc.doctor_id = a.doctor_id
+    LEFT JOIN Rooms r ON r.room_id = a.room_id
+    LEFT JOIN Beds b ON b.bed_id = a.bed_id
+    WHERE a.status IN (N'Đã khám', N'Chờ xếp giường', N'Đang điều trị', N'Theo dõi', N'Ổn định', N'Chờ xuất viện')
+      ${whereDoctor}
+    ORDER BY
+      CASE WHEN a.status = N'Đã khám' THEN 0 ELSE 1 END,
+      a.admission_date DESC
+  `, doctorId ? { doctorId: Number(doctorId) } : {});
+}
+
+async function ensureExamMedicalRecordsForCompletedAppointments(doctorId = null) {
+  const whereDoctor = doctorId ? 'AND doctor_id = @doctorId' : '';
+
+  await execute(`
+    DECLARE @AppointmentCode VARCHAR(40);
+    DECLARE @PatientId INT;
+    DECLARE @DepartmentId INT;
+    DECLARE @AppointmentDoctorId INT;
+    DECLARE @AppointmentTime DATETIME2;
+    DECLARE @Reason NVARCHAR(500);
+    DECLARE @AdmissionId INT;
+    DECLARE @RecordCode VARCHAR(40);
+
+    DECLARE completedAppointments CURSOR LOCAL FAST_FORWARD FOR
+      SELECT appointment_code, patient_id, department_id, doctor_id, appointment_time, reason
+      FROM Appointments
+      WHERE status = N'Đã khám'
+        AND patient_id IS NOT NULL
+        AND department_id IS NOT NULL
+        AND doctor_id IS NOT NULL
+        ${whereDoctor};
+
+    OPEN completedAppointments;
+    FETCH NEXT FROM completedAppointments
+      INTO @AppointmentCode, @PatientId, @DepartmentId, @AppointmentDoctorId, @AppointmentTime, @Reason;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+      SET @RecordCode = CONCAT('HSK', @AppointmentCode);
+
+      IF NOT EXISTS (SELECT 1 FROM MedicalRecords WHERE record_code = @RecordCode)
+      BEGIN
+        INSERT INTO Admissions (
+          patient_id, department_id, doctor_id, admission_date, initial_diagnosis,
+          initial_condition, status, priority_level
+        )
+        VALUES (
+          @PatientId, @DepartmentId, @AppointmentDoctorId, COALESCE(@AppointmentTime, SYSDATETIME()),
+          COALESCE(NULLIF(@Reason, N''), N'Khám bệnh'),
+          N'Đã khám, chờ chỉ định cận lâm sàng hoặc hướng xử trí',
+          N'Đã khám',
+          N'Trung bình'
+        );
+
+        SET @AdmissionId = SCOPE_IDENTITY();
+
+        INSERT INTO MedicalRecords (
+          record_code, patient_id, admission_id, diagnosis_on_admission, medical_history,
+          allergies, vital_signs, doctor_notes, status
+        )
+        VALUES (
+          @RecordCode, @PatientId, @AdmissionId,
+          COALESCE(NULLIF(@Reason, N''), N'Khám bệnh'),
+          N'Chưa ghi nhận', N'Chưa ghi nhận',
+          N'Mạch: --; Huyết áp: --; Nhiệt độ: --; SpO2: --',
+          N'Hồ sơ được mở sau khi bác sĩ hoàn tất khám.',
+          N'Đã khám'
+        );
+      END;
+
+      FETCH NEXT FROM completedAppointments
+        INTO @AppointmentCode, @PatientId, @DepartmentId, @AppointmentDoctorId, @AppointmentTime, @Reason;
+    END;
+
+    CLOSE completedAppointments;
+    DEALLOCATE completedAppointments;
   `, doctorId ? { doctorId: Number(doctorId) } : {});
 }
 
@@ -875,19 +1234,32 @@ async function getLabTestByCode(testCode) {
   return rows[0] || null;
 }
 
-async function updateLabTestResult(testCode, status, resultSummary, resultFiles = null) {
-  return query(`
-    UPDATE LabTests
-    SET status = @status,
-        result_summary = @resultSummary,
-        result_files = COALESCE(@resultFiles, result_files)
-    WHERE test_code = @testCode
-  `, {
+async function updateLabTestResult(testCode, status, resultSummary, resultFiles = null, doctorId = null) {
+  const whereDoctor = doctorId ? 'AND a.doctor_id = @doctorId' : '';
+  const params = {
     testCode,
     status,
     resultSummary,
     resultFiles: resultFiles ? JSON.stringify(resultFiles) : null
-  });
+  };
+  if (doctorId) params.doctorId = Number(doctorId);
+
+  return execute(`
+    UPDATE lt
+    SET lt.status = @status,
+        lt.result_summary = @resultSummary,
+        lt.result_files = COALESCE(@resultFiles, lt.result_files)
+    FROM LabTests lt
+    INNER JOIN MedicalRecords mr ON mr.record_id = lt.record_id
+    INNER JOIN Admissions a ON a.admission_id = mr.admission_id
+    WHERE lt.test_code = @testCode
+      ${whereDoctor};
+
+    IF @@ROWCOUNT = 0
+    BEGIN
+      THROW 51013, N'Không tìm thấy chỉ định thuộc phạm vi phụ trách.', 1;
+    END;
+  `, params);
 }
 
 async function createLabTest(data, enforcedDoctorId = null) {
@@ -1017,9 +1389,11 @@ async function createDischarge(data, doctorId = null) {
     IF NOT EXISTS (
       SELECT 1 FROM Admissions
       WHERE admission_id = @admissionId ${whereDoctor}
+        AND room_id IS NOT NULL
+        AND bed_id IS NOT NULL
     )
     BEGIN
-      THROW 51002, N'Bạn không có quyền xuất viện lượt điều trị này.', 1;
+      THROW 51002, N'Chỉ được ra viện khi điều dưỡng đã xếp buồng/giường cho bệnh nhân.', 1;
     END;
 
     INSERT INTO Discharges (
@@ -1062,9 +1436,11 @@ async function createTransferDisposition(data, doctorId = null) {
     IF NOT EXISTS (
       SELECT 1 FROM Admissions
       WHERE admission_id = @admissionId ${whereDoctor}
+        AND room_id IS NOT NULL
+        AND bed_id IS NOT NULL
     )
     BEGIN
-      THROW 51005, N'Bạn không có quyền chuyển viện lượt điều trị này.', 1;
+      THROW 51005, N'Chỉ được chuyển viện khi điều dưỡng đã xếp buồng/giường cho bệnh nhân.', 1;
     END;
 
     IF EXISTS (SELECT 1 FROM Discharges WHERE admission_id = @admissionId)
@@ -1155,30 +1531,109 @@ async function updateDischargePayment(dischargeId, paymentStatus) {
   `, { dischargeId: Number(dischargeId), paymentStatus });
 }
 
-async function updateNurseVitals(admissionId, vitals) {
+async function updateNurseVitals(admissionId, vitals, doctorId = null) {
+  const whereDoctor = doctorId ? 'AND a.doctor_id = @doctorId' : '';
+  const params = { admissionId: Number(admissionId), vitals };
+  if (doctorId) params.doctorId = Number(doctorId);
+
   return execute(`
-    UPDATE MedicalRecords
-    SET vital_signs = @vitals,
-        updated_at = SYSDATETIME()
-    WHERE admission_id = @admissionId
-  `, { admissionId: Number(admissionId), vitals });
+    UPDATE mr
+    SET mr.vital_signs = @vitals,
+        mr.updated_at = SYSDATETIME()
+    FROM MedicalRecords mr
+    INNER JOIN Admissions a ON a.admission_id = mr.admission_id
+    WHERE mr.admission_id = @admissionId
+      ${whereDoctor};
+
+    IF @@ROWCOUNT = 0
+    BEGIN
+      THROW 51011, N'Không tìm thấy bệnh nhân thuộc phạm vi phụ trách.', 1;
+    END;
+  `, params);
 }
 
-async function updateNurseNotes(admissionId, notes) {
+async function updateNurseNotes(admissionId, notes, doctorId = null) {
+  const whereDoctor = doctorId ? 'AND a.doctor_id = @doctorId' : '';
+  const params = {
+    admissionId: Number(admissionId),
+    notes: `${new Date().toLocaleString()}: ${notes}`
+  };
+  if (doctorId) params.doctorId = Number(doctorId);
+
   return execute(`
-    UPDATE MedicalRecords
-    SET doctor_notes = CONCAT(ISNULL(doctor_notes, ''), CHAR(13), CHAR(10), @notes),
-        updated_at = SYSDATETIME()
-    WHERE admission_id = @admissionId
-  `, { admissionId: Number(admissionId), notes: `${new Date().toLocaleString()}: ${notes}` });
+    UPDATE mr
+    SET mr.doctor_notes = CONCAT(ISNULL(mr.doctor_notes, ''), CHAR(13), CHAR(10), @notes),
+        mr.updated_at = SYSDATETIME()
+    FROM MedicalRecords mr
+    INNER JOIN Admissions a ON a.admission_id = mr.admission_id
+    WHERE mr.admission_id = @admissionId
+      ${whereDoctor};
+
+    IF @@ROWCOUNT = 0
+    BEGIN
+      THROW 51012, N'Không tìm thấy bệnh nhân thuộc phạm vi phụ trách.', 1;
+    END;
+  `, params);
 }
 
-async function updateBedStatus(bedId, status) {
+async function updateBedStatus(bedId, status, departmentId = null) {
+  const whereDepartment = departmentId ? 'AND r.department_id = @departmentId' : '';
+  const params = { bedId: Number(bedId), status };
+  if (departmentId) params.departmentId = Number(departmentId);
+
   return execute(`
-    UPDATE Beds
-    SET status = @status
-    WHERE bed_id = @bedId
-  `, { bedId: Number(bedId), status });
+    UPDATE b
+    SET b.status = @status
+    FROM Beds b
+    INNER JOIN Rooms r ON r.room_id = b.room_id
+    WHERE b.bed_id = @bedId
+      ${whereDepartment};
+
+    IF @@ROWCOUNT = 0
+    BEGIN
+      THROW 51015, N'Không tìm thấy giường thuộc khoa phụ trách.', 1;
+    END;
+  `, params);
+}
+
+async function updateRoomBedStatus(roomId, status, departmentId = null) {
+  const whereDepartment = departmentId ? 'AND r.department_id = @departmentId' : '';
+  const params = {
+    roomId: Number(roomId),
+    status
+  };
+  if (departmentId) params.departmentId = Number(departmentId);
+
+  return execute(`
+    IF NOT EXISTS (
+      SELECT 1
+      FROM Rooms r
+      WHERE r.room_id = @roomId
+        ${whereDepartment}
+    )
+    BEGIN
+      THROW 51022, N'Không tìm thấy phòng thuộc khoa phụ trách.', 1;
+    END;
+
+    UPDATE b
+    SET b.status = @status
+    FROM Beds b
+    INNER JOIN Rooms r ON r.room_id = b.room_id
+    WHERE r.room_id = @roomId
+      ${whereDepartment}
+      AND NOT EXISTS (
+        SELECT 1
+        FROM Admissions a
+        WHERE a.bed_id = b.bed_id
+          AND a.status IN (N'Chờ xếp giường', N'Đang điều trị', N'Theo dõi', N'Ổn định', N'Chờ xuất viện')
+      );
+
+    UPDATE r
+    SET r.status = @status
+    FROM Rooms r
+    WHERE r.room_id = @roomId
+      ${whereDepartment};
+  `, params);
 }
 
 async function getDoctorDuties() {
@@ -1334,9 +1789,13 @@ module.exports = {
   updateBed,
   deleteBed,
   getBeds,
+  getRoomDetail,
+  ensureDepartmentRoomSeed,
+  reconcileBedOccupancy,
   getAvailableBeds,
   getActiveAdmissions,
   transferBed,
+  requestAdmissionBed,
   getDoctors,
   getTreatmentDoctorsOverview,
   getDoctorByUser,
@@ -1346,6 +1805,8 @@ module.exports = {
   getPrescriptions,
   getFinalActionWorklist,
   getActiveMedicalRecords,
+  getClinicalOrderRecords,
+  ensureExamMedicalRecordsForCompletedAppointments,
   createPrescription,
   getLabTests,
   getLabTestByCode,
@@ -1363,6 +1824,7 @@ module.exports = {
   updateNurseVitals,
   updateNurseNotes,
   updateBedStatus,
+  updateRoomBedStatus,
   getDoctorDuties,
   getDutyShiftStats,
   getStaffPerformance,

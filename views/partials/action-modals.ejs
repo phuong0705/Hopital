@@ -54,7 +54,7 @@
     <div class="modal-content app-modal">
       <form action="/beds/transfer" method="post">
         <div class="modal-header">
-          <h5 class="modal-title">Chuyển phòng / giường</h5>
+          <h5 class="modal-title">Xếp / chuyển phòng / giường</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
@@ -66,18 +66,26 @@
               </div>
             </div>
             <div class="mb-3">
-              <label class="form-label">Bệnh nhân đang điều trị</label>
+              <label class="form-label">Bệnh nhân cần xếp/chuyển giường</label>
               <select name="admissionId" class="form-select" id="transferAdmissionSelect" required>
                 <% activeAdmissions.forEach(item => { %>
                   <option value="<%= item.admissionId %>"><%= item.patientCode %> - <%= item.patientName %> · hiện tại: <%= item.roomCode || 'Chưa xếp phòng' %> / <%= item.bedCode || 'Chưa xếp giường' %></option>
                 <% }) %>
               </select>
             </div>
+            <div class="mb-3">
+              <label class="form-label">Phòng chuyển đến</label>
+              <select class="form-select" id="transferRoomSelect" required>
+                <% [...new Map(availableBeds.map(item => [item.roomCode, item])).values()].forEach(item => { %>
+                  <option value="<%= item.roomCode %>"><%= item.departmentName %> · <%= item.roomCode %></option>
+                <% }) %>
+              </select>
+            </div>
             <div>
-              <label class="form-label">Giường trống chuyển đến</label>
-              <select name="bedId" class="form-select" required>
+              <label class="form-label">Giường trống trong phòng</label>
+              <select name="bedId" class="form-select" id="transferBedSelect" required>
                 <% availableBeds.forEach(item => { %>
-                  <option value="<%= item.bedId %>"><%= item.departmentName %> · <%= item.roomCode %> / <%= item.bedCode %></option>
+                  <option value="<%= item.bedId %>" data-room="<%= item.roomCode %>"><%= item.bedCode %></option>
                 <% }) %>
               </select>
             </div>
@@ -86,7 +94,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
-          <button class="btn btn-primary">Chuyển phòng</button>
+          <button class="btn btn-primary">Lưu xếp giường</button>
         </div>
       </form>
     </div>

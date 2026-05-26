@@ -5,7 +5,7 @@
     username: 'guest',
     roleCode: ''
   };
-  const canQuickReception = ['ADMIN', 'DOCTOR', 'RECEPTIONIST'].includes(user.roleCode);
+  const canQuickReception = ['ADMIN', 'RECEPTIONIST'].includes(user.roleCode);
   const isPatient = user.roleCode === 'PATIENT';
 %>
 <header class="topbar">

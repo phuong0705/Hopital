@@ -20,7 +20,6 @@ router.get('/bieu-mau', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']
 router.get('/lap-phieu-kham', requireRole(['ADMIN', 'DOCTOR', 'RECEPTIONIST', 'NURSE']), businessController.examTicket);
 router.post('/lap-phieu-kham', requireRole(['ADMIN', 'RECEPTIONIST']), businessController.createExamTicket);
 router.get('/chan-benh', requireRole(['ADMIN', 'DOCTOR']), businessController.diagnosis);
-router.get('/giao-ban-dien-tu', requireRole(['ADMIN', 'DOCTOR']), businessController.doctorHandoff);
 router.get('/chi-dinh-cdha-thu-thuat', requireRole(['ADMIN', 'DOCTOR']), businessController.imagingProcedureOrders);
 router.get('/tra-cuu-du-lieu-kham', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), businessController.clinicalLookup);
 router.get('/theo-doi-ket-qua-kham', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), businessController.examResults);
@@ -31,16 +30,20 @@ router.get('/lap-phac-do', requireRole(['ADMIN', 'DOCTOR']), businessController.
 router.get('/lich-mo-thu-thuat', requireRole(['ADMIN', 'DOCTOR']), businessController.procedureSchedule);
 router.get('/tong-hop-ket-qua-xet-nghiem', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'LAB']), businessController.labSummary);
 router.get('/tiep-nhan-kham-benh', requireRole(['DOCTOR']), businessController.doctorReceptionExam);
+router.get('/tai-kham', requireRole(['DOCTOR']), businessController.doctorTodayAppointments);
 router.get('/lich-hen-kham-hom-nay', requireRole(['ADMIN', 'DOCTOR']), businessController.doctorTodayAppointments);
 router.post('/lich-hen-kham-hom-nay/:id/status', requireRole(['DOCTOR']), businessController.updateDoctorAppointmentStatus);
 router.get('/phieu-kham-cho', requireRole(['ADMIN', 'DOCTOR']), businessController.pendingExamTickets);
+router.get('/quan-ly-dieu-duong', requireRole(['DOCTOR']), businessController.doctorNurseManagement);
+router.post('/quan-ly-dieu-duong/phan-cong', requireRole(['DOCTOR']), businessController.assignDoctorNurse);
+router.post('/quan-ly-dieu-duong/:id/ngung-phu-trach', requireRole(['DOCTOR']), businessController.stopDoctorNurseAssignment);
 router.get('/xu-tri-sau-kham', requireRole(['ADMIN', 'DOCTOR']), businessController.finalAction);
+router.post('/xu-tri-sau-kham/nhap-vien', requireRole(['ADMIN', 'DOCTOR']), businessController.requestFinalAdmission);
 router.post('/xu-tri-sau-kham/ke-don', requireRole(['ADMIN', 'DOCTOR']), businessController.createFinalPrescription);
 router.post('/xu-tri-sau-kham/ra-vien', requireRole(['ADMIN', 'DOCTOR']), businessController.createFinalDischarge);
 router.post('/xu-tri-sau-kham/chuyen-vien', requireRole(['ADMIN', 'DOCTOR']), businessController.createFinalTransfer);
 
 // Nursing Module
-router.get('/giao-ban-dieu-duong', requireRole(['ADMIN', 'NURSE']), businessController.nurseHandoff);
 router.get('/theo-doi-sinh-hieu', requireRole(['ADMIN', 'NURSE']), businessController.nurseVitals);
 router.post('/theo-doi-sinh-hieu', requireRole(['ADMIN', 'NURSE']), businessController.saveNurseVitals);
 router.get('/ghi-chu-dieu-duong', requireRole(['ADMIN', 'NURSE']), businessController.nurseNotes);

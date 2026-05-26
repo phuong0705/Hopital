@@ -1,0 +1,127 @@
+<%
+  const room = data.room;
+  const beds = data.beds || [];
+  const slots = Array.from({ length: 4 }, (_, index) => beds[index] || {
+    bedCode: `${room.roomCode}-${String(index + 1).padStart(2, '0')}`,
+    status: 'Chưa tạo'
+  });
+%>
+
+<section class="module-hero">
+  <div>
+    <h2>Phòng <%= room.roomCode %></h2>
+    <p class="mb-0"><%= room.departmentName %> · <%= room.roomType %> · tối đa 4 giường</p>
+  </div>
+  <div class="module-actions">
+    <a class="btn btn-light" href="/beds?activeMenu=nurse-beds"><i class="bi bi-arrow-left me-2"></i>Quay lại</a>
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
+    <div>
+      <h3 class="h4 mb-1">Sơ đồ mô phỏng phòng</h3>
+      <p class="text-muted mb-0">Giường trống màu xanh lá, giường có bệnh nhân màu xám.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <span class="badge bg-success-subtle text-success border border-success-subtle">Trống</span>
+      <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Có bệnh nhân</span>
+    </div>
+  </div>
+
+  <div class="room-layout-grid">
+    <% slots.forEach((bed, index) => {
+      const occupied = Boolean(bed.patientName);
+    %>
+      <article class="room-bed-card <%= occupied ? 'is-occupied' : 'is-empty' %>">
+        <div class="room-bed-head">
+          <strong><%= bed.bedCode %></strong>
+          <span>Giường <%= index + 1 %>/4</span>
+        </div>
+        <div class="room-bed-visual">
+          <i class="bi bi-hospital"></i>
+        </div>
+        <% if (occupied) { %>
+          <div class="room-bed-patient">
+            <span><%= bed.patientCode %></span>
+            <strong><%= bed.patientName %></strong>
+          </div>
+        <% } else { %>
+          <div class="room-bed-patient">
+            <span><%= bed.status %></span>
+            <strong>Sẵn sàng tiếp nhận</strong>
+          </div>
+        <% } %>
+      </article>
+    <% }) %>
+  </div>
+</section>
+
+<style>
+  .room-layout-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .room-bed-card {
+    min-height: 220px;
+    border: 1px solid #d8e3ef;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .room-bed-card.is-empty {
+    background: #ecfdf5;
+    border-color: #86efac;
+  }
+
+  .room-bed-card.is-occupied {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+
+  .room-bed-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .room-bed-head span,
+  .room-bed-patient span {
+    color: #64748b;
+    font-size: 13px;
+  }
+
+  .room-bed-visual {
+    height: 74px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.65);
+    color: #0f766e;
+    font-size: 32px;
+  }
+
+  .room-bed-card.is-occupied .room-bed-visual {
+    color: #64748b;
+  }
+
+  .room-bed-patient {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  @media (max-width: 768px) {
+    .room-layout-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

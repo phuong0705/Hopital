@@ -1,3 +1,8 @@
+<%
+  const roleCode = currentUser ? currentUser.roleCode : '';
+  const canCreateAdmission = ['ADMIN', 'RECEPTIONIST'].includes(roleCode);
+%>
+
 <section class="patient-list-hero">
   <div>
     <h2>Tổng quan điều trị</h2>
@@ -6,9 +11,11 @@
     <a href="/patients/list" class="btn btn-light">
       <i class="bi bi-list-ul me-2"></i>Xem tất cả bệnh nhân
     </a>
-    <a href="/patients/reception" class="btn btn-primary">
-      Tiếp nhận mới
-    </a>
+    <% if (canCreateAdmission) { %>
+      <a href="/patients/reception" class="btn btn-primary">
+        Tiếp nhận mới
+      </a>
+    <% } %>
   </div>
 </section>
 

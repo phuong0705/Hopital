@@ -3,7 +3,7 @@
     <h2>Cập nhật trạng thái phòng</h2>
   </div>
   <div class="module-actions">
-    <a href="/beds" class="btn btn-light"><i class="bi bi-grid-3x3-gap me-2"></i>Sơ đồ giường</a>
+    <a href="/beds?activeMenu=nurse-beds" class="btn btn-light"><i class="bi bi-grid-3x3-gap me-2"></i>Sơ đồ giường</a>
   </div>
 </section>
 
@@ -11,7 +11,7 @@
   <div class="module-toolbar">
     <div class="module-search">
       <i class="bi bi-search"></i>
-      <input class="form-control" type="search" placeholder="Tìm mã phòng, mã giường" data-module-search="bedStatusTable">
+      <input class="form-control" type="search" placeholder="Tìm mã phòng, mã giường, bệnh nhân" data-module-search="bedStatusTable">
     </div>
   </div>
 
@@ -19,37 +19,48 @@
     <table class="table app-table module-table" id="bedStatusTable">
       <thead>
         <tr>
+          <th>Chi tiết</th>
           <th>Mã giường</th>
           <th>Phòng</th>
           <th>Khoa</th>
           <th>Loại giường</th>
+          <th>Bệnh nhân</th>
+          <th>Bắt đầu dùng</th>
           <th>Trạng thái hiện tại</th>
-          <th class="text-end">Cập nhật nhanh</th>
+          <th class="text-end">Cập nhật trạng thái</th>
         </tr>
       </thead>
       <tbody>
         <% rows.forEach(row => { %>
-          <tr data-search="<%= `${row.bedCode} ${row.roomCode}`.toLowerCase() %>">
+          <tr data-search="<%= `${row.bedCode} ${row.roomCode} ${row.departmentName} ${row.patientCode || ''} ${row.patientName || ''}`.toLowerCase() %>">
+            <td>
+              <a class="btn btn-sm btn-light" href="/beds/rooms/<%= row.roomId %>?activeMenu=nurse-beds">
+                <i class="bi bi-door-open me-1"></i>Chi tiết phòng
+              </a>
+            </td>
             <td><strong><%= row.bedCode %></strong></td>
             <td><%= row.roomCode %></td>
             <td><%= row.departmentName %></td>
             <td><%= row.roomType %></td>
+            <td>
+              <% if (row.patientName) { %>
+                <strong><%= row.patientCode %></strong>
+                <div class="text-muted small"><%= row.patientName %></div>
+              <% } else { %>
+                <span class="text-muted">Chưa có</span>
+              <% } %>
+            </td>
+            <td><%= row.startDate ? format.date(row.startDate) : '-' %></td>
             <td><%- include('../partials/badge', { text: row.status }) %></td>
             <td class="text-end">
-              <div class="d-flex justify-content-end gap-1">
-                <form action="/nghiep-vu/cap-nhat-trang-thai-phong/<%= row.bedId %>/status" method="POST">
-                  <input type="hidden" name="status" value="Trống">
-                  <button type="submit" class="btn btn-sm btn-outline-success">Sẵn sàng</button>
-                </form>
-                <form action="/nghiep-vu/cap-nhat-trang-thai-phong/<%= row.bedId %>/status" method="POST">
-                  <input type="hidden" name="status" value="Chờ vệ sinh">
-                  <button type="submit" class="btn btn-sm btn-outline-warning">Vệ sinh</button>
-                </form>
-                <form action="/nghiep-vu/cap-nhat-trang-thai-phong/<%= row.bedId %>/status" method="POST">
-                  <input type="hidden" name="status" value="Bảo trì">
-                  <button type="submit" class="btn btn-sm btn-outline-danger">Bảo trì</button>
-                </form>
-              </div>
+              <form class="d-flex justify-content-end gap-2" action="/nghiep-vu/cap-nhat-trang-thai-phong/<%= row.bedId %>/status" method="POST">
+                <select class="form-select form-select-sm" name="status" aria-label="Chọn trạng thái giường" style="max-width: 170px;">
+                  <% ['Trống', 'Đang sử dụng', 'Chờ vệ sinh', 'Bảo trì', 'Cách ly'].forEach(status => { %>
+                    <option value="<%= status %>" <%= row.status === status ? 'selected' : '' %>><%= status %></option>
+                  <% }) %>
+                </select>
+                <button type="submit" class="btn btn-sm btn-primary">Lưu</button>
+              </form>
             </td>
           </tr>
         <% }) %>

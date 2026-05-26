@@ -4,8 +4,8 @@ const { requireRole } = require('../middlewares/role.middleware');
 
 const router = express.Router();
 
-router.get('/reception', requireRole(['ADMIN', 'DOCTOR', 'RECEPTIONIST', 'NURSE']), patientsController.receptionForm);
-router.post('/reception', requireRole(['ADMIN', 'DOCTOR', 'RECEPTIONIST', 'NURSE']), patientsController.createAdmission);
+router.get('/reception', requireRole(['ADMIN', 'RECEPTIONIST']), patientsController.receptionForm);
+router.post('/reception', requireRole(['ADMIN', 'RECEPTIONIST']), patientsController.createAdmission);
 router.get('/me', requireRole(['PATIENT']), patientsController.myProfile);
 router.get('/me/treatments', requireRole(['PATIENT']), patientsController.treatmentsPage);
 router.get('/me/medicines', requireRole(['PATIENT']), patientsController.medicinesPage);
