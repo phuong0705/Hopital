@@ -506,6 +506,9 @@ async function createAdjustment(data, userId) {
   const signedAmount = adjustmentType === 'Điều chỉnh tăng' ? rawAmount : -rawAmount;
 
   await execute(`
+    SET XACT_ABORT ON;
+    BEGIN TRANSACTION;
+
     INSERT INTO BillingAdjustments (
       adjustment_code, billing_id, adjustment_type, amount, reason, created_by
     )
@@ -520,6 +523,8 @@ async function createAdjustment(data, userId) {
       ELSE total_amount + @amount
     END
     WHERE billing_id = @billingId;
+
+    COMMIT TRANSACTION;
   `, {
     billingId: Number(data.billingId),
     adjustmentType,

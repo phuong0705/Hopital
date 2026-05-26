@@ -12,6 +12,12 @@ Tao Azure SQL Database va lay cac thong tin:
 
 Bat firewall/networking de backend Render co the ket noi Azure SQL. Voi Azure SQL, dung `DB_ENCRYPT=true` va `DB_TRUST_SERVER_CERTIFICATE=false`.
 
+Chay cac file SQL migration sau khi tao schema:
+
+```bash
+npm run db:migrate:indexes
+```
+
 ## 2. Deploy backend len Render
 
 Backend Express nam o thu muc goc project.

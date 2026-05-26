@@ -9,7 +9,8 @@
     "dev:backend": "nodemon app.js",
     "reports:dev": "npm --prefix frontend run dev",
     "reports:build": "npm --prefix frontend run build",
-    "db:test": "node scripts/db-test.js"
+    "db:test": "node scripts/db-test.js",
+    "db:migrate:indexes": "node scripts/run-sql-file.js sql/migrations/add-performance-indexes.sql"
   },
   "keywords": [
     "hospital",

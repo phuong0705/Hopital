@@ -276,6 +276,9 @@ async function createAdmission(data) {
   const admissionDate = data.admissionDate ? new Date(data.admissionDate) : new Date();
 
   await execute(`
+    SET XACT_ABORT ON;
+    BEGIN TRANSACTION;
+
     DECLARE @patientId INT;
 
     INSERT INTO Patients (
@@ -307,6 +310,8 @@ async function createAdmission(data) {
       @patientId, SCOPE_IDENTITY(), @initialDiagnosis, N'Chưa ghi nhận', N'Chưa ghi nhận',
       N'Mạch: --; Huyết áp: --; Nhiệt độ: --; SpO2: --', N'Hồ sơ được tạo khi tiếp nhận.', N'Đang điều trị'
     );
+
+    COMMIT TRANSACTION;
   `, {
     patientCode: data.patientCode,
     fullName: data.fullName,
@@ -341,6 +346,9 @@ async function createSupportRequest(data) {
 
 async function createBooking(data) {
   await execute(`
+    SET XACT_ABORT ON;
+    BEGIN TRANSACTION;
+
     DECLARE @patientName NVARCHAR(150);
 
     IF NOT EXISTS (SELECT 1 FROM Patients WHERE patient_id = @patientId)
@@ -367,6 +375,8 @@ async function createBooking(data) {
     VALUES (N'Lịch hẹn mới', 
       CONCAT(N'Bệnh nhân ', @patientName, N' đăng ký tái khám ngày ', FORMAT(CAST(@requestedDate AS DATE), 'dd/MM/yyyy')), 
       'booking-new');
+
+    COMMIT TRANSACTION;
   `, {
     patientId: Number(data.patientId),
     requestedDate: data.requestedDate,
@@ -391,6 +401,9 @@ async function getBookingHistory(patientId) {
 
 async function payBilling(billingId, patientId) {
   await execute(`
+    SET XACT_ABORT ON;
+    BEGIN TRANSACTION;
+
     DECLARE @patientName NVARCHAR(150), @billCode VARCHAR(40);
 
     IF NOT EXISTS (
@@ -419,6 +432,8 @@ async function payBilling(billingId, patientId) {
     VALUES (N'Thanh toán viện phí', 
       CONCAT(N'Bệnh nhân ', @patientName, N' đã thanh toán hóa đơn ', @billCode), 
       'payment-success');
+
+    COMMIT TRANSACTION;
   `, {
     billingId: Number(billingId),
     patientId: Number(patientId)

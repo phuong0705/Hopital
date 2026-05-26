@@ -195,6 +195,7 @@ async function addInventoryTransaction(data) {
   const { medicineId, transactionType, quantity, performedBy, note } = data;
 
   await execute(`
+    SET XACT_ABORT ON;
     BEGIN TRANSACTION;
     
     INSERT INTO MedicineInventoryHistory (medicine_id, transaction_type, quantity, transaction_date, performed_by, note)

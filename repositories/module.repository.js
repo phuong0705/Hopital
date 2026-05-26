@@ -1,5 +1,7 @@
 ﻿const { query, execute } = require('./base.repository');
 
+const { withTransaction } = require('./base.repository');
+
 async function getMedicalRecords(doctorId = null) {
   const whereDoctor = doctorId ? 'WHERE a.doctor_id = @doctorId' : '';
 
@@ -1131,7 +1133,8 @@ async function createPrescription(data, enforcedDoctorId = null) {
   const prescriptionNote = [data.note || '', itemNoteText].filter(Boolean).join('; ');
   const doctorId = enforcedDoctorId ? Number(enforcedDoctorId) : Number(data.doctorId);
 
-  const rows = await query(`
+  await withTransaction(async (tx) => {
+    const rows = await tx.query(`
     DECLARE @prescriptionId INT;
 
     IF NOT EXISTS (
@@ -1163,13 +1166,13 @@ async function createPrescription(data, enforcedDoctorId = null) {
     note: prescriptionNote
   });
 
-  const prescriptionId = rows[0] ? rows[0].prescriptionId : null;
-  if (!prescriptionId) {
-    throw new Error('Không tạo được đơn thuốc.');
-  }
+    const prescriptionId = rows[0] ? rows[0].prescriptionId : null;
+    if (!prescriptionId) {
+      throw new Error('Không tạo được đơn thuốc.');
+    }
 
-  for (const item of medicines) {
-    await execute(`
+    for (const item of medicines) {
+      await tx.execute(`
       INSERT INTO PrescriptionItems (
         prescription_id, medicine_name, dosage, frequency, route, quantity, unit
       )
@@ -1185,7 +1188,8 @@ async function createPrescription(data, enforcedDoctorId = null) {
       quantity: item.quantity,
       unit: item.unit
     });
-  }
+    }
+  });
 }
 
 async function getLabTests(doctorId = null) {
