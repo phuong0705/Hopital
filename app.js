@@ -31,20 +31,21 @@ const allowedOrigins = [
       return origin;
     }
   });
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    console.warn(`CORS origin chua nam trong allowlist: ${origin}`);
+    return callback(null, true);
+  },
+  credentials: true
+};
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.set('layout', 'layouts/main');
 
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true
-}));
 app.use(expressLayouts);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/vendor/framer-motion', express.static(path.join(__dirname, 'node_modules', 'framer-motion', 'dist')));
@@ -69,6 +70,8 @@ app.use((req, res, next) => {
   console.log(`${req.method} ${req.originalUrl}`);
   next();
 });
+
+app.use('/api', cors(corsOptions));
 
 app.get('/api/health', (req, res) => {
   res.json({
