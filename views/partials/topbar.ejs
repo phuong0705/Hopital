@@ -9,6 +9,9 @@
   const isPatient = user.roleCode === 'PATIENT';
 %>
 <header class="topbar">
+  <button class="mobile-menu-btn icon-btn" type="button" data-sidebar-toggle aria-controls="appSidebar" aria-expanded="false" aria-label="Mo menu">
+    <i class="bi bi-list"></i>
+  </button>
   <div class="topbar-actions <%= isPatient ? 'justify-content-end' : '' %>">
     <% if (!isPatient) { %>
       <form class="search-box d-none d-xl-flex" action="/patients" method="get">

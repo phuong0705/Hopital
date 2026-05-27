@@ -1,4 +1,35 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const body = document.body;
+  const sidebar = document.getElementById('appSidebar');
+  const sidebarToggle = document.querySelector('[data-sidebar-toggle]');
+  const sidebarCloseTriggers = document.querySelectorAll('[data-sidebar-close]');
+
+  const setSidebarOpen = (isOpen) => {
+    body.classList.toggle('sidebar-open', isOpen);
+    sidebarToggle?.setAttribute('aria-expanded', String(isOpen));
+  };
+
+  sidebarToggle?.addEventListener('click', () => {
+    setSidebarOpen(!body.classList.contains('sidebar-open'));
+  });
+
+  sidebarCloseTriggers.forEach((trigger) => {
+    trigger.addEventListener('click', () => setSidebarOpen(false));
+  });
+
+  sidebar?.addEventListener('click', (event) => {
+    if (window.innerWidth >= 992) return;
+    if (event.target.closest('a.nav-link')) setSidebarOpen(false);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setSidebarOpen(false);
+  });
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 992) setSidebarOpen(false);
+  });
+
   const cleanupModalState = () => {
     document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
     document.body.classList.remove('modal-open');

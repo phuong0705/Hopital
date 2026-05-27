@@ -1284,12 +1284,34 @@ a:hover {
 }
 
 @media (max-width: 991.98px) {
-  .content-wrap {
-    padding: 18px;
+  .app-shell {
+    display: block;
+  }
+
+  .sidebar {
+    width: min(330px, calc(100vw - 42px));
+    height: 100dvh;
+    min-height: 100dvh;
+    position: fixed;
+    inset: 0 auto 0 0;
+    padding: 18px 14px;
+    transform: translateX(-105%);
+    transition: transform .24s ease;
+    z-index: 1045;
+  }
+
+  body.sidebar-open .sidebar {
+    transform: translateX(0);
   }
 
   .topbar {
-    padding-inline: 18px;
+    min-height: 62px;
+    margin: 10px 12px 0;
+    padding-inline: 14px;
+  }
+
+  .content-wrap {
+    padding: 18px;
   }
 
   .reception-hero,
@@ -1318,6 +1340,26 @@ a:hover {
 }
 
 @media (max-width: 720px) {
+  .topbar {
+    margin: 8px 10px 0;
+    padding-inline: 10px;
+  }
+
+  .content-wrap {
+    padding: 14px 10px 30px;
+  }
+
+  .panel,
+  .reception-hero,
+  .patient-hero,
+  .patient-list-hero,
+  .module-hero,
+  .staff-hero,
+  .treatment-hero,
+  .detail-hero {
+    padding: 16px;
+  }
+
   .auth-motion-page {
     padding: 18px;
   }

@@ -229,6 +229,58 @@
       color: #16a34a;
     }
 
+    @media (max-width: 600px) {
+      body {
+        justify-content: flex-start;
+        padding: 18px 0 24px;
+      }
+
+      .login-container {
+        padding: 12px;
+      }
+
+      .login-card {
+        padding: 30px 20px;
+        border-radius: 24px;
+      }
+
+      .login-header h1 {
+        font-size: 26px;
+      }
+
+      .login-header p {
+        margin-bottom: 30px;
+      }
+
+      .input-group-custom .form-control {
+        height: 52px;
+        font-size: 15px;
+      }
+
+      .btn-login {
+        height: 54px;
+        margin-top: 28px;
+        font-size: 16px;
+      }
+
+      .auth-links {
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 24px;
+        text-align: center;
+      }
+
+      .auth-links .dot {
+        display: none;
+      }
+
+      .login-footer {
+        width: min(100% - 24px, 480px);
+        margin-top: 18px;
+        align-items: flex-start;
+      }
+    }
+
     /* Animation cho việc vào trang */
     .auth-motion-card {
       animation: auth-slide-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -335,4 +387,3 @@
   </script>
 </body>
 </html>
-
