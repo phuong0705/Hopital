@@ -1389,3 +1389,90 @@ a:hover {
     background: #ffffff !important;
   }
 }
+
+@media (max-width: 1024px) {
+  body.sidebar-open {
+    overflow: hidden !important;
+  }
+
+  .app-shell,
+  .app-main {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: block !important;
+  }
+
+  #appSidebar.sidebar {
+    width: min(330px, calc(100vw - 42px)) !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    transform: translate3d(-110%, 0, 0) !important;
+    transition: transform .24s ease !important;
+    z-index: 1045 !important;
+  }
+
+  body.sidebar-open #appSidebar.sidebar {
+    transform: translate3d(0, 0, 0) !important;
+  }
+
+  .mobile-sidebar-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    display: block !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    background: rgba(15, 23, 42, 0.46) !important;
+    backdrop-filter: blur(3px);
+    z-index: 1035 !important;
+  }
+
+  body.sidebar-open .mobile-sidebar-backdrop {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  .mobile-menu-btn,
+  .sidebar-close {
+    display: inline-flex !important;
+  }
+
+  .topbar {
+    width: auto !important;
+    min-height: 58px !important;
+    margin: 8px 10px 0 !important;
+    padding: 8px 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+  }
+
+  .topbar-actions {
+    width: auto !important;
+    min-width: 0 !important;
+    margin-left: auto !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+  }
+
+  .content-wrap {
+    width: 100% !important;
+    padding: 14px 10px 30px !important;
+  }
+
+  .dashboard-welcome h1,
+  .login-hero h1 {
+    font-size: 28px !important;
+    line-height: 1.18 !important;
+    max-width: 100% !important;
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-welcome-content {
+    padding: 24px !important;
+  }
+}
