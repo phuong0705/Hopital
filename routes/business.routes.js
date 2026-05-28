@@ -62,6 +62,7 @@ router.post('/vat-tu-tieu-hao/transaction', requireRole(['ADMIN', 'NURSE', 'PHAR
 // Finance Module
 router.get('/tinh-phi-kham', requireRole(['ADMIN', 'RECEPTIONIST']), businessController.feeExam);
 router.get('/hoa-don', requireRole(['ADMIN', 'RECEPTIONIST']), businessController.invoiceList);
+router.get('/hoa-don/in-bieu-mau', requireRole(['ADMIN', 'RECEPTIONIST']), businessController.printInvoiceTemplate);
 
 // Human Resource Module
 router.get('/quan-ly-bac-si-truc', requireRole(['ADMIN']), businessController.doctorDuty);

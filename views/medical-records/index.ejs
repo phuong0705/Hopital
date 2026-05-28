@@ -1,3 +1,33 @@
+<%
+  const recordFilters = locals.filters || {};
+  const pager = locals.pagination || { page: 1, pageSize: 10, totalRows: rows.length, totalPages: 1 };
+  const menuKey = activeMenu || 'medical-records';
+
+  function formatCareLocation(row) {
+    const department = row.departmentName || 'Chưa phân khoa';
+    const roomBed = row.roomCode || row.bedCode
+      ? [row.roomCode || 'Chưa xếp buồng', row.bedCode || 'Chưa xếp giường'].join(' · ')
+      : 'Chưa xếp buồng/giường';
+    return `${department} · ${roomBed}`;
+  }
+
+  function pageHref(page) {
+    const params = new URLSearchParams();
+    params.set('activeMenu', menuKey);
+    if (recordFilters.q) params.set('q', recordFilters.q);
+    if (recordFilters.status) params.set('status', recordFilters.status);
+    params.set('page', page);
+    return `/medical-records?${params.toString()}`;
+  }
+
+  const pageStart = pager.totalRows ? ((pager.page - 1) * pager.pageSize) + 1 : 0;
+  const pageEnd = Math.min(pager.page * pager.pageSize, pager.totalRows);
+  const pageNumbers = [];
+  for (let pageNo = Math.max(1, pager.page - 2); pageNo <= Math.min(pager.totalPages, pager.page + 2); pageNo += 1) {
+    pageNumbers.push(pageNo);
+  }
+%>
+
 <section class="module-hero">
   <div>
     <h2>Hồ sơ bệnh án</h2>
@@ -11,22 +41,32 @@
 </section>
 
 <section class="panel module-panel mt-4">
-  <div class="module-toolbar">
+  <form class="module-toolbar medical-record-filter-toolbar" method="get" action="/medical-records">
+    <input type="hidden" name="activeMenu" value="<%= menuKey %>">
     <div class="module-search">
       <i class="bi bi-search"></i>
-      <input class="form-control" type="search" placeholder="Tìm bệnh nhân, mã HSBA, chẩn đoán, bác sĩ" data-module-search="medicalRecordsCompletionTable">
+      <input class="form-control" name="q" type="search" value="<%= recordFilters.q || '' %>" placeholder="Tìm bệnh nhân, mã HSBA, chẩn đoán, bác sĩ">
     </div>
-    <select class="form-select" data-module-filter="medicalRecordsCompletionTable" data-filter-key="state">
+    <select class="form-select" name="status">
       <option value="">Tất cả trạng thái</option>
-      <option>Đang điều trị</option>
-      <option>Đang chờ xuất viện</option>
-      <option>Đã xuất viện</option>
+      <% ['Đang điều trị', 'Đang chờ xuất viện', 'Đã xuất viện'].forEach(status => { %>
+        <option value="<%= status %>" <%= recordFilters.status === status ? 'selected' : '' %>><%= status %></option>
+      <% }) %>
     </select>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-funnel me-2"></i>Lọc</button>
+    <% if (recordFilters.q || recordFilters.status) { %>
+      <a class="btn btn-light" href="/medical-records?activeMenu=<%= menuKey %>">Xóa lọc</a>
+    <% } %>
+  </form>
+
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 text-muted small">
+    <span>Hiển thị <strong><%= pageStart %>-<%= pageEnd %></strong> / <strong><%= pager.totalRows %></strong> hồ sơ</span>
+    <span>Mỗi trang <%= pager.pageSize %> hồ sơ</span>
   </div>
 
   <div class="d-flex flex-column gap-3">
     <% rows.forEach(row => {
-      const location = [row.departmentName, row.roomCode, row.bedCode].filter(Boolean).join(' · ') || 'Chưa xếp giường';
+      const location = formatCareLocation(row);
     %>
       <article
         class="border rounded-3 bg-white p-3 medical-record-summary-card"
@@ -84,7 +124,7 @@
       </thead>
       <tbody>
         <% rows.forEach(row => {
-          const location = [row.departmentName, row.roomCode, row.bedCode].filter(Boolean).join(' · ') || 'Chưa xếp giường';
+          const location = formatCareLocation(row);
           const canSubmitComplete = canCompleteRecord && row.completionState === 'Sẵn sàng hoàn tất';
         %>
           <tr
@@ -131,12 +171,12 @@
             </td>
             <td class="text-end no-export">
               <div class="table-actions justify-content-end">
-                <a class="btn btn-sm btn-light action-icon" href="/medical-records/<%= row.recordId %>?activeMenu=doctor-medical-records" data-bs-toggle="tooltip" title="Xem HSBA">
+                <a class="btn btn-sm btn-light action-icon" href="/medical-records/<%= row.recordId %>?activeMenu=<%= menuKey %>" data-bs-toggle="tooltip" title="Xem HSBA">
                   <i class="bi bi-journal-text"></i>
                 </a>
                 <% if (canCompleteRecord) { %>
                   <form action="/medical-records/<%= row.recordId %>/complete" method="post" class="d-inline">
-                    <input type="hidden" name="returnTo" value="/medical-records?activeMenu=doctor-medical-records">
+                    <input type="hidden" name="returnTo" value="<%= pageHref(pager.page) %>">
                     <button class="btn btn-sm <%= canSubmitComplete ? 'btn-primary' : 'btn-light' %> action-icon" type="submit" <%= canSubmitComplete ? '' : 'disabled' %> data-bs-toggle="tooltip" title="Hoàn tất HSBA">
                       <i class="bi bi-check2-square"></i>
                     </button>
@@ -155,8 +195,38 @@
     </table>
   </div>
 
-  <div class="empty-inline module-empty d-none" data-empty-for="medicalRecordsCompletionTable">
+  <div class="empty-inline module-empty <%= rows.length ? 'd-none' : '' %>" data-empty-for="medicalRecordsCompletionTable">
     <i class="bi bi-search"></i>
     <strong>Không tìm thấy hồ sơ phù hợp</strong>
   </div>
+
+  <% if (pager.totalPages > 1) { %>
+    <nav class="mt-4" aria-label="Phân trang hồ sơ bệnh án">
+      <ul class="pagination justify-content-end mb-0">
+        <li class="page-item <%= pager.page <= 1 ? 'disabled' : '' %>">
+          <a class="page-link" href="<%= pager.page <= 1 ? '#' : pageHref(pager.page - 1) %>">Trước</a>
+        </li>
+        <% if (!pageNumbers.includes(1)) { %>
+          <li class="page-item"><a class="page-link" href="<%= pageHref(1) %>">1</a></li>
+          <% if (pageNumbers[0] > 2) { %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          <% } %>
+        <% } %>
+        <% pageNumbers.forEach(pageNo => { %>
+          <li class="page-item <%= pageNo === pager.page ? 'active' : '' %>">
+            <a class="page-link" href="<%= pageHref(pageNo) %>"><%= pageNo %></a>
+          </li>
+        <% }) %>
+        <% if (!pageNumbers.includes(pager.totalPages)) { %>
+          <% if (pageNumbers[pageNumbers.length - 1] < pager.totalPages - 1) { %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          <% } %>
+          <li class="page-item"><a class="page-link" href="<%= pageHref(pager.totalPages) %>"><%= pager.totalPages %></a></li>
+        <% } %>
+        <li class="page-item <%= pager.page >= pager.totalPages ? 'disabled' : '' %>">
+          <a class="page-link" href="<%= pager.page >= pager.totalPages ? '#' : pageHref(pager.page + 1) %>">Sau</a>
+        </li>
+      </ul>
+    </nav>
+  <% } %>
 </section>

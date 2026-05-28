@@ -1,6 +1,9 @@
 const { query, execute } = require('./base.repository');
+const treatmentCostRepository = require('./treatment-cost.repository');
 
 async function ensureCashierTables() {
+  await treatmentCostRepository.ensureTreatmentBillingSchema();
+
   await execute(`
     IF OBJECT_ID(N'dbo.Appointments', N'U') IS NULL
     BEGIN
@@ -72,7 +75,7 @@ async function getCashierSidebarCounts() {
             SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
           FROM TreatmentCosts tc
           OUTER APPLY (
-            SELECT SUM(paid_amount) AS paidAmount
+            SELECT SUM(paid_amount + insurance_covered) AS paidAmount
             FROM InpatientReceipts
             WHERE admission_id = tc.admission_id
           ) receipts
@@ -90,7 +93,7 @@ async function getCashierSidebarCounts() {
               SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
             FROM TreatmentCosts tc
             OUTER APPLY (
-              SELECT SUM(paid_amount) AS paidAmount
+              SELECT SUM(paid_amount + insurance_covered) AS paidAmount
               FROM InpatientReceipts
               WHERE admission_id = tc.admission_id
             ) receipts
@@ -489,7 +492,7 @@ async function getQueue() {
           SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
         FROM TreatmentCosts tc
         OUTER APPLY (
-          SELECT SUM(paid_amount) AS paidAmount
+          SELECT SUM(paid_amount + insurance_covered) AS paidAmount
           FROM InpatientReceipts
           WHERE admission_id = tc.admission_id
         ) receipts
@@ -505,12 +508,14 @@ async function getQueue() {
 }
 
 async function getPrintableDocuments() {
+  await treatmentCostRepository.ensureTreatmentBillingSchema();
+
   return query(`
     SELECT r.receipt_id AS billingId, r.receipt_code AS billCode, r.created_at AS createdAt,
       p.patient_code AS patientCode, p.full_name AS patientName, p.phone,
       dep.department_name AS departmentName, 0 AS consultationFee,
       0 AS bedFee, 0 AS medicineFee, 0 AS labFee,
-      0 AS insuranceCovered, r.total_amount AS totalAmount,
+      r.insurance_covered AS insuranceCovered, r.total_amount AS totalAmount,
       r.payment_status AS paymentStatus
     FROM InpatientReceipts r
     INNER JOIN Admissions adm ON adm.admission_id = r.admission_id
@@ -588,7 +593,7 @@ async function getCashierShiftReport() {
             SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
           FROM TreatmentCosts tc
           OUTER APPLY (
-            SELECT SUM(paid_amount) AS paidAmount
+            SELECT SUM(paid_amount + insurance_covered) AS paidAmount
             FROM InpatientReceipts
             WHERE admission_id = tc.admission_id
           ) receipts
@@ -597,7 +602,7 @@ async function getCashierShiftReport() {
         WHERE due.dueAmount > 0
       ) AS unpaidBills,
       (SELECT ISNULL(SUM(paid_amount), 0) FROM InpatientReceipts WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)) AS revenueToday,
-      0 AS insuranceToday,
+      (SELECT ISNULL(SUM(insurance_covered), 0) FROM InpatientReceipts WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)) AS insuranceToday,
       (SELECT ISNULL(SUM(amount), 0) FROM BillingAdjustments WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)) AS adjustmentsToday
   `);
 

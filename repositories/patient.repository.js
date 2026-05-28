@@ -254,7 +254,7 @@ async function getPatientPortal(patientId, filters = {}) {
       WHERE admission_id = a.admission_id
     ) costStats
     OUTER APPLY (
-      SELECT SUM(paid_amount) AS paidAmount
+      SELECT SUM(paid_amount + insurance_covered) AS paidAmount
       FROM InpatientReceipts
       WHERE admission_id = a.admission_id
     ) receiptStats

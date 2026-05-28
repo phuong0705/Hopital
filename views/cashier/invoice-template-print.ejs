@@ -1,0 +1,224 @@
+<%
+  const doc = typeof data !== 'undefined' ? data : {};
+  const money = (value) => new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0
+  }).format(Number(value || 0));
+  const dot = (value) => value || '........................................';
+  const longDot = (value) => value || '................................................................';
+  const selectedTemplate = typeof template !== 'undefined' ? template : {};
+  const pageTitle = typeof title !== 'undefined' ? title : 'Hóa đơn viện phí';
+  const templateTitle = selectedTemplate?.name || pageTitle;
+  const templateCode = selectedTemplate?.code || 'HD-VP';
+  const createdDate = doc.createdAt ? new Date(doc.createdAt) : new Date();
+  const dateText = Number.isNaN(createdDate.getTime())
+    ? 'Ngày ...... tháng ...... năm ........'
+    : `Ngày ${String(createdDate.getDate()).padStart(2, '0')} tháng ${String(createdDate.getMonth() + 1).padStart(2, '0')} năm ${createdDate.getFullYear()}`;
+%>
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= pageTitle %></title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #eef3f7;
+      color: #000;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 14px;
+    }
+    .toolbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #fff;
+      border-bottom: 1px solid #d7dee8;
+      font-family: Arial, sans-serif;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .toolbar button {
+      border: 1px solid #0b82b7;
+      background: #0089bd;
+      color: #fff;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 16px auto;
+      background: #fff;
+      padding: 14mm 16mm;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+    }
+    .topline {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr 1fr;
+      gap: 12px;
+      align-items: start;
+      text-align: center;
+      font-size: 13px;
+    }
+    .left { text-align: left; }
+    .right { text-align: right; }
+    h1 {
+      margin: 24px 0 6px;
+      text-align: center;
+      font-size: 25px;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      text-align: center;
+      margin-bottom: 22px;
+      font-style: italic;
+    }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    td, th { border: 1px solid #777; padding: 7px 9px; vertical-align: top; }
+    th {
+      text-align: left;
+      background: #f4f4f4;
+      font-weight: 700;
+    }
+    .label { width: 28%; font-weight: 700; background: #f4f4f4; }
+    .money-table td:last-child,
+    .money-table th:last-child {
+      text-align: right;
+    }
+    .summary-row td {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .note {
+      min-height: 54px;
+    }
+    .signature {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-top: 30px;
+      text-align: center;
+    }
+    .signature strong { display: block; margin-bottom: 76px; }
+    .small-note { font-style: italic; font-size: 13px; }
+    @media print {
+      @page { size: A4 portrait; margin: 12mm; }
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .page {
+        width: auto;
+        min-height: auto;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="window.print()">In biểu mẫu</button>
+  </div>
+
+  <main class="page">
+    <div class="topline">
+      <div class="left">
+        <strong>BỆNH VIỆN ĐA KHOA VIỆT NAM</strong><br>
+        Khoa/Phòng: <%= doc.departmentName || '........................' %>
+      </div>
+      <div>
+        <strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><br>
+        Độc lập - Tự do - Hạnh phúc
+      </div>
+      <div class="right">
+        Mẫu: <%= templateCode %><br>
+        Số: ................
+      </div>
+    </div>
+
+    <h1><%= templateTitle %></h1>
+    <div class="subtitle"><%= dateText %></div>
+
+    <table>
+      <tr>
+        <td class="label">Họ tên bệnh nhân</td>
+        <td><%= dot(doc.patientName) %></td>
+      </tr>
+      <tr>
+        <td class="label">Mã bệnh nhân / HSBA</td>
+        <td><%= dot(doc.patientCode) %></td>
+      </tr>
+      <tr>
+        <td class="label">Khoa / Phòng</td>
+        <td><%= longDot(doc.departmentName) %></td>
+      </tr>
+      <tr>
+        <td class="label">Số điện thoại</td>
+        <td><%= dot(doc.phone) %></td>
+      </tr>
+      <tr>
+        <td class="label">Nội dung thu</td>
+        <td><%= longDot(doc.content) %></td>
+      </tr>
+    </table>
+
+    <table class="money-table" style="margin-top: 18px;">
+      <thead>
+        <tr>
+          <th>Khoản mục</th>
+          <th>Số tiền</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Tổng phát sinh</td>
+          <td><%= money(doc.totalAmount) %></td>
+        </tr>
+        <tr>
+          <td>BHYT / miễn giảm</td>
+          <td><%= money(doc.insuranceAmount) %></td>
+        </tr>
+        <tr>
+          <td>Đã thanh toán</td>
+          <td><%= money(doc.paidAmount) %></td>
+        </tr>
+        <tr class="summary-row">
+          <td>Còn phải thu</td>
+          <td><%= money(doc.remainingAmount) %></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table style="margin-top: 18px;">
+      <tr>
+        <td class="label">Ghi chú</td>
+        <td class="note"><%= doc.note || '' %></td>
+      </tr>
+    </table>
+
+    <div class="signature">
+      <div>
+        <strong>Người nộp tiền</strong>
+        <span class="small-note">(Ký, ghi rõ họ tên)</span>
+      </div>
+      <div>
+        <strong>Thu ngân</strong>
+        <span class="small-note">(Ký, ghi rõ họ tên)</span>
+      </div>
+      <div>
+        <strong>Kế toán</strong>
+        <span class="small-note">(Ký, ghi rõ họ tên)</span>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

@@ -39,6 +39,7 @@ export type ReportsPayload = {
   user: {
     fullName?: string;
     roleCode: string;
+    reportScope?: string | null;
   };
   permissions: Record<ReportKey, boolean>;
   data: {

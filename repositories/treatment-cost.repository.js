@@ -50,6 +50,13 @@ async function ensureTreatmentBillingSchema() {
       );
     END;
 
+    IF COL_LENGTH(N'dbo.InpatientReceipts', N'insurance_covered') IS NULL
+    BEGIN
+      ALTER TABLE dbo.InpatientReceipts
+      ADD insurance_covered DECIMAL(18,2) NOT NULL
+        CONSTRAINT DF_InpatientReceipts_insurance_covered DEFAULT 0;
+    END;
+
     IF OBJECT_ID(N'dbo.TreatmentCosts', N'U') IS NULL
     BEGIN
       CREATE TABLE dbo.TreatmentCosts (
@@ -300,51 +307,85 @@ async function syncExistingTreatmentCosts() {
   `);
 }
 
-async function getAdmissionCostSummary() {
+async function getAdmissionCostSummary(filters = {}) {
   await syncExistingTreatmentCosts();
 
+  const pageSize = Number(filters.pageSize || 0);
+  const page = Math.max(Number(filters.page || 1), 1);
+  const offset = (page - 1) * pageSize;
+  const params = {};
+  const whereClauses = [
+    "admissionStatus <> N'Đã xuất viện'",
+    "ISNULL(dischargePaymentStatus, N'') <> N'Đã thanh toán'"
+  ];
+
+  if (filters.search) {
+    whereClauses.push(`(
+      patientCode LIKE @search
+      OR patientName LIKE @search
+      OR departmentName LIKE @search
+      OR doctorName LIKE @search
+    )`);
+    params.search = `%${filters.search}%`;
+  }
+
+  if (pageSize > 0) {
+    params.offset = offset;
+    params.pageSize = pageSize;
+  }
+
+  const whereClause = whereClauses.length ? `WHERE ${whereClauses.join('\n      AND ')}` : '';
+  const pagingClause = pageSize > 0 ? 'OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY' : '';
+
   return query(`
-    SELECT a.admission_id AS admissionId, mr.record_id AS recordId,
-      p.patient_id AS patientId, p.patient_code AS patientCode, p.full_name AS patientName,
-      d.department_name AS departmentName, doc.full_name AS doctorName,
-      a.status AS admissionStatus,
-      CASE WHEN discharge.discharge_id IS NULL THEN 0 ELSE 1 END AS hasDischargeRecord,
-      COUNT(tc.cost_id) AS costCount,
-      SUM(CASE WHEN tc.status = N'Chờ thực hiện' THEN tc.amount ELSE 0 END) AS waitingAmount,
-      SUM(CASE WHEN tc.status = N'Đã thực hiện' THEN tc.amount ELSE 0 END) AS readyAmount,
-      SUM(CASE WHEN tc.status = N'Đã tính phí' THEN tc.amount ELSE 0 END) AS chargedAmount,
-      COALESCE(receiptStats.paidAmount, 0) + SUM(CASE WHEN tc.status = N'Đã thanh toán' THEN tc.amount ELSE 0 END) AS paidAmount,
-      CASE
-        WHEN SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - COALESCE(receiptStats.paidAmount, 0) < 0 THEN 0
-        ELSE SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - COALESCE(receiptStats.paidAmount, 0)
-      END AS payableAmount,
-      MAX(tc.incurred_at) AS latestCostAt
-    FROM TreatmentCosts tc
-    INNER JOIN Admissions a ON a.admission_id = tc.admission_id
-    INNER JOIN Patients p ON p.patient_id = a.patient_id
-    INNER JOIN Departments d ON d.department_id = a.department_id
-    INNER JOIN Doctors doc ON doc.doctor_id = a.doctor_id
-    LEFT JOIN MedicalRecords mr ON mr.record_id = tc.record_id
-    OUTER APPLY (
-      SELECT TOP 1 discharge_id
-      FROM Discharges
-      WHERE admission_id = a.admission_id
-      ORDER BY discharge_date DESC, discharge_id DESC
-    ) discharge
-    OUTER APPLY (
-      SELECT SUM(paid_amount) AS paidAmount
-      FROM (
-        SELECT DISTINCT r.receipt_id, r.paid_amount
-        FROM InpatientReceipts r
-        INNER JOIN InpatientReceiptItems ri ON ri.receipt_id = r.receipt_id
-        INNER JOIN TreatmentCosts linkedCost ON linkedCost.cost_id = ri.cost_id
-        WHERE r.admission_id = a.admission_id
-          AND linkedCost.status IN (N'Đã thực hiện', N'Đã tính phí')
-      ) paidReceipts
-    ) receiptStats
-    GROUP BY a.admission_id, mr.record_id, p.patient_id, p.patient_code, p.full_name, d.department_name, doc.full_name, a.status, discharge.discharge_id, receiptStats.paidAmount
-    ORDER BY MAX(tc.incurred_at) DESC
-  `);
+    WITH costSummary AS (
+      SELECT a.admission_id AS admissionId, mr.record_id AS recordId,
+        p.patient_id AS patientId, p.patient_code AS patientCode, p.full_name AS patientName,
+        d.department_name AS departmentName, doc.full_name AS doctorName,
+        a.status AS admissionStatus,
+        CASE WHEN discharge.discharge_id IS NULL THEN 0 ELSE 1 END AS hasDischargeRecord,
+        discharge.payment_status AS dischargePaymentStatus,
+        COUNT(tc.cost_id) AS costCount,
+        SUM(CASE WHEN tc.status = N'Chờ thực hiện' THEN tc.amount ELSE 0 END) AS waitingAmount,
+        SUM(CASE WHEN tc.status = N'Đã thực hiện' THEN tc.amount ELSE 0 END) AS readyAmount,
+        SUM(CASE WHEN tc.status = N'Đã tính phí' THEN tc.amount ELSE 0 END) AS chargedAmount,
+        COALESCE(receiptStats.paidAmount, 0) + SUM(CASE WHEN tc.status = N'Đã thanh toán' THEN tc.amount ELSE 0 END) AS paidAmount,
+        CASE
+          WHEN SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - COALESCE(receiptStats.paidAmount, 0) < 0 THEN 0
+          ELSE SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - COALESCE(receiptStats.paidAmount, 0)
+        END AS payableAmount,
+        MAX(tc.incurred_at) AS latestCostAt
+      FROM TreatmentCosts tc
+      INNER JOIN Admissions a ON a.admission_id = tc.admission_id
+      INNER JOIN Patients p ON p.patient_id = a.patient_id
+      INNER JOIN Departments d ON d.department_id = a.department_id
+      INNER JOIN Doctors doc ON doc.doctor_id = a.doctor_id
+      LEFT JOIN MedicalRecords mr ON mr.record_id = tc.record_id
+      OUTER APPLY (
+        SELECT TOP 1 discharge_id, payment_status
+        FROM Discharges
+        WHERE admission_id = a.admission_id
+        ORDER BY discharge_date DESC, discharge_id DESC
+      ) discharge
+      OUTER APPLY (
+        SELECT SUM(paid_amount + insurance_covered) AS paidAmount
+        FROM (
+          SELECT DISTINCT r.receipt_id, r.paid_amount, r.insurance_covered
+          FROM InpatientReceipts r
+          INNER JOIN InpatientReceiptItems ri ON ri.receipt_id = r.receipt_id
+          INNER JOIN TreatmentCosts linkedCost ON linkedCost.cost_id = ri.cost_id
+          WHERE r.admission_id = a.admission_id
+            AND linkedCost.status IN (N'Đã thực hiện', N'Đã tính phí')
+        ) paidReceipts
+      ) receiptStats
+      GROUP BY a.admission_id, mr.record_id, p.patient_id, p.patient_code, p.full_name, d.department_name, doc.full_name, a.status, discharge.discharge_id, discharge.payment_status, receiptStats.paidAmount
+    )
+    SELECT *, COUNT(1) OVER() AS totalRows
+    FROM costSummary
+    ${whereClause}
+    ORDER BY latestCostAt DESC
+    ${pagingClause}
+  `, params);
 }
 
 async function getCostsByAdmission(admissionId) {
@@ -394,7 +435,8 @@ async function getReceiptsByPatient(patientId) {
 
   return query(`
     SELECT r.receipt_id AS receiptId, r.receipt_code AS receiptCode, r.total_amount AS totalAmount,
-      r.paid_amount AS paidAmount, r.payment_method AS paymentMethod, r.payment_status AS paymentStatus,
+      r.paid_amount AS paidAmount, r.insurance_covered AS insuranceCovered,
+      r.payment_method AS paymentMethod, r.payment_status AS paymentStatus,
       r.created_at AS createdAt, u.full_name AS cashierName
     FROM InpatientReceipts r
     INNER JOIN Users u ON u.user_id = r.cashier_user_id
@@ -451,6 +493,9 @@ async function createReceipt(data, cashierUserId) {
 
   const admissionId = Number(data.admissionId);
   const paidAmountInput = Number(data.paidAmount || 0);
+  const insuranceCoveredInput = data.insuranceCovered === undefined
+    ? null
+    : Number(data.insuranceCovered || 0);
   const paymentMethod = data.paymentMethod || 'Tiền mặt';
 
   return withTransaction(async (tx) => {
@@ -458,6 +503,7 @@ async function createReceipt(data, cashierUserId) {
       DECLARE @chargeableAmount DECIMAL(18,2);
       DECLARE @paidBefore DECIMAL(18,2);
       DECLARE @totalAmount DECIMAL(18,2);
+      DECLARE @insuranceCovered DECIMAL(18,2) = @inputInsuranceCovered;
       DECLARE @patientId INT;
       DECLARE @recordId INT;
       DECLARE @receiptId INT;
@@ -474,9 +520,9 @@ async function createReceipt(data, cashierUserId) {
       WHERE admission_id = @admissionId
         AND status IN (N'Đã thực hiện', N'Đã tính phí');
 
-      SELECT @paidBefore = ISNULL(SUM(paid_amount), 0)
+      SELECT @paidBefore = ISNULL(SUM(paid_amount + insurance_covered), 0)
       FROM (
-        SELECT DISTINCT r.receipt_id, r.paid_amount
+        SELECT DISTINCT r.receipt_id, r.paid_amount, r.insurance_covered
         FROM InpatientReceipts r
         INNER JOIN InpatientReceiptItems ri ON ri.receipt_id = r.receipt_id
         INNER JOIN TreatmentCosts linkedCost ON linkedCost.cost_id = ri.cost_id
@@ -494,23 +540,27 @@ async function createReceipt(data, cashierUserId) {
         THROW 51041, N'Không có chi phí đã thực hiện để lập phiếu thu.', 1;
       END;
 
+      IF @insuranceCovered IS NULL SET @insuranceCovered = ROUND(@totalAmount * 0.2, 0);
+      IF @insuranceCovered < 0 SET @insuranceCovered = 0;
+      IF @insuranceCovered > @totalAmount SET @insuranceCovered = @totalAmount;
+
       IF @paidAmount < 0 SET @paidAmount = 0;
-      IF @paidAmount > @totalAmount SET @paidAmount = @totalAmount;
+      IF @paidAmount > @totalAmount - @insuranceCovered SET @paidAmount = @totalAmount - @insuranceCovered;
 
       SET @paymentStatus = CASE
-        WHEN @paidAmount >= @totalAmount THEN N'Đã thanh toán'
+        WHEN @paidAmount + @insuranceCovered >= @totalAmount THEN N'Đã thanh toán'
         WHEN @paidAmount > 0 THEN N'Một phần'
         ELSE N'Chưa thanh toán'
       END;
 
       INSERT INTO InpatientReceipts (
         receipt_code, patient_id, admission_id, record_id, cashier_user_id,
-        total_amount, paid_amount, payment_method, payment_status
+        total_amount, paid_amount, insurance_covered, payment_method, payment_status
       )
       VALUES (
         CONCAT('PT', FORMAT(SYSDATETIME(), 'yyMMddHHmmssfff')),
         @patientId, @admissionId, @recordId, @cashierUserId,
-        @totalAmount, @paidAmount, @paymentMethod, @paymentStatus
+        @totalAmount, @paidAmount, @insuranceCovered, @paymentMethod, @paymentStatus
       );
 
       SET @receiptId = SCOPE_IDENTITY();
@@ -558,6 +608,7 @@ async function createReceipt(data, cashierUserId) {
     `, {
       admissionId,
       inputPaidAmount: paidAmountInput,
+      inputInsuranceCovered: Number.isFinite(insuranceCoveredInput) ? insuranceCoveredInput : null,
       paymentMethod,
       cashierUserId: Number(cashierUserId)
     });
@@ -620,6 +671,7 @@ async function getReceipt(receiptId) {
   const receiptRows = await query(`
     SELECT r.receipt_id AS receiptId, r.receipt_code AS receiptCode,
       r.total_amount AS totalAmount, r.paid_amount AS paidAmount,
+      r.insurance_covered AS insuranceCovered,
       r.payment_method AS paymentMethod, r.payment_status AS paymentStatus,
       r.created_at AS createdAt,
       p.patient_code AS patientCode, p.full_name AS patientName, p.date_of_birth AS dateOfBirth,
@@ -667,9 +719,9 @@ async function notifyPaymentDue(admissionId, cashierUserId) {
     WHERE admission_id = @admissionId
       AND status IN (N'Đã thực hiện', N'Đã tính phí');
 
-    SELECT @amount = @amount - ISNULL(SUM(paid_amount), 0)
+    SELECT @amount = @amount - ISNULL(SUM(paid_amount + insurance_covered), 0)
     FROM (
-      SELECT DISTINCT r.receipt_id, r.paid_amount
+      SELECT DISTINCT r.receipt_id, r.paid_amount, r.insurance_covered
       FROM InpatientReceipts r
       INNER JOIN InpatientReceiptItems ri ON ri.receipt_id = r.receipt_id
       INNER JOIN TreatmentCosts linkedCost ON linkedCost.cost_id = ri.cost_id

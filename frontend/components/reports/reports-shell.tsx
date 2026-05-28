@@ -49,6 +49,15 @@ const tabIcons: Record<ReportKey, React.ReactNode> = {
   discharges: <FileBarChart className="h-4 w-4" />
 };
 
+const roleDescriptions: Record<string, string> = {
+  ADMIN: "Dashboard quản trị tổng hợp toàn viện.",
+  DOCTOR: "Dashboard theo phạm vi bệnh nhân và chỉ định của bác sĩ đang đăng nhập.",
+  NURSE: "Dashboard theo khoa hoặc bác sĩ điều dưỡng đang phụ trách.",
+  RECEPTIONIST: "Dashboard thu ngân/tiếp nhận gồm doanh thu, lượt khám và hồ sơ xuất viện.",
+  PHARMACY: "Dashboard dược chỉ gồm dữ liệu thuốc và cấp phát.",
+  LAB: "Tài khoản xét nghiệm chưa có dashboard báo cáo riêng trong module này."
+};
+
 function numberValue(value: unknown) {
   return Number(value || 0);
 }
@@ -213,7 +222,8 @@ export function ReportsShell({
               Báo cáo - thống kê
             </h1>
             <p className="mt-2 text-base text-muted-foreground">
-              Dashboard tổng hợp bệnh nhân nội trú, doanh thu, lượt khám, thuốc và xuất viện từ dữ liệu HIS.
+              {roleDescriptions[payload.user.roleCode] || "Dashboard theo quyền dữ liệu của tài khoản đang đăng nhập."}
+              {payload.user.reportScope ? ` Phạm vi: ${payload.user.reportScope}.` : ""}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -255,34 +265,43 @@ export function ReportsShell({
           ))}
         </div>
 
-        <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <Tabs value={activeTab} onValueChange={updateTab}>
-            <TabsList>
-              {tabs.map((tab) => (
-                <TabsTrigger key={tab} value={tab} className="gap-2">
-                  {tabIcons[tab]}
-                  {tabLabels[tab]}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+        {tabs.length ? (
+          <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <Tabs value={activeTab} onValueChange={updateTab}>
+              <TabsList>
+                {tabs.map((tab) => (
+                  <TabsTrigger key={tab} value={tab} className="gap-2">
+                    {tabIcons[tab]}
+                    {tabLabels[tab]}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
 
-          <div className="relative w-full lg:w-80">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Tìm trong bảng hiện tại"
-            />
+            <div className="relative w-full lg:w-80">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Tìm trong bảng hiện tại"
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Chưa có dashboard báo cáo cho vai trò này</CardTitle>
+              <CardDescription>Vui lòng dùng module nghiệp vụ tương ứng với tài khoản hiện tại.</CardDescription>
+            </CardHeader>
+          </Card>
+        )}
 
-        {activeTab === "inpatient" && <InpatientReport payload={payload} query={query} />}
-        {activeTab === "revenue" && <RevenueReport payload={payload} query={query} />}
-        {activeTab === "visits" && <VisitsReport payload={payload} query={query} />}
-        {activeTab === "medicines" && <MedicinesReport payload={payload} query={query} />}
-        {activeTab === "discharges" && <DischargesReport payload={payload} query={query} />}
+        {payload.permissions.inpatient && activeTab === "inpatient" && <InpatientReport payload={payload} query={query} />}
+        {payload.permissions.revenue && activeTab === "revenue" && <RevenueReport payload={payload} query={query} />}
+        {payload.permissions.visits && activeTab === "visits" && <VisitsReport payload={payload} query={query} />}
+        {payload.permissions.medicines && activeTab === "medicines" && <MedicinesReport payload={payload} query={query} />}
+        {payload.permissions.discharges && activeTab === "discharges" && <DischargesReport payload={payload} query={query} />}
       </section>
     </main>
   );

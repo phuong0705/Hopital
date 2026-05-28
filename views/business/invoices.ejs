@@ -1,60 +1,104 @@
+<%
+  const fallbackTemplates = [
+    { key: 'invoice', name: 'Hóa đơn viện phí' },
+    { key: 'receipt', name: 'Phiếu thu viện phí' },
+    { key: 'payment-request', name: 'Phiếu đề nghị thanh toán' }
+  ];
+  const templates = typeof invoiceTemplates !== 'undefined' && invoiceTemplates.length ? invoiceTemplates : fallbackTemplates;
+  const invoiceRows = typeof rows !== 'undefined' ? rows : [];
+  const defaultTemplate = templates[0] || { key: 'invoice', name: 'Hóa đơn viện phí' };
+  const buildPrintHref = (row) => {
+    const params = new URLSearchParams({
+      template: defaultTemplate.key,
+      patientName: row.patientName || '',
+      patientCode: row.patientCode || '',
+      departmentName: row.departmentName || '',
+      amount: String((row.totalAmount || 0) + (row.insuranceCovered || 0)),
+      insuranceAmount: String(row.insuranceCovered || 0),
+      paidAmount: String(row.totalAmount || 0),
+      content: row.billCode ? `Thanh toán viện phí ${row.billCode}` : 'Thanh toán viện phí'
+    });
+    return `/nghiep-vu/hoa-don/in-bieu-mau?${params.toString()}`;
+  };
+%>
+
 <section class="module-hero">
   <div>
-    <h2>Quản lý hóa đơn & chứng từ</h2>
+    <h2>Quản lý hóa đơn</h2>
   </div>
   <div class="module-actions">
-    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In báo cáo</button>
+    <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In danh sách</button>
   </div>
 </section>
 
 <section class="panel mt-4">
+  <div class="panel-header">
+    <div>
+      <h2>Chứng từ đã phát hành</h2>
+      <p>Tra cứu nhanh và in lại hóa đơn từ dữ liệu viện phí đã có.</p>
+    </div>
+  </div>
+
   <div class="module-toolbar">
     <div class="module-search">
       <i class="bi bi-search"></i>
       <input class="form-control" type="search" placeholder="Tìm số hóa đơn hoặc tên BN" data-module-search="invoiceTable">
     </div>
+    <select class="form-select" data-module-filter="invoiceTable" data-filter-key="status">
+      <option value="">Tất cả trạng thái</option>
+      <% [...new Set(invoiceRows.map(row => row.paymentStatus).filter(Boolean))].forEach(status => { %>
+        <option><%= status %></option>
+      <% }) %>
+    </select>
   </div>
 
   <div class="table-responsive">
     <table class="table app-table" id="invoiceTable">
       <thead>
         <tr>
-          <th></th>
+          <th>Chứng từ</th>
           <th>Bệnh nhân</th>
           <th>Ngày phát hành</th>
           <th>Tổng tiền</th>
           <th>BHYT hỗ trợ</th>
           <th>Thực thu</th>
+          <th>Trạng thái</th>
           <th class="text-end">Thao tác</th>
         </tr>
       </thead>
       <tbody>
-        <% rows.forEach(row => { %>
-          <tr data-search="<%= `${row.billCode} ${row.patientName}`.toLowerCase() %>">
+        <% invoiceRows.forEach(row => { %>
+          <tr data-search="<%= `${row.billCode} ${row.patientCode || ''} ${row.patientName} ${row.departmentName || ''}`.toLowerCase() %>" data-status="<%= row.paymentStatus || '' %>">
             <td>
               <div class="module-primary">
                 <strong><%= row.billCode %></strong>
+                <small><%= row.departmentName || 'Chưa phân khoa' %></small>
               </div>
             </td>
-            <td><strong><%= row.patientName %></strong></td>
+            <td>
+              <strong><%= row.patientName %></strong>
+              <small><%= row.patientCode || '' %></small>
+            </td>
             <td><%= format.date(row.createdAt) %></td>
             <td><%= format.currency(row.totalAmount + (row.insuranceCovered || 0)) %></td>
             <td class="text-success">- <%= format.currency(row.insuranceCovered || 0) %></td>
             <td><strong class="text-primary"><%= format.currency(row.totalAmount) %></strong></td>
+            <td><%- include('../partials/badge', { text: row.paymentStatus || 'Đã lập' }) %></td>
             <td class="text-end">
-              <button class="btn btn-sm btn-light action-icon" type="button" data-print-page data-bs-toggle="tooltip" title="Xem & In hóa đơn">
-                <i class="bi bi-file-earmark-text"></i>
-              </button>
-              <button class="btn btn-sm btn-light action-icon" type="button" data-print-page data-bs-toggle="tooltip" title="Tải PDF">
-                <i class="bi bi-download"></i>
-              </button>
+              <a class="btn btn-sm btn-light action-icon" href="<%= buildPrintHref(row) %>" target="_blank" data-bs-toggle="tooltip" title="In hóa đơn">
+                <i class="bi bi-printer"></i>
+              </a>
             </td>
           </tr>
         <% }) %>
-        <% if (!rows.length) { %>
-          <tr><td colspan="7" class="text-center py-4 text-muted">Chưa có hóa đơn nào được phát hành</td></tr>
+        <% if (!invoiceRows.length) { %>
+          <tr><td colspan="8" class="text-center py-4 text-muted">Chưa có hóa đơn nào được phát hành</td></tr>
         <% } %>
       </tbody>
     </table>
+  </div>
+  <div class="empty-inline module-empty d-none" data-empty-for="invoiceTable">
+    <i class="bi bi-search"></i>
+    <strong>Không tìm thấy hóa đơn phù hợp</strong>
   </div>
 </section>

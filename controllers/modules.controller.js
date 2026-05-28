@@ -51,8 +51,19 @@ async function getCareScopeDepartmentId(req) {
 
 async function medicalRecords(req, res, next) {
   try {
-    const doctorId = await getSessionDoctorId(req);
-    const rows = await moduleRepository.getMedicalRecords(doctorId);
+    const roleCode = req.session.user ? req.session.user.roleCode : '';
+    const doctorId = roleCode === 'DOCTOR' ? await getSessionDoctorId(req) : null;
+    const pageSize = 10;
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const filters = {
+      search: String(req.query.q || '').trim(),
+      status: String(req.query.status || '').trim(),
+      page,
+      pageSize
+    };
+    const rows = await moduleRepository.getMedicalRecords(doctorId, filters);
+    const totalRows = rows.length ? Number(rows[0].totalRows || 0) : 0;
+    const totalPages = Math.max(Math.ceil(totalRows / pageSize), 1);
     const completionRows = rows.map((row) => {
       const missingItems = [];
       if (Number(row.pendingLabCount || 0) > 0) missingItems.push(`${row.pendingLabCount} CLS chưa có kết quả`);
@@ -77,7 +88,7 @@ async function medicalRecords(req, res, next) {
     });
 
     const stats = {
-      total: completionRows.length,
+      total: totalRows,
       completed: completionRows.filter((row) => row.completionState === 'Đã hoàn tất').length,
       ready: completionRows.filter((row) => row.completionState === 'Sẵn sàng hoàn tất').length,
       pending: completionRows.filter((row) => row.completionState === 'Cần bổ sung').length,
@@ -87,8 +98,18 @@ async function medicalRecords(req, res, next) {
 
     res.render('medical-records/index', {
       title: 'Hồ sơ bệnh án',
-      activeMenu: req.query.activeMenu || (req.session.user.roleCode === 'DOCTOR' ? 'doctor-medical-records' : 'medical-records'),
+      activeMenu: req.query.activeMenu || (roleCode === 'DOCTOR' ? 'doctor-medical-records' : roleCode === 'RECEPTIONIST' ? 'cashier-medical-records' : 'medical-records'),
       rows: completionRows,
+      filters: {
+        q: filters.search,
+        status: filters.status
+      },
+      pagination: {
+        page,
+        pageSize,
+        totalRows,
+        totalPages
+      },
       stats,
       canCompleteRecord: req.session.user && ['ADMIN', 'DOCTOR'].includes(req.session.user.roleCode)
     });
@@ -268,7 +289,16 @@ async function updateRoomBedStatus(req, res, next) {
 
 async function billing(req, res, next) {
   try {
-    const rows = await treatmentCostRepository.getAdmissionCostSummary();
+    const pageSize = 10;
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const filters = {
+      search: String(req.query.q || '').trim(),
+      page,
+      pageSize
+    };
+    const rows = await treatmentCostRepository.getAdmissionCostSummary(filters);
+    const totalRows = rows.length ? Number(rows[0].totalRows || 0) : 0;
+    const totalPages = Math.max(Math.ceil(totalRows / pageSize), 1);
     const costGroups = {};
     await Promise.all(rows.map(async (row) => {
       costGroups[row.admissionId] = await treatmentCostRepository.getCostsByAdmission(row.admissionId);
@@ -278,7 +308,16 @@ async function billing(req, res, next) {
       title: 'Tổng hợp viện phí',
       activeMenu: req.query.activeMenu || 'billing',
       rows,
-      costGroups
+      costGroups,
+      filters: {
+        q: filters.search
+      },
+      pagination: {
+        page,
+        pageSize,
+        totalRows,
+        totalPages
+      }
     });
   } catch (error) {
     next(error);

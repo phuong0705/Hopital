@@ -1,4 +1,24 @@
-<% const canCollectPayment = currentUser && ['ADMIN', 'RECEPTIONIST'].includes(currentUser.roleCode); %>
+<%
+  const canCollectPayment = currentUser && ['ADMIN', 'RECEPTIONIST'].includes(currentUser.roleCode);
+  const billingFilters = locals.filters || {};
+  const pager = locals.pagination || { page: 1, pageSize: 10, totalRows: rows.length, totalPages: 1 };
+  const menuKey = activeMenu || 'billing';
+
+  function pageHref(page) {
+    const params = new URLSearchParams();
+    params.set('activeMenu', menuKey);
+    if (billingFilters.q) params.set('q', billingFilters.q);
+    params.set('page', page);
+    return `/billing?${params.toString()}`;
+  }
+
+  const pageStart = pager.totalRows ? ((pager.page - 1) * pager.pageSize) + 1 : 0;
+  const pageEnd = Math.min(pager.page * pager.pageSize, pager.totalRows);
+  const pageNumbers = [];
+  for (let pageNo = Math.max(1, pager.page - 2); pageNo <= Math.min(pager.totalPages, pager.page + 2); pageNo += 1) {
+    pageNumbers.push(pageNo);
+  }
+%>
 
 <section class="module-hero">
   <div>
@@ -11,11 +31,21 @@
 </section>
 
 <section class="panel module-panel mt-4">
-  <div class="module-toolbar">
+  <form class="module-toolbar billing-filter-toolbar" method="get" action="/billing">
+    <input type="hidden" name="activeMenu" value="<%= menuKey %>">
     <div class="module-search">
       <i class="bi bi-search"></i>
-      <input class="form-control" type="search" placeholder="Tìm bệnh nhân, mã BN, khoa hoặc bác sĩ" data-module-search="billingSummaryTable">
+      <input class="form-control" name="q" type="search" value="<%= billingFilters.q || '' %>" placeholder="Tìm bệnh nhân, mã BN, khoa hoặc bác sĩ">
     </div>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-funnel me-2"></i>Lọc</button>
+    <% if (billingFilters.q) { %>
+      <a class="btn btn-light" href="/billing?activeMenu=<%= menuKey %>">Xóa lọc</a>
+    <% } %>
+  </form>
+
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 text-muted small">
+    <span>Hiển thị <strong><%= pageStart %>-<%= pageEnd %></strong> / <strong><%= pager.totalRows %></strong> lượt viện phí đang xử lý</span>
+    <span>Mỗi trang <%= pager.pageSize %> bệnh nhân</span>
   </div>
 
   <div class="module-table-wrap">
@@ -84,16 +114,48 @@
           </tr>
         <% }) %>
         <% if (!rows.length) { %>
-          <tr><td colspan="<%= canCollectPayment ? 7 : 6 %>" class="text-center py-4 text-muted">Chưa có chi phí điều trị phát sinh.</td></tr>
+          <tr><td colspan="<%= canCollectPayment ? 7 : 6 %>" class="text-center py-4 text-muted">Không có lượt viện phí cần xử lý.</td></tr>
         <% } %>
       </tbody>
     </table>
   </div>
+
+  <% if (pager.totalPages > 1) { %>
+    <nav class="mt-4" aria-label="Phân trang tổng hợp viện phí">
+      <ul class="pagination justify-content-end mb-0">
+        <li class="page-item <%= pager.page <= 1 ? 'disabled' : '' %>">
+          <a class="page-link" href="<%= pager.page <= 1 ? '#' : pageHref(pager.page - 1) %>">Trước</a>
+        </li>
+        <% if (!pageNumbers.includes(1)) { %>
+          <li class="page-item"><a class="page-link" href="<%= pageHref(1) %>">1</a></li>
+          <% if (pageNumbers[0] > 2) { %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          <% } %>
+        <% } %>
+        <% pageNumbers.forEach(pageNo => { %>
+          <li class="page-item <%= pageNo === pager.page ? 'active' : '' %>">
+            <a class="page-link" href="<%= pageHref(pageNo) %>"><%= pageNo %></a>
+          </li>
+        <% }) %>
+        <% if (!pageNumbers.includes(pager.totalPages)) { %>
+          <% if (pageNumbers[pageNumbers.length - 1] < pager.totalPages - 1) { %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          <% } %>
+          <li class="page-item"><a class="page-link" href="<%= pageHref(pager.totalPages) %>"><%= pager.totalPages %></a></li>
+        <% } %>
+        <li class="page-item <%= pager.page >= pager.totalPages ? 'disabled' : '' %>">
+          <a class="page-link" href="<%= pager.page >= pager.totalPages ? '#' : pageHref(pager.page + 1) %>">Sau</a>
+        </li>
+      </ul>
+    </nav>
+  <% } %>
 </section>
 
 <% if (canCollectPayment) rows.forEach(row => {
   const costs = costGroups[row.admissionId] || [];
   const payableAmount = Number(row.payableAmount || 0);
+  const defaultInsuranceCovered = Math.round(payableAmount * 0.2);
+  const defaultPatientPayable = Math.max(payableAmount - defaultInsuranceCovered, 0);
 %>
   <div class="modal fade" id="costModal<%= row.admissionId %>" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
@@ -144,11 +206,20 @@
             <small class="text-muted d-block">Đến hạn thu</small>
             <strong class="fs-5 text-primary"><%= format.currency(payableAmount) %></strong>
           </div>
-          <form action="/billing" method="post" class="d-flex align-items-end gap-2 flex-wrap">
+          <form
+            action="/billing"
+            method="post"
+            class="d-flex align-items-end gap-2 flex-wrap"
+            data-billing-receipt-form
+            data-patient-name="<%= row.patientName %>"
+            data-patient-code="<%= row.patientCode %>"
+            data-service-amount="<%= payableAmount %>"
+            data-insurance-amount="<%= defaultInsuranceCovered %>">
             <input type="hidden" name="admissionId" value="<%= row.admissionId %>">
+            <input type="hidden" name="insuranceCovered" value="<%= defaultInsuranceCovered %>">
             <div>
               <label class="form-label">Số tiền thanh toán</label>
-              <input class="form-control" name="paidAmount" type="number" min="0" max="<%= payableAmount %>" value="<%= payableAmount %>">
+              <input class="form-control" name="paidAmount" type="number" min="0" max="<%= defaultPatientPayable %>" value="<%= defaultPatientPayable %>">
             </div>
             <div>
               <label class="form-label">Phương thức</label>
@@ -169,3 +240,35 @@
     </div>
   </div>
 <% }) %>
+
+<div class="modal fade" id="billingReceiptConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title">Xác nhận lập phiếu thu</h5>
+          <small class="text-muted" data-billing-confirm-patient></small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <dl class="info-list compact mb-0">
+          <dt>Tiền dịch vụ phải trả</dt>
+          <dd><strong data-billing-confirm-service>0 đ</strong></dd>
+          <dt>BHYT chi trả mặc định 20%</dt>
+          <dd><strong class="text-success">- <span data-billing-confirm-insurance>0 đ</span></strong></dd>
+          <dt>Bệnh nhân cần thanh toán</dt>
+          <dd><strong class="text-primary" data-billing-confirm-patient-payable>0 đ</strong></dd>
+          <dt>Số tiền thu</dt>
+          <dd><strong data-billing-confirm-paid>0 đ</strong></dd>
+        </dl>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Kiểm tra lại</button>
+        <button type="button" class="btn btn-primary" data-billing-confirm-submit>
+          <i class="bi bi-receipt me-2"></i>Xác nhận lập phiếu thu
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

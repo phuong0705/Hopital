@@ -1,5 +1,13 @@
 <%
   const arrangedRows = rows.filter(row => row.roomCode && row.bedCode);
+
+  function formatCareLocation(row) {
+    const department = row.departmentName || 'Chưa phân khoa';
+    const roomBed = row.roomCode || row.bedCode
+      ? [row.roomCode || 'Chưa xếp buồng', row.bedCode || 'Chưa xếp giường'].join(' · ')
+      : 'Chưa xếp buồng/giường';
+    return `${department} · ${roomBed}`;
+  }
 %>
 
 <section class="module-hero">
@@ -32,7 +40,7 @@
     <% rows.forEach(row => {
       const hasAssignedBed = Boolean(row.roomCode && row.bedCode);
       const isWaitingBed = row.finalDecision === 'Chờ điều dưỡng xếp giường';
-      const location = [row.departmentName, row.roomCode, row.bedCode].filter(Boolean).join(' · ') || 'Chưa xếp buồng/giường';
+      const location = formatCareLocation(row);
     %>
       <article
         class="border rounded-3 bg-white p-3"
@@ -134,7 +142,7 @@
       </thead>
       <tbody>
         <% rows.forEach(row => {
-          const location = [row.departmentName, row.roomCode, row.bedCode].filter(Boolean).join(' · ') || 'Chưa xếp giường';
+          const location = formatCareLocation(row);
         %>
           <tr
             data-search="<%= `${row.patientCode} ${row.patientName} ${row.diagnosis || ''} ${row.doctorName || ''} ${row.status || ''} ${row.finalDecision}`.toLowerCase() %>"

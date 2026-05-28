@@ -641,6 +641,55 @@ document.addEventListener('DOMContentLoaded', () => {
     updateBillingPreview();
   }
 
+  const billingReceiptForms = Array.from(document.querySelectorAll('[data-billing-receipt-form]'));
+  const billingConfirmModalElement = document.getElementById('billingReceiptConfirmModal');
+  if (billingReceiptForms.length && billingConfirmModalElement) {
+    const currencyFormatter = new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+      maximumFractionDigits: 0
+    });
+    let pendingBillingReceiptForm = null;
+
+    const setConfirmText = (selector, value) => {
+      const element = billingConfirmModalElement.querySelector(selector);
+      if (element) element.textContent = value;
+    };
+
+    billingReceiptForms.forEach((form) => {
+      form.addEventListener('submit', (event) => {
+        if (form.dataset.confirmed === '1') return;
+        event.preventDefault();
+
+        const serviceAmount = Number(form.dataset.serviceAmount || 0);
+        const insuranceAmount = Math.round(serviceAmount * 0.2);
+        const patientPayable = Math.max(serviceAmount - insuranceAmount, 0);
+        const paidInput = form.querySelector('input[name="paidAmount"]');
+        const insuranceInput = form.querySelector('input[name="insuranceCovered"]');
+        const paidAmount = Math.min(Math.max(Number(paidInput?.value || 0), 0), patientPayable);
+
+        if (paidInput) paidInput.value = paidAmount;
+        if (insuranceInput) insuranceInput.value = insuranceAmount;
+
+        const patientLabel = [form.dataset.patientName, form.dataset.patientCode].filter(Boolean).join(' · ');
+        setConfirmText('[data-billing-confirm-patient]', patientLabel);
+        setConfirmText('[data-billing-confirm-service]', currencyFormatter.format(serviceAmount));
+        setConfirmText('[data-billing-confirm-insurance]', currencyFormatter.format(insuranceAmount));
+        setConfirmText('[data-billing-confirm-patient-payable]', currencyFormatter.format(patientPayable));
+        setConfirmText('[data-billing-confirm-paid]', currencyFormatter.format(paidAmount));
+
+        pendingBillingReceiptForm = form;
+        bootstrap.Modal.getOrCreateInstance(billingConfirmModalElement).show();
+      });
+    });
+
+    billingConfirmModalElement.querySelector('[data-billing-confirm-submit]')?.addEventListener('click', () => {
+      if (!pendingBillingReceiptForm) return;
+      pendingBillingReceiptForm.dataset.confirmed = '1';
+      HTMLFormElement.prototype.submit.call(pendingBillingReceiptForm);
+    });
+  }
+
   // Auto-open billing modal if admissionId is in URL
   const urlParams = new URLSearchParams(window.location.search);
   const admissionId = urlParams.get('admissionId');

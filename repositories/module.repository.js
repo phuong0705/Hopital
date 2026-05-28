@@ -3,15 +3,57 @@
 const { withTransaction } = require('./base.repository');
 const treatmentCostRepository = require('./treatment-cost.repository');
 
-async function getMedicalRecords(doctorId = null) {
-  const whereDoctor = doctorId ? 'WHERE a.doctor_id = @doctorId' : '';
+async function getMedicalRecords(doctorId = null, filters = {}) {
+  const pageSize = Number(filters.pageSize || 0);
+  const page = Math.max(Number(filters.page || 1), 1);
+  const offset = (page - 1) * pageSize;
+  const params = {};
+  const whereClauses = [];
+
+  if (doctorId) {
+    whereClauses.push('a.doctor_id = @doctorId');
+    params.doctorId = Number(doctorId);
+  }
+
+  if (filters.search) {
+    whereClauses.push(`(
+      p.full_name LIKE @search
+      OR p.patient_code LIKE @search
+      OR mr.record_code LIKE @search
+      OR COALESCE(NULLIF(mr.diagnosis_on_admission, N''), a.initial_diagnosis) LIKE @search
+      OR doc.full_name LIKE @search
+    )`);
+    params.search = `%${filters.search}%`;
+  }
+
+  if (filters.status) {
+    whereClauses.push(`(
+      CASE
+        WHEN a.status = N'Đã xuất viện' THEN N'Đã xuất viện'
+        WHEN discharge.discharge_id IS NOT NULL OR a.status = N'Chờ xuất viện' THEN N'Đang chờ xuất viện'
+        ELSE N'Đang điều trị'
+      END
+    ) = @recordStatus`);
+    params.recordStatus = filters.status;
+  }
+
+  if (pageSize > 0) {
+    params.offset = offset;
+    params.pageSize = pageSize;
+  }
+
+  const whereClause = whereClauses.length ? `WHERE ${whereClauses.join('\n      AND ')}` : '';
+  const pagingClause = pageSize > 0 ? 'OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY' : '';
 
   return query(`
     SELECT mr.record_id AS recordId, mr.record_code AS recordCode, p.full_name AS patientName,
+      COUNT(1) OVER() AS totalRows,
       p.patient_code AS patientCode, p.gender, mr.diagnosis_on_admission AS diagnosis,
       mr.vital_signs AS vitalSigns, mr.doctor_notes AS doctorNotes, mr.status, mr.created_at AS createdAt,
       a.admission_id AS admissionId, a.admission_date AS admissionDate, a.status AS admissionStatus,
-      d.department_name AS departmentName, r.room_code AS roomCode, b.bed_code AS bedCode,
+      COALESCE(currentCare.departmentName, d.department_name) AS departmentName,
+      COALESCE(r.room_code, currentCare.roomCode) AS roomCode,
+      COALESCE(b.bed_code, currentCare.bedCode) AS bedCode,
       doc.full_name AS doctorName,
       COALESCE(labStats.labCount, 0) AS labCount,
       COALESCE(labStats.pendingLabCount, 0) AS pendingLabCount,
@@ -28,6 +70,20 @@ async function getMedicalRecords(doctorId = null) {
     LEFT JOIN Doctors doc ON doc.doctor_id = a.doctor_id
     LEFT JOIN Rooms r ON r.room_id = a.room_id
     LEFT JOIN Beds b ON b.bed_id = a.bed_id
+    OUTER APPLY (
+      SELECT TOP 1 d2.department_name AS departmentName, r2.room_code AS roomCode, b2.bed_code AS bedCode
+      FROM Admissions a2
+      INNER JOIN Departments d2 ON d2.department_id = a2.department_id
+      LEFT JOIN Rooms r2 ON r2.room_id = a2.room_id
+      LEFT JOIN Beds b2 ON b2.bed_id = a2.bed_id
+      WHERE a2.patient_id = p.patient_id
+        AND a2.status IN (N'Chờ xếp giường', N'Đang điều trị', N'Theo dõi', N'Ổn định', N'Chờ xuất viện')
+        AND (a2.room_id IS NOT NULL OR a2.bed_id IS NOT NULL)
+      ORDER BY
+        CASE WHEN a2.admission_id = a.admission_id THEN 0 ELSE 1 END,
+        a2.admission_date DESC,
+        a2.admission_id DESC
+    ) currentCare
     OUTER APPLY (
       SELECT COUNT(*) AS labCount,
         COUNT(CASE WHEN lt.status <> N'Đã có kết quả' THEN 1 END) AS pendingLabCount
@@ -51,9 +107,10 @@ async function getMedicalRecords(doctorId = null) {
       WHERE dsc.admission_id = a.admission_id
       ORDER BY dsc.discharge_date DESC, dsc.discharge_id DESC
     ) discharge
-    ${whereDoctor}
+    ${whereClause}
     ORDER BY mr.created_at DESC
-  `, doctorId ? { doctorId: Number(doctorId) } : {});
+    ${pagingClause}
+  `, params);
 }
 
 async function completeMedicalRecord(recordId, doctorId = null) {
@@ -1419,11 +1476,13 @@ async function createLabTest(data, enforcedDoctorId = null) {
 }
 
 async function getBilling() {
+  await treatmentCostRepository.ensureTreatmentBillingSchema();
+
   return query(`
     SELECT r.receipt_id AS billingId, r.admission_id AS admissionId, r.receipt_code AS billCode,
       p.full_name AS patientName, 0 AS consultationFee,
       0 AS bedFee, 0 AS medicineFee, 0 AS labFee,
-      0 AS insuranceCovered, r.total_amount AS totalAmount, r.payment_status AS paymentStatus
+      r.insurance_covered AS insuranceCovered, r.total_amount AS totalAmount, r.payment_status AS paymentStatus
     FROM InpatientReceipts r
     INNER JOIN Admissions a ON a.admission_id = r.admission_id
     INNER JOIN Patients p ON p.patient_id = a.patient_id
@@ -1471,7 +1530,7 @@ async function getDischarges(doctorId = null, filters = {}) {
       WHERE admission_id = a.admission_id
     ) costStats
     OUTER APPLY (
-      SELECT SUM(paid_amount) AS paidAmount
+      SELECT SUM(paid_amount + insurance_covered) AS paidAmount
       FROM InpatientReceipts
       WHERE admission_id = a.admission_id
     ) receiptStats
@@ -1824,26 +1883,58 @@ async function removeDoctorDuty(doctorId) {
   `, { doctorId: Number(doctorId) });
 }
 
-async function getInpatientStats() {
+async function getInpatientStats(scope = {}) {
+  const params = {};
+  const admissionFilters = ["a.status = N'Đang điều trị'"];
+
+  if (scope.doctorId) {
+    admissionFilters.push('a.doctor_id = @doctorId');
+    params.doctorId = Number(scope.doctorId);
+  }
+  if (scope.departmentId) {
+    admissionFilters.push('a.department_id = @departmentId');
+    params.departmentId = Number(scope.departmentId);
+  }
+
+  const admissionJoinFilter = admissionFilters.length ? `AND ${admissionFilters.join(' AND ')}` : '';
+  const departmentWhere = scope.departmentId ? 'WHERE d.department_id = @departmentId' : '';
+
   return query(`
     SELECT d.department_name AS departmentName, 
       COUNT(a.admission_id) AS patientCount,
       (SELECT COUNT(*) FROM Beds b INNER JOIN Rooms r ON r.room_id = b.room_id WHERE r.department_id = d.department_id) AS totalBeds
     FROM Departments d
-    LEFT JOIN Admissions a ON a.department_id = d.department_id AND a.status = N'Đang điều trị'
+    LEFT JOIN Admissions a ON a.department_id = d.department_id ${admissionJoinFilter}
+    ${departmentWhere}
     GROUP BY d.department_id, d.department_name
-  `);
+  `, params);
 }
 
-async function getRevenueStats() {
+async function getRevenueStats(scope = {}) {
+  await treatmentCostRepository.ensureTreatmentBillingSchema();
+
+  const where = [];
+  const params = {};
+  if (scope.doctorId) {
+    where.push('a.doctor_id = @doctorId');
+    params.doctorId = Number(scope.doctorId);
+  }
+  if (scope.departmentId) {
+    where.push('a.department_id = @departmentId');
+    params.departmentId = Number(scope.departmentId);
+  }
+  const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
   return query(`
-    SELECT FORMAT(created_at, 'yyyy-MM') AS month,
-      SUM(paid_amount) AS revenue,
-      0 AS insurance
-    FROM InpatientReceipts
-    GROUP BY FORMAT(created_at, 'yyyy-MM')
+    SELECT FORMAT(r.created_at, 'yyyy-MM') AS month,
+      SUM(r.paid_amount) AS revenue,
+      SUM(r.insurance_covered) AS insurance
+    FROM InpatientReceipts r
+    INNER JOIN Admissions a ON a.admission_id = r.admission_id
+    ${whereClause}
+    GROUP BY FORMAT(r.created_at, 'yyyy-MM')
     ORDER BY month DESC
-  `);
+  `, params);
 }
 
 async function getVisitStats(filters = {}) {
@@ -1862,6 +1953,15 @@ async function getVisitStats(filters = {}) {
     }
   }
 
+  if (filters.doctorId) {
+    whereClause += ' AND doctor_id = @doctorId';
+    params.doctorId = Number(filters.doctorId);
+  }
+  if (filters.departmentId) {
+    whereClause += ' AND department_id = @departmentId';
+    params.departmentId = Number(filters.departmentId);
+  }
+
   return query(`
     SELECT CAST(admission_date AS date) AS date, COUNT(*) AS visitCount
     FROM Admissions
@@ -1871,14 +1971,30 @@ async function getVisitStats(filters = {}) {
   `, params);
 }
 
-async function getMedicineUsageStats() {
+async function getMedicineUsageStats(scope = {}) {
+  const where = [];
+  const params = {};
+  if (scope.doctorId) {
+    where.push('pr.doctor_id = @doctorId');
+    params.doctorId = Number(scope.doctorId);
+  }
+  if (scope.departmentId) {
+    where.push('a.department_id = @departmentId');
+    params.departmentId = Number(scope.departmentId);
+  }
+  const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
   return query(`
-    SELECT medicine_name AS medicineName, SUM(quantity) AS totalUsed,
-      COUNT(DISTINCT prescription_id) AS prescriptionCount
-    FROM PrescriptionItems
-    GROUP BY medicine_name
+    SELECT pi.medicine_name AS medicineName, SUM(pi.quantity) AS totalUsed,
+      COUNT(DISTINCT pi.prescription_id) AS prescriptionCount
+    FROM PrescriptionItems pi
+    INNER JOIN Prescriptions pr ON pr.prescription_id = pi.prescription_id
+    LEFT JOIN MedicalRecords mr ON mr.record_id = pr.record_id
+    LEFT JOIN Admissions a ON a.admission_id = mr.admission_id
+    ${whereClause}
+    GROUP BY pi.medicine_name
     ORDER BY totalUsed DESC
-  `);
+  `, params);
 }
 
 module.exports = {

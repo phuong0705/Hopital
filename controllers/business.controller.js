@@ -43,6 +43,17 @@ function priorityRank(value) {
   return 3;
 }
 
+const invoiceTemplateOptions = [
+  { key: 'invoice', name: 'Hóa đơn viện phí', code: 'HD-VP' },
+  { key: 'receipt', name: 'Phiếu thu viện phí', code: 'PT-VP' },
+  { key: 'payment-request', name: 'Phiếu đề nghị thanh toán', code: 'DNTT-VP' }
+];
+
+function normalizeMoneyInput(value) {
+  const numeric = Number(String(value || '0').replace(/[^\d.-]/g, ''));
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
 async function getSessionDoctor(req) {
   if (!req.session.user || req.session.user.roleCode !== 'DOCTOR') return null;
   return moduleRepository.getDoctorByUser(req.session.user);
@@ -573,23 +584,14 @@ async function doctorReceptionExam(req, res, next) {
       return res.redirect('/dashboard');
     }
 
-    const [appointmentRows, patients, activeAdmissions] = await Promise.all([
-      cashierRepository.getAppointmentsByDoctor(doctor.doctorId),
-      patientRepository.getInpatients({ doctorId: doctor.doctorId }),
-      moduleRepository.getActiveAdmissions(doctor.doctorId)
-    ]);
+    const appointmentRows = await cashierRepository.getAppointmentsByDoctor(doctor.doctorId);
     const appointments = appointmentRows.filter((row) => row.status === 'Đã tiếp nhận');
 
     return res.render('business/doctor-reception-exam', {
       title: 'Tiếp nhận & khám bệnh',
       activeMenu: req.query.activeMenu || 'doctor-reception-exam',
       doctor,
-      appointments,
-      patients,
-      activeAdmissions,
-      statusOptions: ['Đang điều trị', 'Theo dõi', 'Ổn định', 'Chờ xuất viện'],
-      priorityOptions: ['Thấp', 'Trung bình', 'Cao', 'Nguy cấp'],
-      returnTo: '/nghiep-vu/tiep-nhan-kham-benh?activeMenu=doctor-reception-exam'
+      appointments
     });
   } catch (error) {
     return next(error);
@@ -837,8 +839,40 @@ async function invoiceList(req, res, next) {
     const rows = await cashierRepository.getPrintableDocuments();
     res.render('business/invoices', {
       title: 'Quản lý hóa đơn',
-      activeMenu: req.query.activeMenu || 'invoice',
-      rows
+      activeMenu: req.query.activeMenu || 'cashier-invoices',
+      rows,
+      invoiceTemplates: invoiceTemplateOptions
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function printInvoiceTemplate(req, res, next) {
+  try {
+    const selectedTemplate = invoiceTemplateOptions.find((item) => item.key === req.query.template) || invoiceTemplateOptions[0];
+    const totalAmount = normalizeMoneyInput(req.query.amount);
+    const insuranceAmount = normalizeMoneyInput(req.query.insuranceAmount);
+    const paidAmount = normalizeMoneyInput(req.query.paidAmount);
+    const remainingAmount = Math.max(totalAmount - insuranceAmount - paidAmount, 0);
+
+    res.render('cashier/invoice-template-print', {
+      title: selectedTemplate.name,
+      layout: false,
+      template: selectedTemplate,
+      data: {
+        patientName: req.query.patientName || '',
+        patientCode: req.query.patientCode || '',
+        departmentName: req.query.departmentName || '',
+        phone: req.query.phone || '',
+        content: req.query.content || '',
+        note: req.query.note || '',
+        createdAt: req.query.createdAt || new Date().toISOString().slice(0, 10),
+        totalAmount,
+        insuranceAmount,
+        paidAmount,
+        remainingAmount
+      }
     });
   } catch (error) {
     next(error);
@@ -1280,6 +1314,7 @@ module.exports = {
   createFinalTransfer,
   feeExam,
   invoiceList,
+  printInvoiceTemplate,
   doctorDuty,
   dutyShift,
   performance,

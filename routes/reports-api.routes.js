@@ -1,18 +1,20 @@
 const express = require('express');
 const moduleRepository = require('../repositories/module.repository');
+const nurseAssignmentRepository = require('../repositories/nurse-assignment.repository');
 
 const router = express.Router();
 
 const reportAccess = {
-  inpatient: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'LAB'],
-  revenue: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'LAB'],
-  visits: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'LAB'],
-  medicines: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'LAB', 'PHARMACY'],
-  discharges: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'LAB']
+  ADMIN: ['inpatient', 'revenue', 'visits', 'medicines', 'discharges'],
+  DOCTOR: ['inpatient', 'visits', 'medicines', 'discharges'],
+  NURSE: ['inpatient'],
+  RECEPTIONIST: ['revenue', 'visits', 'discharges'],
+  PHARMACY: ['medicines'],
+  LAB: []
 };
 
 function canViewReport(roleCode, reportKey) {
-  return roleCode === 'ADMIN' || reportAccess[reportKey].includes(roleCode);
+  return (reportAccess[roleCode] || []).includes(reportKey);
 }
 
 function requireApiAuth(req, res, next) {
@@ -31,11 +33,39 @@ function requireApiAuth(req, res, next) {
   return next();
 }
 
+async function getReportScope(user) {
+  if (user.roleCode === 'DOCTOR') {
+    const doctor = await moduleRepository.getDoctorByUser(user);
+    return {
+      doctorId: doctor ? Number(doctor.doctorId) : -1,
+      departmentId: doctor?.departmentId || null,
+      label: doctor?.fullName || user.fullName
+    };
+  }
+
+  if (user.roleCode === 'NURSE') {
+    const supervisor = await nurseAssignmentRepository.getNurseSupervisor(user.userId);
+    return {
+      doctorId: supervisor ? Number(supervisor.doctorId) : -1,
+      departmentId: supervisor?.departmentId || user.departmentId || null,
+      label: supervisor?.departmentName || user.departmentName || user.fullName
+    };
+  }
+
+  return {
+    doctorId: null,
+    departmentId: null,
+    label: null
+  };
+}
+
 router.get('/summary', requireApiAuth, async (req, res, next) => {
   try {
-    const roleCode = req.session.user.roleCode;
+    const { user } = req.session;
+    const roleCode = user.roleCode;
+    const scope = await getReportScope(user);
     const permissions = Object.fromEntries(
-      Object.keys(reportAccess).map((reportKey) => [
+      ['inpatient', 'revenue', 'visits', 'medicines', 'discharges'].map((reportKey) => [
         reportKey,
         canViewReport(roleCode, reportKey)
       ])
@@ -51,27 +81,27 @@ router.get('/summary', requireApiAuth, async (req, res, next) => {
 
     await Promise.all([
       permissions.inpatient
-        ? moduleRepository.getInpatientStats().then((rows) => {
+        ? moduleRepository.getInpatientStats(scope).then((rows) => {
           data.inpatient = rows;
         })
         : Promise.resolve(),
       permissions.revenue
-        ? moduleRepository.getRevenueStats().then((rows) => {
+        ? moduleRepository.getRevenueStats(scope).then((rows) => {
           data.revenue = rows;
         })
         : Promise.resolve(),
       permissions.visits
-        ? moduleRepository.getVisitStats().then((rows) => {
+        ? moduleRepository.getVisitStats(scope).then((rows) => {
           data.visits = rows;
         })
         : Promise.resolve(),
       permissions.medicines
-        ? moduleRepository.getMedicineUsageStats().then((rows) => {
+        ? moduleRepository.getMedicineUsageStats(scope).then((rows) => {
           data.medicines = rows;
         })
         : Promise.resolve(),
       permissions.discharges
-        ? moduleRepository.getDischarges().then((rows) => {
+        ? moduleRepository.getDischarges(scope.doctorId || null).then((rows) => {
           data.discharges = rows;
         })
         : Promise.resolve()
@@ -80,8 +110,9 @@ router.get('/summary', requireApiAuth, async (req, res, next) => {
     return res.json({
       generatedAt: new Date().toISOString(),
       user: {
-        fullName: req.session.user.fullName,
-        roleCode
+        fullName: user.fullName,
+        roleCode,
+        reportScope: scope.label
       },
       permissions,
       data

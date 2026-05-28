@@ -1,4 +1,5 @@
 const { query } = require('./base.repository');
+const treatmentCostRepository = require('./treatment-cost.repository');
 
 async function getOverviewStats() {
   const rows = await query(`
@@ -75,6 +76,8 @@ async function getDelayedLabTests() {
 }
 
 async function getCashierStats() {
+  await treatmentCostRepository.ensureTreatmentBillingSchema();
+
   const rows = await query(`
     SELECT
       (SELECT COUNT(*) FROM Admissions WHERE CAST(admission_date AS date) = CAST(GETDATE() AS date)) AS todayAdmissions,
@@ -85,7 +88,7 @@ async function getCashierStats() {
             SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
           FROM TreatmentCosts tc
           OUTER APPLY (
-            SELECT SUM(paid_amount) AS paidAmount
+            SELECT SUM(paid_amount + insurance_covered) AS paidAmount
             FROM InpatientReceipts
             WHERE admission_id = tc.admission_id
           ) receipts
@@ -100,7 +103,7 @@ async function getCashierStats() {
             SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
           FROM TreatmentCosts tc
           OUTER APPLY (
-            SELECT SUM(paid_amount) AS paidAmount
+              SELECT SUM(paid_amount + insurance_covered) AS paidAmount
             FROM InpatientReceipts
             WHERE admission_id = tc.admission_id
           ) receipts
@@ -130,6 +133,8 @@ async function getTodayAdmissionList() {
 }
 
 async function getPendingPayments() {
+  await treatmentCostRepository.ensureTreatmentBillingSchema();
+
   return query(`
     SELECT TOP 8 CONCAT('VP', due.admission_id) AS billCode, p.patient_code AS patientCode, p.full_name AS patientName,
       due.dueAmount AS totalAmount, N'Chưa thanh toán' AS paymentStatus, due.latestCostAt AS createdAt
@@ -139,7 +144,7 @@ async function getPendingPayments() {
         SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
       FROM TreatmentCosts tc
       OUTER APPLY (
-        SELECT SUM(paid_amount) AS paidAmount
+        SELECT SUM(paid_amount + insurance_covered) AS paidAmount
         FROM InpatientReceipts
         WHERE admission_id = tc.admission_id
       ) receipts
@@ -153,6 +158,8 @@ async function getPendingPayments() {
 }
 
 async function getDischargePaymentQueue() {
+  await treatmentCostRepository.ensureTreatmentBillingSchema();
+
   return query(`
     SELECT TOP 6 p.patient_code AS patientCode, p.full_name AS patientName,
       d.discharge_date AS dischargeDate, ISNULL(costStats.totalCost, 0) AS totalCost,
@@ -166,7 +173,7 @@ async function getDischargePaymentQueue() {
     INNER JOIN Admissions a ON a.admission_id = d.admission_id
     INNER JOIN Patients p ON p.patient_id = a.patient_id
     OUTER APPLY (SELECT SUM(amount) AS totalCost FROM TreatmentCosts WHERE admission_id = a.admission_id) costStats
-    OUTER APPLY (SELECT SUM(paid_amount) AS paidAmount FROM InpatientReceipts WHERE admission_id = a.admission_id) receiptStats
+    OUTER APPLY (SELECT SUM(paid_amount + insurance_covered) AS paidAmount FROM InpatientReceipts WHERE admission_id = a.admission_id) receiptStats
     WHERE ISNULL(receiptStats.paidAmount, 0) < ISNULL(costStats.totalCost, 0)
     ORDER BY d.discharge_date DESC
   `);

@@ -1512,6 +1512,35 @@ a:hover {
     grid-template-columns: minmax(260px, 1fr) 190px 220px;
   }
 
+  .medical-record-filter-toolbar {
+    grid-template-columns: minmax(320px, 1fr) 250px auto auto;
+  }
+
+  .medical-record-filter-toolbar .btn {
+    white-space: nowrap;
+  }
+
+  .billing-filter-toolbar {
+    grid-template-columns: minmax(320px, 1fr) auto auto;
+  }
+
+  .billing-filter-toolbar .btn {
+    white-space: nowrap;
+  }
+
+  .invoice-template-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .invoice-template-form label span {
+    font-size: 13px;
+  }
+
   .patient-filter-form {
     grid-template-columns: minmax(260px, 1.4fr) repeat(4, minmax(150px, 1fr)) auto auto;
   }
