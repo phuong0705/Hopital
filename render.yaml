@@ -3,7 +3,7 @@ services:
     name: ql-noi-tru-api
     runtime: node
     rootDir: .
-    buildCommand: npm install
+    buildCommand: npm install --omit=optional
     startCommand: npm start
     plan: free
     envVars:

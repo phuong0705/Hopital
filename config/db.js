@@ -1,7 +1,20 @@
 require('dotenv').config();
 
 const useWindowsAuth = String(process.env.DB_AUTH || '').toLowerCase() === 'windows';
-const sql = useWindowsAuth ? require('mssql/msnodesqlv8') : require('mssql');
+let sql;
+
+if (useWindowsAuth) {
+  try {
+    sql = require('mssql/msnodesqlv8');
+  } catch (error) {
+    throw new Error(
+      'DB_AUTH=windows requires the optional msnodesqlv8 package and ODBC driver. ' +
+      'Use DB_AUTH=sql on Linux/Render deployments, or install the Windows auth dependencies locally.'
+    );
+  }
+} else {
+  sql = require('mssql');
+}
 
 const databaseName = process.env.DB_NAME || process.env.DB_DATABASE;
 const serverName = process.env.DB_SERVER || 'localhost';
