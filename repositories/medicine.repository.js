@@ -202,7 +202,11 @@ async function addInventoryTransaction(data) {
     VALUES (@medicineId, @transactionType, @quantity, SYSDATETIME(), @performedBy, @note);
 
     UPDATE MedicineCatalog
-    SET current_stock = current_stock + (CASE WHEN @transactionType = N'Nhập kho' THEN @quantity ELSE -@quantity END),
+    SET current_stock = CASE
+          WHEN @transactionType IN (N'Nhập kho', N'Hoàn trả') THEN current_stock + @quantity
+          WHEN current_stock >= @quantity THEN current_stock - @quantity
+          ELSE 0
+        END,
         updated_at = SYSDATETIME()
     WHERE medicine_id = @medicineId;
 

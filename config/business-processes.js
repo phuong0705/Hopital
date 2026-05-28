@@ -78,7 +78,8 @@ const businessGroups = [
     items: [
       { key: 'fee-exam', code: '6.1', title: 'Tính phí khám', href: '/nghiep-vu/tinh-phi-kham', icon: 'bi-calculator' },
       { key: 'fee-inpatient', code: '6.2', title: 'Thu phí nội trú', href: '/billing', icon: 'bi-wallet2' },
-      { key: 'invoice', code: '6.3', title: 'Hóa đơn', href: '/nghiep-vu/hoa-don', icon: 'bi-file-text' }
+      { key: 'invoice', code: '6.3', title: 'Hóa đơn', href: '/nghiep-vu/hoa-don', icon: 'bi-file-text' },
+      { key: 'cashier-lab-status', code: '6.4', title: 'Trạng thái xét nghiệm', href: '/labtests', icon: 'bi-clipboard2-pulse', roles: ['ADMIN', 'RECEPTIONIST'] }
     ]
   },
   {
@@ -92,6 +93,19 @@ const businessGroups = [
       { key: 'doctor-duty', code: '7.2', title: 'Phân công bác sĩ trực', href: '/nghiep-vu/quan-ly-bac-si-truc', icon: 'bi-calendar-check' },
       { key: 'duty-shift', code: '7.3', title: 'Quản lý ca trực', href: '/nghiep-vu/quan-ly-ca-truc', icon: 'bi-calendar-week' },
       { key: 'performance', code: '7.4', title: 'Theo dõi hiệu suất', href: '/nghiep-vu/theo-doi-hieu-suat', icon: 'bi-graph-up-arrow' }
+    ]
+  },
+  {
+    key: 'pharmacy',
+    code: 'D',
+    title: 'Dược & kho',
+    icon: 'bi-capsule-pill',
+    roles: ['PHARMACY'],
+    items: [
+      { key: 'pharmacy-medicine-catalog', code: 'D.1', title: 'Danh mục thuốc', href: '/nghiep-vu/danh-muc-thuoc', icon: 'bi-capsule' },
+      { key: 'pharmacy-ward-meds', code: 'D.2', title: 'Tồn kho & cấp phát thuốc', href: '/nghiep-vu/quan-ly-thuoc-tai-khoa', icon: 'bi-box-seam' },
+      { key: 'pharmacy-supplies', code: 'D.3', title: 'Vật tư tiêu hao', href: '/nghiep-vu/vat-tu-tieu-hao', icon: 'bi-hexagon' },
+      { key: 'pharmacy-report-medicines', code: 'D.4', title: 'Báo cáo sử dụng thuốc', href: '/nghiep-vu/thong-ke-su-dung-thuoc', icon: 'bi-bar-chart-line' }
     ]
   },
   {

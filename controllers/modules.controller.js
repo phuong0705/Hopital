@@ -2,6 +2,8 @@
 
 const nurseAssignmentRepository = require('../repositories/nurse-assignment.repository');
 const adminRepository = require('../repositories/admin.repository');
+const treatmentCostRepository = require('../repositories/treatment-cost.repository');
+const serviceRepository = require('../repositories/service.repository');
 
 function makeListAction(options) {
   return async (req, res, next) => {
@@ -56,15 +58,15 @@ async function medicalRecords(req, res, next) {
       if (Number(row.pendingLabCount || 0) > 0) missingItems.push(`${row.pendingLabCount} CLS chưa có kết quả`);
       if (Number(row.pendingTreatmentCount || 0) > 0) missingItems.push(`${row.pendingTreatmentCount} y lệnh chưa hoàn thành`);
       if (!row.dischargeId && !['Chờ xuất viện', 'Đã xuất viện'].includes(row.admissionStatus)) {
-        missingItems.push('Chưa có quyết định ra viện/chuyển viện');
+        missingItems.push('Chưa có quyết định ra viện');
       }
       if (!row.diagnosis) missingItems.push('Thiếu chẩn đoán');
 
       const isCompleted = row.status === 'Hoàn tất';
       const isReady = !isCompleted && missingItems.length === 0;
-      const recordAdmissionState = row.dischargeId || row.admissionStatus === 'Đã xuất viện'
+      const recordAdmissionState = row.admissionStatus === 'Đã xuất viện'
         ? 'Đã xuất viện'
-        : 'Đang nhập viện';
+        : (row.dischargeId || row.admissionStatus === 'Chờ xuất viện' ? 'Đang chờ xuất viện' : 'Đang điều trị');
 
       return {
         ...row,
@@ -79,7 +81,7 @@ async function medicalRecords(req, res, next) {
       completed: completionRows.filter((row) => row.completionState === 'Đã hoàn tất').length,
       ready: completionRows.filter((row) => row.completionState === 'Sẵn sàng hoàn tất').length,
       pending: completionRows.filter((row) => row.completionState === 'Cần bổ sung').length,
-      admitted: completionRows.filter((row) => row.recordAdmissionState === 'Đang nhập viện').length,
+      admitted: completionRows.filter((row) => row.recordAdmissionState === 'Đang điều trị').length,
       discharged: completionRows.filter((row) => row.recordAdmissionState === 'Đã xuất viện').length
     };
 
@@ -266,16 +268,17 @@ async function updateRoomBedStatus(req, res, next) {
 
 async function billing(req, res, next) {
   try {
-    const [rows, activeAdmissions] = await Promise.all([
-      moduleRepository.getBilling(),
-      moduleRepository.getActiveAdmissions()
-    ]);
+    const rows = await treatmentCostRepository.getAdmissionCostSummary();
+    const costGroups = {};
+    await Promise.all(rows.map(async (row) => {
+      costGroups[row.admissionId] = await treatmentCostRepository.getCostsByAdmission(row.admissionId);
+    }));
 
     res.render('billing/index', {
-      title: 'Viện phí / thanh toán',
+      title: 'Tổng hợp viện phí',
       activeMenu: req.query.activeMenu || 'billing',
       rows,
-      activeAdmissions
+      costGroups
     });
   } catch (error) {
     next(error);
@@ -284,11 +287,63 @@ async function billing(req, res, next) {
 
 async function createBilling(req, res, next) {
   try {
-    await moduleRepository.createBilling(req.body);
-    req.flash('success', 'Lập phiếu thu thành công.');
+    const receipt = await treatmentCostRepository.createReceipt(req.body, req.session.user.userId);
+    req.flash('success', 'Lập phiếu thu viện phí thành công.');
+    if (req.body.printAfterSave === '1' && receipt && receipt.receiptId) {
+      return res.redirect(`/billing/receipts/${receipt.receiptId}/print`);
+    }
     res.redirect('/billing');
   } catch (error) {
+    if (error.number === 51041) {
+      req.flash('error', error.message);
+      return res.redirect('/billing');
+    }
     next(error);
+  }
+}
+
+async function printReceipt(req, res, next) {
+  try {
+    const data = await treatmentCostRepository.getReceipt(req.params.id);
+    if (!data.receipt) {
+      return res.status(404).render('errors/404', { title: 'Không tìm thấy phiếu thu', activeMenu: 'billing' });
+    }
+
+    return res.render('billing/receipt-print', {
+      title: `Phiếu thu ${data.receipt.receiptCode}`,
+      activeMenu: 'billing',
+      data
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function notifyPaymentDue(req, res, next) {
+  try {
+    await treatmentCostRepository.notifyPaymentDue(req.params.admissionId, req.session.user.userId);
+    req.flash('success', 'Đã gửi thông báo viện phí đến bệnh nhân/người nhà.');
+    return res.redirect('/billing');
+  } catch (error) {
+    if (error.number === 51042) {
+      req.flash('error', 'Không có viện phí đến hạn để gửi thông báo.');
+      return res.redirect('/billing');
+    }
+    return next(error);
+  }
+}
+
+async function confirmBillingDischarge(req, res, next) {
+  try {
+    await treatmentCostRepository.confirmDischarge(req.params.admissionId);
+    req.flash('success', 'Đã xác nhận bệnh nhân xuất viện.');
+    return res.redirect('/billing');
+  } catch (error) {
+    if ([51044, 51045].includes(error.number)) {
+      req.flash('error', error.message);
+      return res.redirect('/billing');
+    }
+    return next(error);
   }
 }
 
@@ -418,19 +473,43 @@ async function createPrescription(req, res, next) {
   }
 }
 
+async function printPrescriptionTemplate(req, res, next) {
+  try {
+    const doctorId = await getSessionDoctorId(req);
+    const data = await moduleRepository.getPrescriptionPrintData(req.params.id, doctorId);
+
+    if (!data) {
+      return res.status(404).render('errors/404', {
+        title: 'Không tìm thấy đơn thuốc',
+        activeMenu: req.query.activeMenu || 'doctor-prescription-history'
+      });
+    }
+
+    return res.render('prescriptions/inpatient-template-print', {
+      title: `Đơn thuốc nội trú ${data.prescription.prescriptionCode}`,
+      layout: false,
+      data
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function labtests(req, res, next) {
   try {
     const doctorId = await getCareScopeDoctorId(req);
     await moduleRepository.ensureExamMedicalRecordsForCompletedAppointments(doctorId);
-    const [rows, activeRecords] = await Promise.all([
+    const [rows, activeRecords, clinicalServices] = await Promise.all([
       moduleRepository.getLabTests(doctorId),
-      moduleRepository.getClinicalOrderRecords(doctorId)
+      moduleRepository.getClinicalOrderRecords(doctorId),
+      serviceRepository.getClinicalOrderServices()
     ]);
     res.render('labtests/index', {
       title: 'Xét nghiệm / cận lâm sàng',
       activeMenu: req.query.activeMenu || 'labtests',
       rows,
-      activeRecords
+      activeRecords,
+      clinicalServices
     });
   } catch (error) {
     next(error);
@@ -443,7 +522,13 @@ async function createLabTest(req, res, next) {
     const { recordId, testType } = req.body;
 
     if (!recordId || !testType) {
-      req.flash('error', 'Vui lòng chọn hồ sơ bệnh án và nhập loại xét nghiệm.');
+      req.flash('error', 'Vui lòng chọn hồ sơ bệnh án và loại xét nghiệm.');
+      return res.redirect('/labtests?activeMenu=doctor-lab-orders');
+    }
+
+    const clinicalServices = await serviceRepository.getClinicalOrderServices();
+    if (!clinicalServices.some((service) => service.serviceName === testType)) {
+      req.flash('error', 'Vui lòng chọn loại xét nghiệm từ danh mục dịch vụ.');
       return res.redirect('/labtests?activeMenu=doctor-lab-orders');
     }
 
@@ -494,6 +579,16 @@ async function updateLabTestResult(req, res, next) {
   } catch (error) {
     console.error('Lỗi khi cập nhật kết quả xét nghiệm:', error);
     res.status(500).json({ error: 'Không thể cập nhật kết quả xét nghiệm' });
+  }
+}
+
+async function confirmLabCost(req, res, next) {
+  try {
+    await moduleRepository.confirmLabCostPerformed(req.params.testCode, req.session.user.fullName);
+    req.flash('success', 'Đã xác nhận xét nghiệm để cập nhật viện phí.');
+    return res.redirect('/labtests?activeMenu=lab-orders');
+  } catch (error) {
+    return next(error);
   }
 }
 
@@ -721,11 +816,16 @@ module.exports = {
   updateTreatmentStatus,
   prescriptions,
   createPrescription,
+  printPrescriptionTemplate,
   labtests,
   createLabTest,
   updateLabTestResult,
+  confirmLabCost,
   billing,
   createBilling,
+  printReceipt,
+  notifyPaymentDue,
+  confirmBillingDischarge,
   discharges,
   createDischarge,
   users: makeListAction({

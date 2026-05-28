@@ -51,7 +51,7 @@
         { key: 'doctor-follow-up', label: 'Tái khám', icon: 'bi-calendar-heart', href: '/nghiep-vu/tai-kham?activeMenu=doctor-follow-up' },
         { key: 'doctor-lab-orders', label: 'Chỉ định cận lâm sàng', icon: 'bi-clipboard2-plus', href: '/labtests?activeMenu=doctor-lab-orders' },
         { key: 'doctor-diagnostic-results', label: 'Đọc và đánh giá kết quả', icon: 'bi-clipboard2-data', href: '/nghiep-vu/tong-hop-ket-qua-xet-nghiem?activeMenu=doctor-diagnostic-results' },
-        { key: 'doctor-final-action', label: 'Kê đơn / nhập viện / chuyển viện / ra viện', icon: 'bi-arrow-left-right', href: '/nghiep-vu/xu-tri-sau-kham?activeMenu=doctor-final-action' },
+        { key: 'doctor-final-action', label: 'Kê đơn / nhập viện / ra viện', icon: 'bi-arrow-left-right', href: '/nghiep-vu/xu-tri-sau-kham?activeMenu=doctor-final-action' },
         { key: 'doctor-medical-records', label: 'Hồ sơ bệnh án', icon: 'bi-journal-medical', href: '/medical-records?activeMenu=doctor-medical-records' },
         { key: 'doctor-nurse-management', label: 'Quản lý điều dưỡng', icon: 'bi-person-badge', href: '/nghiep-vu/quan-ly-dieu-duong?activeMenu=doctor-nurse-management' }
       ]
@@ -106,15 +106,13 @@
       label: 'TIẾP NHẬN',
       items: [
         { key: 'cashier-reception', label: 'Tiếp nhận bệnh nhân', icon: 'bi-person-plus', href: '/patients/reception?activeMenu=cashier-reception' },
-        { key: 'cashier-bhyt', label: 'Kiểm tra BHYT', icon: 'bi-check2-square', href: '/bhyt?activeMenu=cashier-bhyt' },
-        { key: 'cashier-appointments', label: 'Đặt lịch hẹn khám', icon: 'bi-calendar-plus', href: '/thu-ngan/dat-lich-hen-kham' },
-        { key: 'cashier-queue', label: 'Quản lý hàng chờ', icon: 'bi-list-ul', href: '/thu-ngan/hang-cho' }
+        { key: 'cashier-appointments', label: 'Đặt lịch hẹn khám', icon: 'bi-calendar-plus', href: '/thu-ngan/dat-lich-hen-kham' }
       ]
     },
     {
       label: 'THANH TOÁN',
       items: [
-        { key: 'cashier-billing', label: 'Thanh toán viện phí', icon: 'bi-credit-card', href: '/billing?activeMenu=cashier-billing' },
+        { key: 'cashier-billing', label: 'Tổng hợp viện phí', icon: 'bi-credit-card', href: '/billing?activeMenu=cashier-billing' },
         { key: 'cashier-invoices', label: 'Quản lý hóa đơn', icon: 'bi-file-earmark', href: '/nghiep-vu/hoa-don?activeMenu=cashier-invoices' },
         { key: 'cashier-print', label: 'In phiếu / Hóa đơn', icon: 'bi-printer', href: '/thu-ngan/in-phieu-hoa-don' },
         { key: 'cashier-adjustments', label: 'Hoàn tiền / Điều chỉnh', icon: 'bi-arrow-counterclockwise', href: '/thu-ngan/hoan-tien-dieu-chinh' }
@@ -175,9 +173,6 @@
       <small>Bệnh viện Đa khoa Việt Nam</small>
     </span>
   </a>
-  <button class="sidebar-close icon-btn" type="button" data-sidebar-close aria-label="Dong menu">
-    <i class="bi bi-x-lg"></i>
-  </button>
   <nav class="sidebar-nav" id="sidebarBusinessMenu">
     <% if (isPatient) { %>
       <div class="px-3 py-4 mb-3 border-bottom border-white border-opacity-10">

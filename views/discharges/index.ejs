@@ -34,7 +34,7 @@
           <th>Tóm tắt điều trị</th>
           <th>Tổng chi phí</th>
           <th>Thanh toán</th>
-          <th class="text-end">Hành động</th>
+          <th class="text-end">Hồ sơ</th>
         </tr>
       </thead>
       <tbody>
@@ -53,14 +53,6 @@
                 <a href="/medical-records/<%= row.recordId %>" class="btn btn-sm btn-light action-icon" data-bs-toggle="tooltip" title="Xem hồ sơ bệnh án">
                   <i class="bi bi-journal-text"></i>
                 </a>
-                <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#dischargePaymentModal"
-                  data-id="<%= row.dischargeId %>"
-                  data-patient-name="<%= row.patientName %>"
-                  data-patient-code="<%= row.patientCode %>"
-                  data-status="<%= row.paymentStatus %>"
-                  title="Cập nhật thanh toán">
-                  <i class="bi bi-credit-card"></i>
-                </button>
               </div>
             </td>
           </tr>
@@ -79,5 +71,3 @@
     <strong>Không tìm thấy hồ sơ xuất viện phù hợp</strong>
   </div>
 </section>
-
-<%- include('../partials/action-modals') %>

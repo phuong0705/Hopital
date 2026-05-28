@@ -20,8 +20,12 @@ async function main() {
   const batches = splitBatches(sqlText);
   const pool = await getPool();
 
-  for (const batch of batches) {
-    await pool.request().batch(batch);
+  try {
+    for (const batch of batches) {
+      await pool.request().batch(batch);
+    }
+  } finally {
+    await pool.close();
   }
 
   console.log(`Da chay xong ${batches.length} batch tu ${relativePath}`);

@@ -1,3 +1,8 @@
+<%
+  const isPharmacyUser = currentUser && currentUser.roleCode === 'PHARMACY';
+  const medicineConfirmations = pendingMedicineCosts || [];
+%>
+
 <section class="module-hero">
   <div>
     <h2>Quản lý thuốc tại khoa</h2>
@@ -7,6 +12,64 @@
     <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#cabinetEntryModal"><i class="bi bi-plus-lg me-2"></i>Nhập tủ trực</button>
   </div>
 </section>
+
+<% if (isPharmacyUser) { %>
+  <section class="panel mt-4">
+    <div class="panel-header">
+      <div>
+        <h2>Thuốc chờ Dược xác nhận</h2>
+        <small>Xác nhận cấp phát để chi phí thuốc chuyển từ Chờ thực hiện sang Đã thực hiện.</small>
+      </div>
+      <span class="badge bg-light text-dark border"><%= medicineConfirmations.length %> yêu cầu</span>
+    </div>
+    <div class="module-table-wrap">
+      <table class="table app-table">
+        <thead>
+          <tr>
+            <th>Ngày kê</th>
+            <th>Bệnh nhân</th>
+            <th>Đơn thuốc</th>
+            <th>Thuốc</th>
+            <th>Số lượng</th>
+            <th>Thành tiền</th>
+            <th>Người kê</th>
+            <th class="text-end">Xác nhận</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% medicineConfirmations.forEach(item => { %>
+            <tr>
+              <td><%= format.datetime(item.incurredAt) %></td>
+              <td>
+                <div class="module-primary">
+                  <strong><%= item.patientName %></strong>
+                  <small><%= item.patientCode %> · <%= item.recordCode || '-' %></small>
+                </div>
+              </td>
+              <td><%= item.prescriptionCode || '-' %></td>
+              <td class="text-wrap-cell compact"><%= item.content %></td>
+              <td><%= Number(item.quantity || 0).toLocaleString('vi-VN') %></td>
+              <td><strong><%= format.currency(item.amount || 0) %></strong></td>
+              <td><%= item.prescribedBy || '-' %></td>
+              <td class="text-end">
+                <form action="/nghiep-vu/quan-ly-thuoc-tai-khoa/chi-phi-thuoc/<%= item.costId %>/xac-nhan" method="post" class="d-inline">
+                  <button class="btn btn-sm btn-primary" type="submit">
+                    <i class="bi bi-check2-circle me-1"></i>Xác nhận cấp phát
+                  </button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+          <% if (!medicineConfirmations.length) { %>
+            <tr>
+              <td colspan="8" class="text-center py-4 text-muted">Không có thuốc chờ Dược xác nhận.</td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<% } %>
 
 <section class="panel mt-4">
   <div class="module-toolbar">
@@ -141,8 +204,14 @@
             <label class="form-label">Loại giao dịch</label>
             <select class="form-select" name="transactionType">
               <option value="Nhập kho">Nhập kho</option>
-              <option value="Xuất kho">Xuất kho</option>
-              <option value="Điều chỉnh">Điều chỉnh</option>
+              <% if (isPharmacyUser) { %>
+                <option value="Cấp phát">Cấp phát</option>
+                <option value="Hoàn trả">Hoàn trả</option>
+                <option value="Hủy thuốc">Hủy thuốc</option>
+              <% } else { %>
+                <option value="Xuất kho">Xuất kho</option>
+                <option value="Điều chỉnh">Điều chỉnh</option>
+              <% } %>
             </select>
           </div>
           <div class="mb-3">

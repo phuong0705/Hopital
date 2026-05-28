@@ -6,6 +6,5 @@ const router = express.Router();
 
 router.get('/', requireRole(['ADMIN', 'DOCTOR']), modulesController.discharges);
 router.post('/', requireRole(['ADMIN', 'DOCTOR']), modulesController.createDischarge);
-router.post('/:id/payment', requireRole(['ADMIN', 'RECEPTIONIST']), modulesController.updateDischargePayment);
 
 module.exports = router;

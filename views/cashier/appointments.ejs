@@ -31,7 +31,6 @@
           <th>Khoa / bác sĩ</th>
           <th>Lý do</th>
           <th>Trạng thái</th>
-          <th class="text-end">Cập nhật</th>
         </tr>
       </thead>
       <tbody>
@@ -53,22 +52,10 @@
             </td>
             <td class="text-wrap-cell compact"><%= row.reason || 'Khám theo lịch hẹn' %></td>
             <td><%- include('../partials/badge', { text: row.status }) %></td>
-            <td class="text-end">
-              <form action="/thu-ngan/dat-lich-hen-kham/<%= row.appointmentId %>/status" method="post" class="d-inline-flex gap-2">
-                <select name="status" class="form-select form-select-sm">
-                  <option <%= row.status === 'Đã đặt' ? 'selected' : '' %>>Đã đặt</option>
-                  <option <%= row.status === 'Đã tiếp nhận' ? 'selected' : '' %>>Đã tiếp nhận</option>
-                  <option <%= row.status === 'Chưa khám' ? 'selected' : '' %>>Chưa khám</option>
-                  <option <%= row.status === 'Đã khám' ? 'selected' : '' %>>Đã khám</option>
-                  <option <%= row.status === 'Đã hủy' ? 'selected' : '' %>>Đã hủy</option>
-                </select>
-                <button class="btn btn-sm btn-light">Lưu</button>
-              </form>
-            </td>
           </tr>
         <% }) %>
         <% if (!rows.length) { %>
-          <tr><td colspan="6" class="text-center py-4 text-muted">Chưa có lịch hẹn nào.</td></tr>
+          <tr><td colspan="5" class="text-center py-4 text-muted">Chưa có lịch hẹn nào.</td></tr>
         <% } %>
       </tbody>
     </table>

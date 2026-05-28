@@ -1,4 +1,5 @@
 const { query, execute } = require('./base.repository');
+const treatmentCostRepository = require('./treatment-cost.repository');
 
 async function getInpatients(filters = {}) {
   const inpatientStatuses = [
@@ -230,35 +231,41 @@ async function getPatientPortal(patientId, filters = {}) {
     ORDER BY lt.ordered_date DESC
   `, labParams);
 
-  const billingRows = await query(`
-    SELECT TOP 1 b.bill_code AS billCode, b.consultation_fee AS consultationFee,
-      b.billing_id AS billingId,
-      b.bed_fee AS bedFee, b.medicine_fee AS medicineFee, b.lab_fee AS labFee,
-      b.insurance_covered AS insuranceCovered, b.total_amount AS totalAmount,
-      b.payment_status AS paymentStatus
-    FROM Billing b
-    INNER JOIN Admissions a ON a.admission_id = b.admission_id
-    WHERE a.patient_id = @patientId
-    ORDER BY b.created_at DESC
-  `, { patientId });
+  const billingRows = [];
+  const billingItems = [];
 
-  const billingItems = billingRows[0]
-    ? await query(`
-      SELECT item_name AS itemName, item_type AS itemType, quantity, unit_price AS unitPrice, amount
-      FROM BillingItems
-      WHERE billing_id = @billingId
-      ORDER BY billing_item_id
-    `, { billingId: billingRows[0].billingId })
-    : [];
+  await treatmentCostRepository.syncExistingTreatmentCosts();
 
   const dischargeRows = await query(`
     SELECT TOP 1 d.discharge_condition AS dischargeCondition, d.discharge_date AS dischargeDate,
-      d.treatment_summary AS treatmentSummary, d.total_cost AS totalCost, d.payment_status AS paymentStatus
+      d.treatment_summary AS treatmentSummary,
+      ISNULL(costStats.totalCost, 0) AS totalCost,
+      CASE
+        WHEN ISNULL(costStats.totalCost, 0) = 0 THEN N'Chưa phát sinh'
+        WHEN ISNULL(receiptStats.paidAmount, 0) >= ISNULL(costStats.totalCost, 0) THEN N'Đã thanh toán'
+        WHEN ISNULL(receiptStats.paidAmount, 0) > 0 THEN N'Một phần'
+        ELSE N'Chưa thanh toán'
+      END AS paymentStatus
     FROM Discharges d
     INNER JOIN Admissions a ON a.admission_id = d.admission_id
+    OUTER APPLY (
+      SELECT SUM(amount) AS totalCost
+      FROM TreatmentCosts
+      WHERE admission_id = a.admission_id
+    ) costStats
+    OUTER APPLY (
+      SELECT SUM(paid_amount) AS paidAmount
+      FROM InpatientReceipts
+      WHERE admission_id = a.admission_id
+    ) receiptStats
     WHERE a.patient_id = @patientId
     ORDER BY d.discharge_date DESC
   `, { patientId });
+
+  const [treatmentCosts, inpatientReceipts] = await Promise.all([
+    treatmentCostRepository.getCostsByPatient(patientId),
+    treatmentCostRepository.getReceiptsByPatient(patientId)
+  ]);
 
   return {
     patient: patientRows[0],
@@ -267,7 +274,9 @@ async function getPatientPortal(patientId, filters = {}) {
     labTests,
     billing: billingRows[0],
     billingItems,
-    discharge: dischargeRows[0]
+    discharge: dischargeRows[0],
+    treatmentCosts,
+    inpatientReceipts
   };
 }
 
@@ -400,44 +409,9 @@ async function getBookingHistory(patientId) {
 }
 
 async function payBilling(billingId, patientId) {
-  await execute(`
-    SET XACT_ABORT ON;
-    BEGIN TRANSACTION;
-
-    DECLARE @patientName NVARCHAR(150), @billCode VARCHAR(40);
-
-    IF NOT EXISTS (
-      SELECT 1
-      FROM Billing b
-      INNER JOIN Admissions a ON a.admission_id = b.admission_id
-      WHERE b.billing_id = @billingId
-        AND a.patient_id = @patientId
-    )
-    BEGIN
-      THROW 51003, N'Hóa đơn không thuộc hồ sơ bệnh nhân hiện tại.', 1;
-    END;
-    
-    SELECT @patientName = p.full_name, @billCode = b.bill_code
-    FROM Billing b
-    INNER JOIN Admissions a ON a.admission_id = b.admission_id
-    INNER JOIN Patients p ON p.patient_id = a.patient_id
-    WHERE b.billing_id = @billingId
-      AND p.patient_id = @patientId;
-
-    UPDATE Billing
-    SET payment_status = N'Đã thanh toán'
-    WHERE billing_id = @billingId;
-
-    INSERT INTO Notifications (title, message, type)
-    VALUES (N'Thanh toán viện phí', 
-      CONCAT(N'Bệnh nhân ', @patientName, N' đã thanh toán hóa đơn ', @billCode), 
-      'payment-success');
-
-    COMMIT TRANSACTION;
-  `, {
-    billingId: Number(billingId),
-    patientId: Number(patientId)
-  });
+  const error = new Error('Luồng thanh toán cũ đã được thay bằng phiếu thu viện phí tại quầy thu ngân.');
+  error.number = 51003;
+  throw error;
 }
 
 async function getNotifications(userId) {

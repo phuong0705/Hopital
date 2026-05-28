@@ -9,7 +9,7 @@ async function getOverviewStats() {
       (SELECT COUNT(*) FROM Beds WHERE status = N'Đang sử dụng') AS usedBeds,
       (SELECT COUNT(*) FROM Beds) AS totalBeds,
       (SELECT COUNT(*) FROM Admissions WHERE priority_level IN (N'Cao', N'Nguy cấp') AND status = N'Đang điều trị') AS highRiskCount,
-      (SELECT ISNULL(SUM(total_amount), 0) FROM Billing WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)) AS todayBilling
+      (SELECT ISNULL(SUM(paid_amount), 0) FROM InpatientReceipts WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)) AS todayBilling
   `);
 
   return rows[0];
@@ -78,9 +78,37 @@ async function getCashierStats() {
   const rows = await query(`
     SELECT
       (SELECT COUNT(*) FROM Admissions WHERE CAST(admission_date AS date) = CAST(GETDATE() AS date)) AS todayAdmissions,
-      (SELECT COUNT(*) FROM Billing WHERE payment_status IN (N'Chưa thanh toán', N'Một phần')) AS pendingPaymentCount,
-      (SELECT ISNULL(SUM(total_amount), 0) FROM Billing WHERE payment_status IN (N'Chưa thanh toán', N'Một phần')) AS pendingPaymentAmount,
-      (SELECT COUNT(*) FROM Discharges WHERE payment_status IN (N'Chưa thanh toán', N'Một phần')) AS pendingDischargePayments,
+      (
+        SELECT COUNT(*)
+        FROM (
+          SELECT tc.admission_id,
+            SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
+          FROM TreatmentCosts tc
+          OUTER APPLY (
+            SELECT SUM(paid_amount) AS paidAmount
+            FROM InpatientReceipts
+            WHERE admission_id = tc.admission_id
+          ) receipts
+          GROUP BY tc.admission_id, receipts.paidAmount
+        ) due
+        WHERE due.dueAmount > 0
+      ) AS pendingPaymentCount,
+      (
+        SELECT ISNULL(SUM(dueAmount), 0)
+        FROM (
+          SELECT tc.admission_id,
+            SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
+          FROM TreatmentCosts tc
+          OUTER APPLY (
+            SELECT SUM(paid_amount) AS paidAmount
+            FROM InpatientReceipts
+            WHERE admission_id = tc.admission_id
+          ) receipts
+          GROUP BY tc.admission_id, receipts.paidAmount
+        ) due
+        WHERE due.dueAmount > 0
+      ) AS pendingPaymentAmount,
+      0 AS pendingDischargePayments,
       (SELECT COUNT(*) FROM Discharges WHERE CAST(discharge_date AS date) = CAST(GETDATE() AS date)) AS todayDischarges
   `);
 
@@ -103,24 +131,43 @@ async function getTodayAdmissionList() {
 
 async function getPendingPayments() {
   return query(`
-    SELECT TOP 8 b.bill_code AS billCode, p.patient_code AS patientCode, p.full_name AS patientName,
-      b.total_amount AS totalAmount, b.payment_status AS paymentStatus, b.created_at AS createdAt
-    FROM Billing b
-    INNER JOIN Admissions a ON a.admission_id = b.admission_id
+    SELECT TOP 8 CONCAT('VP', due.admission_id) AS billCode, p.patient_code AS patientCode, p.full_name AS patientName,
+      due.dueAmount AS totalAmount, N'Chưa thanh toán' AS paymentStatus, due.latestCostAt AS createdAt
+    FROM (
+      SELECT tc.admission_id,
+        MAX(tc.incurred_at) AS latestCostAt,
+        SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
+      FROM TreatmentCosts tc
+      OUTER APPLY (
+        SELECT SUM(paid_amount) AS paidAmount
+        FROM InpatientReceipts
+        WHERE admission_id = tc.admission_id
+      ) receipts
+      GROUP BY tc.admission_id, receipts.paidAmount
+    ) due
+    INNER JOIN Admissions a ON a.admission_id = due.admission_id
     INNER JOIN Patients p ON p.patient_id = a.patient_id
-    WHERE b.payment_status IN (N'Chưa thanh toán', N'Một phần')
-    ORDER BY b.created_at DESC
+    WHERE due.dueAmount > 0
+    ORDER BY due.latestCostAt DESC
   `);
 }
 
 async function getDischargePaymentQueue() {
   return query(`
     SELECT TOP 6 p.patient_code AS patientCode, p.full_name AS patientName,
-      d.discharge_date AS dischargeDate, d.total_cost AS totalCost, d.payment_status AS paymentStatus
+      d.discharge_date AS dischargeDate, ISNULL(costStats.totalCost, 0) AS totalCost,
+      CASE
+        WHEN ISNULL(costStats.totalCost, 0) = 0 THEN N'Chưa phát sinh'
+        WHEN ISNULL(receiptStats.paidAmount, 0) >= ISNULL(costStats.totalCost, 0) THEN N'Đã thanh toán'
+        WHEN ISNULL(receiptStats.paidAmount, 0) > 0 THEN N'Một phần'
+        ELSE N'Chưa thanh toán'
+      END AS paymentStatus
     FROM Discharges d
     INNER JOIN Admissions a ON a.admission_id = d.admission_id
     INNER JOIN Patients p ON p.patient_id = a.patient_id
-    WHERE d.payment_status IN (N'Chưa thanh toán', N'Một phần')
+    OUTER APPLY (SELECT SUM(amount) AS totalCost FROM TreatmentCosts WHERE admission_id = a.admission_id) costStats
+    OUTER APPLY (SELECT SUM(paid_amount) AS paidAmount FROM InpatientReceipts WHERE admission_id = a.admission_id) receiptStats
+    WHERE ISNULL(receiptStats.paidAmount, 0) < ISNULL(costStats.totalCost, 0)
     ORDER BY d.discharge_date DESC
   `);
 }

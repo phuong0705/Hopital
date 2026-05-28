@@ -1,3 +1,5 @@
+<% const isPharmacyUser = currentUser && currentUser.roleCode === 'PHARMACY'; %>
+
 <section class="module-hero">
   <div>
     <h2>Quản lý vật tư tiêu hao</h2>
@@ -61,7 +63,6 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content app-modal">
       <form action="/nghiep-vu/vat-tu-tieu-hao/transaction" method="post">
-        <input type="hidden" name="transactionType" value="Yêu cầu lĩnh">
         <div class="modal-header">
           <h5 class="modal-title">Lĩnh vật tư y tế</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -76,6 +77,18 @@
               <% }) %>
             </select>
           </div>
+          <% if (isPharmacyUser) { %>
+            <div class="mb-3">
+              <label class="form-label">Loại giao dịch</label>
+              <select class="form-select" name="transactionType">
+                <option value="Cấp phát">Cấp phát</option>
+                <option value="Hoàn trả">Hoàn trả</option>
+                <option value="Nhập kho">Nhập kho</option>
+              </select>
+            </div>
+          <% } else { %>
+            <input type="hidden" name="transactionType" value="Yêu cầu lĩnh">
+          <% } %>
           <div class="mb-3">
             <label class="form-label">Số lượng yêu cầu</label>
             <input type="number" class="form-control" name="quantity" value="100" min="1" required>

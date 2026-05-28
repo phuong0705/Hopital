@@ -9,6 +9,9 @@ GO
 
 DROP TABLE IF EXISTS Notifications;
 DROP TABLE IF EXISTS Discharges;
+DROP TABLE IF EXISTS InpatientReceiptItems;
+DROP TABLE IF EXISTS TreatmentCosts;
+DROP TABLE IF EXISTS InpatientReceipts;
 DROP TABLE IF EXISTS BillingItems;
 DROP TABLE IF EXISTS Billing;
 DROP TABLE IF EXISTS LabTests;
@@ -219,6 +222,56 @@ CREATE TABLE BillingItems (
   CONSTRAINT FK_BillingItems_Billing FOREIGN KEY (billing_id) REFERENCES Billing(billing_id)
 );
 
+CREATE TABLE InpatientReceipts (
+  receipt_id INT IDENTITY(1,1) PRIMARY KEY,
+  receipt_code VARCHAR(40) NOT NULL UNIQUE,
+  patient_id INT NOT NULL,
+  admission_id INT NOT NULL,
+  record_id INT NULL,
+  cashier_user_id INT NOT NULL,
+  total_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+  paid_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+  payment_method NVARCHAR(80) NOT NULL DEFAULT N'Tiền mặt',
+  payment_status NVARCHAR(50) NOT NULL DEFAULT N'Chưa thanh toán',
+  created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+  CONSTRAINT FK_InpatientReceipts_Patients FOREIGN KEY (patient_id) REFERENCES Patients(patient_id),
+  CONSTRAINT FK_InpatientReceipts_Admissions FOREIGN KEY (admission_id) REFERENCES Admissions(admission_id),
+  CONSTRAINT FK_InpatientReceipts_MedicalRecords FOREIGN KEY (record_id) REFERENCES MedicalRecords(record_id),
+  CONSTRAINT FK_InpatientReceipts_Users FOREIGN KEY (cashier_user_id) REFERENCES Users(user_id)
+);
+
+CREATE TABLE TreatmentCosts (
+  cost_id INT IDENTITY(1,1) PRIMARY KEY,
+  admission_id INT NOT NULL,
+  record_id INT NOT NULL,
+  source_type NVARCHAR(50) NOT NULL,
+  source_id INT NULL,
+  source_code VARCHAR(60) NULL,
+  incurred_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+  cost_type NVARCHAR(80) NOT NULL,
+  content NVARCHAR(250) NOT NULL,
+  department_name NVARCHAR(150),
+  recorded_by NVARCHAR(150),
+  quantity DECIMAL(18,2) NOT NULL DEFAULT 1,
+  unit_price DECIMAL(18,2) NOT NULL DEFAULT 0,
+  amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+  status NVARCHAR(50) NOT NULL DEFAULT N'Chờ thực hiện',
+  receipt_id INT NULL,
+  created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+  updated_at DATETIME2 NULL,
+  CONSTRAINT FK_TreatmentCosts_Admissions FOREIGN KEY (admission_id) REFERENCES Admissions(admission_id),
+  CONSTRAINT FK_TreatmentCosts_MedicalRecords FOREIGN KEY (record_id) REFERENCES MedicalRecords(record_id),
+  CONSTRAINT FK_TreatmentCosts_Receipts FOREIGN KEY (receipt_id) REFERENCES InpatientReceipts(receipt_id)
+);
+
+CREATE TABLE InpatientReceiptItems (
+  receipt_item_id INT IDENTITY(1,1) PRIMARY KEY,
+  receipt_id INT NOT NULL,
+  cost_id INT NOT NULL,
+  CONSTRAINT FK_InpatientReceiptItems_Receipts FOREIGN KEY (receipt_id) REFERENCES InpatientReceipts(receipt_id),
+  CONSTRAINT FK_InpatientReceiptItems_Costs FOREIGN KEY (cost_id) REFERENCES TreatmentCosts(cost_id)
+);
+
 CREATE TABLE Discharges (
   discharge_id INT IDENTITY(1,1) PRIMARY KEY,
   admission_id INT NOT NULL,
@@ -248,13 +301,15 @@ INSERT INTO Roles (role_code, role_name, description) VALUES
 ('DOCTOR', N'Bác sĩ', N'Quản lí hồ sơ điều trị, y lệnh, thuốc và xét nghiệm'),
 ('NURSE', N'Y tá / điều dưỡng', N'Theo dõi chăm sóc và thực hiện y lệnh'),
 ('RECEPTIONIST', N'Tiếp nhận / thu ngân', N'Tiếp nhận, thanh toán và xuất viện'),
+('PHARMACY', N'Dược', N'Kiểm tra tồn kho, cấp phát thuốc và vật tư, ghi nhận hoàn trả hoặc hủy thuốc'),
 ('PATIENT', N'Bệnh nhân', N'Xem hồ sơ cá nhân, lịch điều trị, đơn thuốc, xét nghiệm và viện phí của chính mình');
 
 INSERT INTO Users (role_id, username, email, password_hash, full_name, status) VALUES
 (1, 'admin', 'admin@benhvien.vn', '123456', N'Quản trị viên', N'Hoạt động'),
 (2, 'bacsi', 'bacsi@benhvien.vn', '123456', N'TS.BS Nguyễn Minh Khôi', N'Hoạt động'),
 (3, 'dieuduong', 'dieuduong@benhvien.vn', '123456', N'Điều dưỡng Trần Thị Mai', N'Hoạt động'),
-(4, 'thungan', 'thungan@benhvien.vn', '123456', N'Nhân viên Lê Hoàng Anh', N'Hoạt động');
+(4, 'thungan', 'thungan@benhvien.vn', '123456', N'Nhân viên Lê Hoàng Anh', N'Hoạt động'),
+(5, 'duoc', 'duoc@benhvien.vn', '123456', N'Nhân viên Dược', N'Hoạt động');
 
 INSERT INTO Departments (department_code, department_name, head_doctor, phone, location) VALUES
 ('NOI', N'Khoa Nội tổng hợp', N'TS.BS Nguyễn Minh Khôi', '02838110001', N'Tầng 4 - Khối A'),

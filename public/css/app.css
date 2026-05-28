@@ -6,6 +6,72 @@ a {
   text-decoration: none !important;
 }
 
+.final-action-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px 18px;
+  align-items: start;
+}
+
+.final-action-meta-item {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.final-action-meta-item .fw-semibold {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.medical-records-completion-table {
+  table-layout: fixed;
+  min-width: 1120px;
+}
+
+.medical-records-completion-table th,
+.medical-records-completion-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.medical-records-completion-table .mr-col-record { width: 16%; }
+.medical-records-completion-table .mr-col-patient { width: 22%; }
+.medical-records-completion-table .mr-col-type { width: 11%; }
+.medical-records-completion-table .mr-col-checks { width: 24%; }
+.medical-records-completion-table .mr-col-result { width: 18%; }
+.medical-records-completion-table .mr-col-status { width: 12%; }
+.medical-records-completion-table .mr-col-actions { width: 72px; }
+
+.medical-record-summary-card {
+  overflow: hidden;
+}
+
+.medical-record-summary-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1.3fr 1fr 0.7fr;
+  gap: 18px 28px;
+  align-items: start;
+}
+
+.medical-record-summary-grid > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+}
+
+@media (max-width: 992px) {
+  .medical-record-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .medical-record-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 a:hover {
   color: var(--primary);
   text-decoration: none !important;

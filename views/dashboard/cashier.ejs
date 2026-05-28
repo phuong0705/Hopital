@@ -14,16 +14,6 @@
     <strong>Tiếp nhận bệnh nhân</strong>
     <span>Tạo hồ sơ nội trú, chọn khoa, bác sĩ và giường.</span>
   </a>
-  <a class="patient-action-card text-decoration-none" href="/bhyt?activeMenu=cashier-bhyt">
-    <i class="bi bi-check2-square"></i>
-    <strong>Kiểm tra BHYT</strong>
-    <span>Đối chiếu thẻ BHYT và phần bảo hiểm hỗ trợ.</span>
-  </a>
-  <a class="patient-action-card text-decoration-none" href="/thu-ngan/hang-cho">
-    <i class="bi bi-list-ul"></i>
-    <strong><%= (locals.cashierCounts && locals.cashierCounts.queueCount) || 0 %> việc hàng chờ</strong>
-    <span>Lịch hẹn, tiếp nhận hôm nay và viện phí chưa thanh toán.</span>
-  </a>
   <a class="patient-action-card text-decoration-none" href="/billing?activeMenu=cashier-billing">
     <i class="bi bi-credit-card"></i>
     <strong><%= (locals.cashierCounts && locals.cashierCounts.unpaidBills) || 0 %> phiếu chưa thu</strong>

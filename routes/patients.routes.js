@@ -18,7 +18,6 @@ router.get('/me/booking', requireRole(['PATIENT']), patientsController.bookingPa
 router.post('/me/booking', requireRole(['PATIENT']), patientsController.submitBooking);
 router.get('/me/notifications', requireRole(['PATIENT']), patientsController.notificationsPage);
 router.post('/me/support', requireRole(['PATIENT']), patientsController.createSupportRequest);
-router.post('/me/billing/:id/pay', requireRole(['PATIENT']), patientsController.processPayment);
 router.get('/', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), patientsController.doctorOverview);
 router.get('/list', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), patientsController.list);
 router.post('/:admissionId/status', requireRole(['ADMIN', 'DOCTOR', 'NURSE']), patientsController.updateStatus);

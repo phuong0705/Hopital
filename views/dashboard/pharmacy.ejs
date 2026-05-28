@@ -1,0 +1,129 @@
+<section class="module-hero">
+  <div>
+    <div class="eyebrow">Dược & kho</div>
+    <h2>Tổng quan Dược</h2>
+    <p>Kiểm tra tồn kho, cấp phát thuốc và vật tư, ghi nhận hoàn trả hoặc hủy thuốc.</p>
+  </div>
+  <div class="module-actions">
+    <a class="btn btn-light" href="/nghiep-vu/vat-tu-tieu-hao?activeMenu=pharmacy-supplies">
+      <i class="bi bi-box-seam me-2"></i>Vật tư
+    </a>
+    <a class="btn btn-primary" href="/nghiep-vu/quan-ly-thuoc-tai-khoa?activeMenu=pharmacy-ward-meds">
+      <i class="bi bi-capsule-pill me-2"></i>Quản lý thuốc
+    </a>
+  </div>
+</section>
+
+<div class="nurse-kpi-grid">
+  <% kpis.forEach(item => { %>
+    <section class="nurse-kpi-card is-<%= item.tone %>">
+      <div class="nurse-kpi-icon"><i class="bi <%= item.icon %>"></i></div>
+      <span><%= item.label %></span>
+      <strong><%= item.value %></strong>
+      <small><%= item.detail %></small>
+    </section>
+  <% }) %>
+</div>
+
+<section class="patient-action-grid compact mt-4">
+  <a class="patient-action-card text-decoration-none" href="/nghiep-vu/danh-muc-thuoc?activeMenu=pharmacy-medicine-catalog">
+    <i class="bi bi-capsule"></i>
+    <strong>Danh mục thuốc</strong>
+    <span>Tra cứu thông tin, đơn vị, tồn kho và trạng thái thuốc.</span>
+  </a>
+  <a class="patient-action-card text-decoration-none" href="/nghiep-vu/quan-ly-thuoc-tai-khoa?activeMenu=pharmacy-ward-meds">
+    <i class="bi bi-arrow-left-right"></i>
+    <strong>Cấp phát / hoàn trả</strong>
+    <span>Ghi nhận nhập kho, cấp phát, hoàn trả hoặc hủy thuốc.</span>
+  </a>
+  <a class="patient-action-card text-decoration-none" href="/nghiep-vu/vat-tu-tieu-hao?activeMenu=pharmacy-supplies">
+    <i class="bi bi-hexagon"></i>
+    <strong>Vật tư tiêu hao</strong>
+    <span>Theo dõi tồn kho và giao dịch vật tư y tế.</span>
+  </a>
+  <a class="patient-action-card text-decoration-none" href="/nghiep-vu/thong-ke-su-dung-thuoc?activeMenu=pharmacy-report-medicines">
+    <i class="bi bi-bar-chart-line"></i>
+    <strong>Báo cáo thuốc</strong>
+    <span>Xem thống kê sử dụng thuốc trong điều trị.</span>
+  </a>
+</section>
+
+<div class="row g-4 mt-1">
+  <div class="col-xl-7">
+    <section class="panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2>Thuốc cần kiểm tra tồn kho</h2>
+          <p>Các thuốc đang bằng hoặc dưới ngưỡng cảnh báo.</p>
+        </div>
+        <span class="status-badge status-warning"><%= lowStockMedicines.length %> thuốc</span>
+      </div>
+      <div class="module-table-wrap">
+        <table class="table app-table module-table mb-0">
+          <thead>
+            <tr>
+              <th>Thuốc</th>
+              <th>Đơn vị</th>
+              <th>Tồn</th>
+              <th>Ngưỡng</th>
+              <th class="text-end">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% lowStockMedicines.slice(0, 8).forEach(row => { %>
+              <tr>
+                <td>
+                  <div class="module-primary">
+                    <strong><%= row.medicineName %></strong>
+                    <small><%= row.medicineCode %></small>
+                  </div>
+                </td>
+                <td><%= row.unit || '-' %></td>
+                <td><strong class="text-danger"><%= row.currentStock %></strong></td>
+                <td><%= row.stockWarningLevel %></td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-light" href="/nghiep-vu/quan-ly-thuoc-tai-khoa?activeMenu=pharmacy-ward-meds">Xử lý</a>
+                </td>
+              </tr>
+            <% }) %>
+            <% if (!lowStockMedicines.length) { %>
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">Không có thuốc dưới ngưỡng cảnh báo.</td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-xl-5">
+    <section class="panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2>Vật tư cần bổ sung</h2>
+          <p>Vật tư hết hàng, sắp hết hoặc dưới định mức.</p>
+        </div>
+        <span class="status-badge status-warning"><%= lowStockSupplies.length %> vật tư</span>
+      </div>
+      <div class="list-stack">
+        <% lowStockSupplies.slice(0, 8).forEach(row => { %>
+          <a class="list-item list-link text-decoration-none" href="/nghiep-vu/vat-tu-tieu-hao?activeMenu=pharmacy-supplies">
+            <span class="list-icon warning"><i class="bi bi-exclamation-triangle"></i></span>
+            <div class="min-w-0">
+              <strong><%= row.supplyName %></strong>
+              <small><%= row.supplyCode %> · Tồn <%= row.currentStock %>/<%= row.stockNorm %> <%= row.unit %> · <%= row.warningStatus %></small>
+            </div>
+          </a>
+        <% }) %>
+        <% if (!lowStockSupplies.length) { %>
+          <div class="empty-inline">
+            <i class="bi bi-check2-circle"></i>
+            <strong>Vật tư ổn định</strong>
+            <span>Chưa có vật tư dưới định mức.</span>
+          </div>
+        <% } %>
+      </div>
+    </section>
+  </div>
+</div>

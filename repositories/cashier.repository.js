@@ -65,11 +65,39 @@ async function getCashierSidebarCounts() {
     SELECT
       @appointmentCount AS appointmentsToday,
       @adjustmentCount AS adjustmentsToday,
-      (SELECT COUNT(*) FROM Billing WHERE payment_status <> N'Đã thanh toán') AS unpaidBills,
+      (
+        SELECT COUNT(*)
+        FROM (
+          SELECT tc.admission_id,
+            SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
+          FROM TreatmentCosts tc
+          OUTER APPLY (
+            SELECT SUM(paid_amount) AS paidAmount
+            FROM InpatientReceipts
+            WHERE admission_id = tc.admission_id
+          ) receipts
+          GROUP BY tc.admission_id, receipts.paidAmount
+        ) due
+        WHERE due.dueAmount > 0
+      ) AS unpaidBills,
       (
         @appointmentCount +
         (SELECT COUNT(*) FROM Admissions WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)) +
-        (SELECT COUNT(*) FROM Billing WHERE payment_status <> N'Đã thanh toán')
+        (
+          SELECT COUNT(*)
+          FROM (
+            SELECT tc.admission_id,
+              SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
+            FROM TreatmentCosts tc
+            OUTER APPLY (
+              SELECT SUM(paid_amount) AS paidAmount
+              FROM InpatientReceipts
+              WHERE admission_id = tc.admission_id
+            ) receipts
+            GROUP BY tc.admission_id, receipts.paidAmount
+          ) due
+          WHERE due.dueAmount > 0
+        )
       ) AS queueCount;
   `);
 
@@ -446,20 +474,31 @@ async function getQueue() {
       UNION ALL
 
       SELECT
-        CONCAT('B', b.billing_id) AS queueId,
+        CONCAT('VP', due.admission_id) AS queueId,
         N'Thanh toán viện phí' AS queueType,
-        b.bill_code AS code,
+        p.patient_code AS code,
         p.full_name AS patientName,
         dep.department_name AS departmentName,
-        b.created_at AS queueTime,
-        b.payment_status AS status,
-        b.total_amount AS amount,
+        due.latestCostAt AS queueTime,
+        N'Chưa thanh toán' AS status,
+        due.dueAmount AS amount,
         '/billing?activeMenu=cashier-billing' AS actionHref
-      FROM Billing b
-      INNER JOIN Admissions adm ON adm.admission_id = b.admission_id
+      FROM (
+        SELECT tc.admission_id,
+          MAX(tc.incurred_at) AS latestCostAt,
+          SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
+        FROM TreatmentCosts tc
+        OUTER APPLY (
+          SELECT SUM(paid_amount) AS paidAmount
+          FROM InpatientReceipts
+          WHERE admission_id = tc.admission_id
+        ) receipts
+        GROUP BY tc.admission_id, receipts.paidAmount
+      ) due
+      INNER JOIN Admissions adm ON adm.admission_id = due.admission_id
       INNER JOIN Patients p ON p.patient_id = adm.patient_id
       LEFT JOIN Departments dep ON dep.department_id = adm.department_id
-      WHERE b.payment_status <> N'Đã thanh toán'
+      WHERE due.dueAmount > 0
     ) q
     ORDER BY q.queueTime DESC
   `);
@@ -467,17 +506,17 @@ async function getQueue() {
 
 async function getPrintableDocuments() {
   return query(`
-    SELECT b.billing_id AS billingId, b.bill_code AS billCode, b.created_at AS createdAt,
+    SELECT r.receipt_id AS billingId, r.receipt_code AS billCode, r.created_at AS createdAt,
       p.patient_code AS patientCode, p.full_name AS patientName, p.phone,
-      dep.department_name AS departmentName, b.consultation_fee AS consultationFee,
-      b.bed_fee AS bedFee, b.medicine_fee AS medicineFee, b.lab_fee AS labFee,
-      b.insurance_covered AS insuranceCovered, b.total_amount AS totalAmount,
-      b.payment_status AS paymentStatus
-    FROM Billing b
-    INNER JOIN Admissions adm ON adm.admission_id = b.admission_id
+      dep.department_name AS departmentName, 0 AS consultationFee,
+      0 AS bedFee, 0 AS medicineFee, 0 AS labFee,
+      0 AS insuranceCovered, r.total_amount AS totalAmount,
+      r.payment_status AS paymentStatus
+    FROM InpatientReceipts r
+    INNER JOIN Admissions adm ON adm.admission_id = r.admission_id
     INNER JOIN Patients p ON p.patient_id = adm.patient_id
     LEFT JOIN Departments dep ON dep.department_id = adm.department_id
-    ORDER BY b.created_at DESC
+    ORDER BY r.created_at DESC
   `);
 }
 
@@ -541,29 +580,43 @@ async function getCashierShiftReport() {
     SELECT
       (SELECT COUNT(*) FROM Admissions WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)) AS admissionsToday,
       (SELECT COUNT(*) FROM Appointments WHERE CAST(appointment_time AS date) = CAST(GETDATE() AS date)) AS appointmentsToday,
-      (SELECT COUNT(*) FROM Billing WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)) AS billsToday,
-      (SELECT COUNT(*) FROM Billing WHERE payment_status <> N'Đã thanh toán') AS unpaidBills,
-      (SELECT ISNULL(SUM(total_amount), 0) FROM Billing WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)) AS revenueToday,
-      (SELECT ISNULL(SUM(insurance_covered), 0) FROM Billing WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)) AS insuranceToday,
+      (SELECT COUNT(*) FROM InpatientReceipts WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)) AS billsToday,
+      (
+        SELECT COUNT(*)
+        FROM (
+          SELECT tc.admission_id,
+            SUM(CASE WHEN tc.status IN (N'Đã thực hiện', N'Đã tính phí') THEN tc.amount ELSE 0 END) - ISNULL(receipts.paidAmount, 0) AS dueAmount
+          FROM TreatmentCosts tc
+          OUTER APPLY (
+            SELECT SUM(paid_amount) AS paidAmount
+            FROM InpatientReceipts
+            WHERE admission_id = tc.admission_id
+          ) receipts
+          GROUP BY tc.admission_id, receipts.paidAmount
+        ) due
+        WHERE due.dueAmount > 0
+      ) AS unpaidBills,
+      (SELECT ISNULL(SUM(paid_amount), 0) FROM InpatientReceipts WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)) AS revenueToday,
+      0 AS insuranceToday,
       (SELECT ISNULL(SUM(amount), 0) FROM BillingAdjustments WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)) AS adjustmentsToday
   `);
 
   const revenueByStatus = await query(`
-    SELECT payment_status AS paymentStatus, COUNT(*) AS totalBills, ISNULL(SUM(total_amount), 0) AS totalAmount
-    FROM Billing
+    SELECT payment_status AS paymentStatus, COUNT(*) AS totalBills, ISNULL(SUM(paid_amount), 0) AS totalAmount
+    FROM InpatientReceipts
     WHERE CAST(created_at AS date) = CAST(GETDATE() AS date)
     GROUP BY payment_status
     ORDER BY totalAmount DESC
   `);
 
   const recentBills = await query(`
-    SELECT TOP 15 b.bill_code AS billCode, p.full_name AS patientName,
-      b.total_amount AS totalAmount, b.payment_status AS paymentStatus, b.created_at AS createdAt
-    FROM Billing b
-    INNER JOIN Admissions adm ON adm.admission_id = b.admission_id
+    SELECT TOP 15 r.receipt_code AS billCode, p.full_name AS patientName,
+      r.paid_amount AS totalAmount, r.payment_status AS paymentStatus, r.created_at AS createdAt
+    FROM InpatientReceipts r
+    INNER JOIN Admissions adm ON adm.admission_id = r.admission_id
     INNER JOIN Patients p ON p.patient_id = adm.patient_id
-    WHERE CAST(b.created_at AS date) = CAST(GETDATE() AS date)
-    ORDER BY b.created_at DESC
+    WHERE CAST(r.created_at AS date) = CAST(GETDATE() AS date)
+    ORDER BY r.created_at DESC
   `);
 
   return {

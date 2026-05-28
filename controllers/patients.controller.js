@@ -3,6 +3,7 @@ const lookupRepository = require('../repositories/lookup.repository');
 const moduleRepository = require('../repositories/module.repository');
 const nurseAssignmentRepository = require('../repositories/nurse-assignment.repository');
 const cashierRepository = require('../repositories/cashier.repository');
+const treatmentCostRepository = require('../repositories/treatment-cost.repository');
 
 async function receptionForm(req, res, next) {
   try {
@@ -110,10 +111,14 @@ async function detail(req, res, next) {
     if (!patient) {
       return res.status(404).render('errors/404', { title: 'Không tìm thấy', activeMenu: req.query.activeMenu || 'patients' });
     }
+    const treatmentCosts = patient.admission_id
+      ? await treatmentCostRepository.getCostsByAdmission(patient.admission_id)
+      : [];
     return res.render('patients/detail', {
       title: `Bệnh nhân ${patient.full_name}`,
       activeMenu: req.query.activeMenu || 'patients',
-      patient
+      patient,
+      treatmentCosts
     });
   } catch (error) {
     return next(error);

@@ -36,8 +36,7 @@ async function createAppointment(req, res, next) {
 
 async function updateAppointmentStatus(req, res, next) {
   try {
-    await cashierRepository.updateAppointmentStatus(req.params.id, req.body.status);
-    req.flash('success', 'Đã cập nhật trạng thái lịch hẹn.');
+    req.flash('error', 'Tài khoản thu ngân không có quyền cập nhật trạng thái lịch hẹn.');
     return res.redirect('/thu-ngan/dat-lich-hen-kham');
   } catch (error) {
     return next(error);

@@ -1,3 +1,5 @@
+<% const canUpdateTreatment = currentUser && ['ADMIN', 'NURSE'].includes(currentUser.roleCode); %>
+
 <section class="treatment-hero">
   <div>
     <h2>Lịch điều trị</h2>
@@ -79,14 +81,16 @@
         </div>
         <div class="treatment-state">
           <%- include('../partials/badge', { text: row.status }) %>
-          <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#treatmentModal"
-            data-id="<%= row.scheduleId %>"
-            data-patient="<%= row.patientName %>"
-            data-content="<%= row.treatmentContent %>"
-            data-status="<%= row.status %>"
-            data-note="<%= row.note || '' %>">
-            Cập nhật
-          </button>
+          <% if (canUpdateTreatment) { %>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#treatmentModal"
+              data-id="<%= row.scheduleId %>"
+              data-patient="<%= row.patientName %>"
+              data-content="<%= row.treatmentContent %>"
+              data-status="<%= row.status %>"
+              data-note="<%= row.note || '' %>">
+              Cập nhật
+            </button>
+          <% } %>
         </div>
       </article>
     <% }) %>
@@ -98,6 +102,7 @@
   </div>
 </section>
 
+<% if (canUpdateTreatment) { %>
 <div class="modal fade" id="treatmentModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content app-modal">
@@ -132,3 +137,4 @@
     </div>
   </div>
 </div>
+<% } %>

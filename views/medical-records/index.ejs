@@ -18,19 +18,59 @@
     </div>
     <select class="form-select" data-module-filter="medicalRecordsCompletionTable" data-filter-key="state">
       <option value="">Tất cả trạng thái</option>
-      <% [...new Set(rows.map(row => row.completionState))].forEach(state => { %>
-        <option><%= state %></option>
-      <% }) %>
-    </select>
-    <select class="form-select" data-module-filter="medicalRecordsCompletionTable" data-filter-key="admissionState">
-      <option value="">Tất cả hồ sơ</option>
-      <option>Đang nhập viện</option>
+      <option>Đang điều trị</option>
+      <option>Đang chờ xuất viện</option>
       <option>Đã xuất viện</option>
     </select>
   </div>
 
-  <div class="module-table-wrap">
-    <table class="table app-table module-table" id="medicalRecordsCompletionTable">
+  <div class="d-flex flex-column gap-3">
+    <% rows.forEach(row => {
+      const location = [row.departmentName, row.roomCode, row.bedCode].filter(Boolean).join(' · ') || 'Chưa xếp giường';
+    %>
+      <article
+        class="border rounded-3 bg-white p-3 medical-record-summary-card"
+        data-table-row="medicalRecordsCompletionTable"
+        data-search="<%= `${row.recordCode} ${row.patientCode} ${row.patientName} ${row.doctorName || ''} ${row.recordAdmissionState}`.toLowerCase() %>"
+        data-state="<%= row.recordAdmissionState %>">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <h4 class="mb-0"><%= row.patientName %></h4>
+          <span class="module-soft-pill"><%= row.patientCode %> · <%= row.gender || '-' %></span>
+          <%- include('../partials/badge', { text: row.recordAdmissionState }) %>
+        </div>
+        <div class="medical-record-summary-grid">
+          <div>
+            <span class="fw-semibold text-dark d-block">Hồ sơ:</span>
+            <span class="text-muted"><%= row.recordCode || '-' %></span>
+          </div>
+          <div>
+            <span class="fw-semibold text-dark d-block">Khoa/Buồng/Giường:</span>
+            <span class="text-muted"><%= location %></span>
+          </div>
+          <div>
+            <span class="fw-semibold text-dark d-block">Bác sĩ:</span>
+            <span class="text-muted"><%= row.doctorName || '-' %></span>
+          </div>
+          <div>
+            <span class="fw-semibold text-dark d-block">Đơn thuốc:</span>
+            <span class="text-muted"><%= row.prescriptionCount || 0 %></span>
+          </div>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+
+  <div class="module-table-wrap visually-hidden">
+    <table class="table app-table module-table medical-records-completion-table" id="medicalRecordsCompletionTable">
+      <colgroup>
+        <col class="mr-col-record">
+        <col class="mr-col-patient">
+        <col class="mr-col-type">
+        <col class="mr-col-checks">
+        <col class="mr-col-result">
+        <col class="mr-col-status">
+        <col class="mr-col-actions">
+      </colgroup>
       <thead>
         <tr>
           <th>Hồ sơ</th>
@@ -48,8 +88,8 @@
           const canSubmitComplete = canCompleteRecord && row.completionState === 'Sẵn sàng hoàn tất';
         %>
           <tr
-            data-search="<%= `${row.recordCode} ${row.patientCode} ${row.patientName} ${row.diagnosis || ''} ${row.doctorName || ''} ${row.completionState}`.toLowerCase() %>"
-            data-state="<%= row.completionState %>"
+            data-search="<%= `${row.recordCode} ${row.patientCode} ${row.patientName} ${row.doctorName || ''} ${row.recordAdmissionState}`.toLowerCase() %>"
+            data-state="<%= row.recordAdmissionState %>"
             data-admission-state="<%= row.recordAdmissionState %>">
             <td>
               <div class="module-primary">
@@ -76,7 +116,7 @@
               <% } %>
             </td>
             <td class="text-wrap-cell">
-              <div><%= row.dischargeId ? 'Đã có hồ sơ ra viện/chuyển viện' : row.admissionStatus %></div>
+              <div><%= row.dischargeId ? 'Đã có hồ sơ ra viện' : row.admissionStatus %></div>
               <% if (row.dischargeDate) { %>
                 <small class="text-muted"><%= format.datetime(row.dischargeDate) %> · <%= row.dischargePaymentStatus || 'Chưa cập nhật thanh toán' %></small>
               <% } else { %>

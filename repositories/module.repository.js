@@ -1,13 +1,14 @@
 ﻿const { query, execute } = require('./base.repository');
 
 const { withTransaction } = require('./base.repository');
+const treatmentCostRepository = require('./treatment-cost.repository');
 
 async function getMedicalRecords(doctorId = null) {
   const whereDoctor = doctorId ? 'WHERE a.doctor_id = @doctorId' : '';
 
   return query(`
     SELECT mr.record_id AS recordId, mr.record_code AS recordCode, p.full_name AS patientName,
-      p.patient_code AS patientCode, mr.diagnosis_on_admission AS diagnosis,
+      p.patient_code AS patientCode, p.gender, mr.diagnosis_on_admission AS diagnosis,
       mr.vital_signs AS vitalSigns, mr.doctor_notes AS doctorNotes, mr.status, mr.created_at AS createdAt,
       a.admission_id AS admissionId, a.admission_date AS admissionDate, a.status AS admissionStatus,
       d.department_name AS departmentName, r.room_code AS roomCode, b.bed_code AS bedCode,
@@ -94,7 +95,7 @@ async function completeMedicalRecord(recordId, doctorId = null) {
 
     IF @PendingLabCount > 0 OR @PendingTreatmentCount > 0 OR @HasFinalDisposition = 0
     BEGIN
-      THROW 51008, N'Hồ sơ chưa đủ điều kiện hoàn tất: cần đủ kết quả cận lâm sàng, y lệnh hoàn thành và quyết định ra viện/chuyển viện.', 1;
+      THROW 51008, N'Hồ sơ chưa đủ điều kiện hoàn tất: cần đủ kết quả cận lâm sàng, y lệnh hoàn thành và quyết định ra viện.', 1;
     END;
 
     UPDATE MedicalRecords
@@ -143,11 +144,14 @@ async function getMedicalRecordDetail(recordId, doctorId = null) {
     ORDER BY scheduled_time DESC
   `, { recordId });
 
+  const costs = await treatmentCostRepository.getCostsByRecord(recordId);
+
   return {
     record: rows[0],
     medicines,
     labs,
-    treatments
+    treatments,
+    costs
   };
 }
 
@@ -601,7 +605,7 @@ async function transferBed(data, doctorId = null, departmentId = null) {
 async function reconcileBedOccupancy(departmentId = null) {
   const whereDepartment = departmentId ? 'AND r.department_id = @departmentId' : '';
 
-  return execute(`
+  await execute(`
     UPDATE b
     SET b.status = CASE
       WHEN EXISTS (
@@ -858,6 +862,10 @@ async function updateTreatmentStatus(scheduleId, data, doctorId = null) {
       THROW 51010, N'Không tìm thấy y lệnh thuộc phạm vi phụ trách.', 1;
     END;
   `, params);
+
+  if (status === 'Hoàn thành') {
+    await treatmentCostRepository.markTreatmentPerformed(scheduleId, data.performedBy || data.assigneeName || '');
+  }
 }
 
 async function getNursingWorklist(doctorId = null) {
@@ -891,6 +899,8 @@ async function getNursingWorklist(doctorId = null) {
 }
 
 async function getPrescriptions(doctorId = null) {
+  await treatmentCostRepository.syncExistingTreatmentCosts();
+
   const whereDoctor = doctorId ? 'WHERE pr.doctor_id = @doctorId' : '';
 
   return query(`
@@ -900,7 +910,8 @@ async function getPrescriptions(doctorId = null) {
       pi.medicine_name AS medicineName,
       pi.dosage, pi.frequency, pi.route, pi.quantity, pi.unit,
       pr.start_date AS startDate, pr.end_date AS endDate,
-      doc.full_name AS doctorName
+      doc.full_name AS doctorName,
+      medicineCost.status AS dispenseStatus
     FROM Prescriptions pr
     INNER JOIN MedicalRecords mr ON mr.record_id = pr.record_id
     INNER JOIN Patients p ON p.patient_id = mr.patient_id
@@ -908,9 +919,83 @@ async function getPrescriptions(doctorId = null) {
     LEFT JOIN Departments d ON d.department_id = a.department_id
     INNER JOIN Doctors doc ON doc.doctor_id = pr.doctor_id
     INNER JOIN PrescriptionItems pi ON pi.prescription_id = pr.prescription_id
+    OUTER APPLY (
+      SELECT TOP 1 status
+      FROM TreatmentCosts
+      WHERE source_type = N'PRESCRIPTION_ITEM'
+        AND source_id = pi.item_id
+      ORDER BY cost_id DESC
+    ) medicineCost
     ${whereDoctor}
     ORDER BY pr.start_date DESC
   `, doctorId ? { doctorId: Number(doctorId) } : {});
+}
+
+async function getPrescriptionPrintData(prescriptionId, doctorId = null) {
+  const whereDoctor = doctorId ? 'AND pr.doctor_id = @doctorId' : '';
+  const params = { prescriptionId: Number(prescriptionId) };
+  if (doctorId) params.doctorId = Number(doctorId);
+
+  const rows = await query(`
+    SELECT pr.prescription_id AS prescriptionId, pr.prescription_code AS prescriptionCode,
+      pr.start_date AS startDate, pr.end_date AS endDate, pr.note,
+      p.patient_code AS patientCode, p.full_name AS patientName, p.gender, p.date_of_birth AS dateOfBirth,
+      mr.record_code AS recordCode, mr.diagnosis_on_admission AS diagnosis, mr.allergies,
+      a.initial_diagnosis AS initialDiagnosis, d.department_name AS departmentName,
+      r.room_code AS roomCode, b.bed_code AS bedCode,
+      doc.full_name AS doctorName,
+      pi.medicine_name AS medicineName, pi.dosage, pi.frequency, pi.route, pi.quantity, pi.unit
+    FROM Prescriptions pr
+    INNER JOIN MedicalRecords mr ON mr.record_id = pr.record_id
+    INNER JOIN Patients p ON p.patient_id = mr.patient_id
+    LEFT JOIN Admissions a ON a.admission_id = mr.admission_id
+    LEFT JOIN Departments d ON d.department_id = a.department_id
+    LEFT JOIN Rooms r ON r.room_id = a.room_id
+    LEFT JOIN Beds b ON b.bed_id = a.bed_id
+    INNER JOIN Doctors doc ON doc.doctor_id = pr.doctor_id
+    INNER JOIN PrescriptionItems pi ON pi.prescription_id = pr.prescription_id
+    WHERE pr.prescription_id = @prescriptionId
+      ${whereDoctor}
+    ORDER BY pi.item_id
+  `, params);
+
+  if (!rows.length) return null;
+
+  const first = rows[0];
+  return {
+    prescription: {
+      prescriptionId: first.prescriptionId,
+      prescriptionCode: first.prescriptionCode,
+      startDate: first.startDate,
+      endDate: first.endDate,
+      note: first.note
+    },
+    patient: {
+      patientCode: first.patientCode,
+      patientName: first.patientName,
+      gender: first.gender,
+      dateOfBirth: first.dateOfBirth
+    },
+    record: {
+      recordCode: first.recordCode,
+      diagnosis: first.diagnosis || first.initialDiagnosis || '',
+      allergies: first.allergies || ''
+    },
+    care: {
+      departmentName: first.departmentName,
+      roomCode: first.roomCode,
+      bedCode: first.bedCode,
+      doctorName: first.doctorName
+    },
+    medicines: rows.map((row) => ({
+      medicineName: row.medicineName,
+      dosage: row.dosage,
+      frequency: row.frequency,
+      route: row.route,
+      quantity: row.quantity,
+      unit: row.unit
+    }))
+  };
 }
 
 async function getFinalActionWorklist(doctorId = null) {
@@ -1190,9 +1275,13 @@ async function createPrescription(data, enforcedDoctorId = null) {
     });
     }
   });
+
+  await treatmentCostRepository.recordLatestPrescriptionCosts(data.recordId);
 }
 
 async function getLabTests(doctorId = null) {
+  await treatmentCostRepository.syncExistingTreatmentCosts();
+
   const whereDoctor = doctorId ? 'WHERE lt.doctor_id = @doctorId' : '';
 
   const rows = await query(`
@@ -1202,13 +1291,21 @@ async function getLabTests(doctorId = null) {
       lt.test_type AS testType,
       lt.ordered_date AS orderedDate, lt.status, lt.result_summary AS resultSummary,
       lt.result_files AS resultFilesJson,
-      doc.full_name AS doctorName, d.department_name AS departmentName
+      doc.full_name AS doctorName, d.department_name AS departmentName,
+      labCost.status AS labCostStatus
     FROM LabTests lt
     INNER JOIN MedicalRecords mr ON mr.record_id = lt.record_id
     INNER JOIN Patients p ON p.patient_id = mr.patient_id
     INNER JOIN Admissions a ON a.admission_id = mr.admission_id
     INNER JOIN Departments d ON d.department_id = a.department_id
     INNER JOIN Doctors doc ON doc.doctor_id = lt.doctor_id
+    OUTER APPLY (
+      SELECT TOP 1 status
+      FROM TreatmentCosts
+      WHERE source_type = N'LAB'
+        AND source_id = lt.lab_test_id
+      ORDER BY cost_id DESC
+    ) labCost
     ${whereDoctor}
     ORDER BY lt.ordered_date DESC
   `, doctorId ? { doctorId: Number(doctorId) } : {});
@@ -1248,7 +1345,7 @@ async function updateLabTestResult(testCode, status, resultSummary, resultFiles 
   };
   if (doctorId) params.doctorId = Number(doctorId);
 
-  return execute(`
+  await execute(`
     UPDATE lt
     SET lt.status = @status,
         lt.result_summary = @resultSummary,
@@ -1264,6 +1361,14 @@ async function updateLabTestResult(testCode, status, resultSummary, resultFiles 
       THROW 51013, N'Không tìm thấy chỉ định thuộc phạm vi phụ trách.', 1;
     END;
   `, params);
+
+  if (status === 'Đã có kết quả' || status === 'Hoàn thành') {
+    await treatmentCostRepository.markLabPerformed(testCode, '');
+  }
+}
+
+async function confirmLabCostPerformed(testCode, recordedBy = '') {
+  return treatmentCostRepository.markLabPerformed(testCode, recordedBy);
 }
 
 async function createLabTest(data, enforcedDoctorId = null) {
@@ -1300,52 +1405,39 @@ async function createLabTest(data, enforcedDoctorId = null) {
       NULL
     );
   `, params);
+
+  const rows = await query(`
+    SELECT TOP 1 test_code AS testCode
+    FROM LabTests
+    WHERE record_id = @recordId
+    ORDER BY lab_test_id DESC
+  `, { recordId: Number(data.recordId) });
+
+  if (rows[0]) {
+    await treatmentCostRepository.recordLabOrderCost(rows[0].testCode);
+  }
 }
 
 async function getBilling() {
   return query(`
-    SELECT b.billing_id AS billingId, b.admission_id AS admissionId, b.bill_code AS billCode,
-      p.full_name AS patientName, b.consultation_fee AS consultationFee,
-      b.bed_fee AS bedFee, b.medicine_fee AS medicineFee, b.lab_fee AS labFee,
-      b.insurance_covered AS insuranceCovered, b.total_amount AS totalAmount, b.payment_status AS paymentStatus
-    FROM Billing b
-    INNER JOIN Admissions a ON a.admission_id = b.admission_id
+    SELECT r.receipt_id AS billingId, r.admission_id AS admissionId, r.receipt_code AS billCode,
+      p.full_name AS patientName, 0 AS consultationFee,
+      0 AS bedFee, 0 AS medicineFee, 0 AS labFee,
+      0 AS insuranceCovered, r.total_amount AS totalAmount, r.payment_status AS paymentStatus
+    FROM InpatientReceipts r
+    INNER JOIN Admissions a ON a.admission_id = r.admission_id
     INNER JOIN Patients p ON p.patient_id = a.patient_id
-    ORDER BY b.created_at DESC
+    ORDER BY r.created_at DESC
   `);
 }
 
 async function createBilling(data) {
-  const consultationFee = Number(data.consultationFee || 0);
-  const bedFee = Number(data.bedFee || 0);
-  const medicineFee = Number(data.medicineFee || 0);
-  const labFee = Number(data.labFee || 0);
-  const insuranceCovered = Number(data.insuranceCovered || 0);
-  const totalAmount = Math.max(consultationFee + bedFee + medicineFee + labFee - insuranceCovered, 0);
-
-  await execute(`
-    INSERT INTO Billing (
-      bill_code, admission_id, consultation_fee, bed_fee, medicine_fee, lab_fee,
-      insurance_covered, total_amount, payment_status
-    )
-    VALUES (
-      CONCAT('VP', FORMAT(GETDATE(), 'yyMMddHHmmss')),
-      @admissionId, @consultationFee, @bedFee, @medicineFee, @labFee,
-      @insuranceCovered, @totalAmount, @paymentStatus
-    )
-  `, {
-    admissionId: Number(data.admissionId),
-    consultationFee,
-    bedFee,
-    medicineFee,
-    labFee,
-    insuranceCovered,
-    totalAmount,
-    paymentStatus: data.paymentStatus || 'Chưa thanh toán'
-  });
+  return treatmentCostRepository.createReceipt(data, data.cashierUserId || 1);
 }
 
 async function getDischarges(doctorId = null, filters = {}) {
+  await treatmentCostRepository.syncExistingTreatmentCosts();
+
   let whereClause = doctorId ? 'WHERE a.doctor_id = @doctorId' : 'WHERE 1=1';
   const params = doctorId ? { doctorId: Number(doctorId) } : {};
 
@@ -1361,11 +1453,28 @@ async function getDischarges(doctorId = null, filters = {}) {
   return query(`
     SELECT d.discharge_id AS dischargeId, p.patient_code AS patientCode, p.full_name AS patientName, 
       d.discharge_condition AS dischargeCondition, d.discharge_date AS dischargeDate, 
-      d.treatment_summary AS treatmentSummary, d.total_cost AS totalCost, d.payment_status AS paymentStatus,
+      d.treatment_summary AS treatmentSummary,
+      ISNULL(costStats.totalCost, 0) AS totalCost,
+      CASE
+        WHEN ISNULL(costStats.totalCost, 0) = 0 THEN N'Chưa phát sinh'
+        WHEN ISNULL(receiptStats.paidAmount, 0) >= ISNULL(costStats.totalCost, 0) THEN N'Đã thanh toán'
+        WHEN ISNULL(receiptStats.paidAmount, 0) > 0 THEN N'Một phần'
+        ELSE N'Chưa thanh toán'
+      END AS paymentStatus,
       (SELECT TOP 1 record_id FROM MedicalRecords WHERE admission_id = a.admission_id) AS recordId
     FROM Discharges d
     INNER JOIN Admissions a ON a.admission_id = d.admission_id
     INNER JOIN Patients p ON p.patient_id = a.patient_id
+    OUTER APPLY (
+      SELECT SUM(amount) AS totalCost
+      FROM TreatmentCosts
+      WHERE admission_id = a.admission_id
+    ) costStats
+    OUTER APPLY (
+      SELECT SUM(paid_amount) AS paidAmount
+      FROM InpatientReceipts
+      WHERE admission_id = a.admission_id
+    ) receiptStats
     ${whereClause}
     ORDER BY d.discharge_date DESC
   `, params);
@@ -1386,8 +1495,8 @@ async function createDischarge(data, doctorId = null) {
   await execute(`
     DECLARE @totalCost DECIMAL(18,2);
 
-    SELECT @totalCost = ISNULL(SUM(total_amount), 0)
-    FROM Billing
+    SELECT @totalCost = ISNULL(SUM(amount), 0)
+    FROM TreatmentCosts
     WHERE admission_id = @admissionId;
 
     IF NOT EXISTS (
@@ -1433,8 +1542,8 @@ async function createTransferDisposition(data, doctorId = null) {
     DECLARE @condition NVARCHAR(500);
     DECLARE @summary NVARCHAR(1000);
 
-    SELECT @totalCost = ISNULL(SUM(total_amount), 0)
-    FROM Billing
+    SELECT @totalCost = ISNULL(SUM(amount), 0)
+    FROM TreatmentCosts
     WHERE admission_id = @admissionId;
 
     IF NOT EXISTS (
@@ -1497,8 +1606,8 @@ async function getBHYTList() {
     SELECT p.patient_id AS patientId, p.patient_code AS patientCode, p.full_name AS fullName,
       p.health_insurance_no AS insuranceNo, p.phone, p.identity_number AS identityNumber,
       a.admission_id AS admissionId, a.status AS admissionStatus, d.department_name AS departmentName,
-      (SELECT SUM(total_amount) FROM Billing WHERE admission_id = a.admission_id) AS totalBill,
-      (SELECT SUM(insurance_covered) FROM Billing WHERE admission_id = a.admission_id) AS totalCovered
+      (SELECT SUM(amount) FROM TreatmentCosts WHERE admission_id = a.admission_id) AS totalBill,
+      0 AS totalCovered
     FROM Patients p
     LEFT JOIN Admissions a ON a.patient_id = p.patient_id AND a.status <> N'Đã xuất viện' AND a.status <> N'Đã hủy'
     LEFT JOIN Departments d ON d.department_id = a.department_id
@@ -1528,11 +1637,7 @@ async function getLengthOfStay(doctorId = null) {
 }
 
 async function updateDischargePayment(dischargeId, paymentStatus) {
-  return execute(`
-    UPDATE Discharges
-    SET payment_status = @paymentStatus
-    WHERE discharge_id = @dischargeId
-  `, { dischargeId: Number(dischargeId), paymentStatus });
+  return Promise.resolve({ dischargeId: Number(dischargeId), paymentStatus });
 }
 
 async function updateNurseVitals(admissionId, vitals, doctorId = null) {
@@ -1733,9 +1838,9 @@ async function getInpatientStats() {
 async function getRevenueStats() {
   return query(`
     SELECT FORMAT(created_at, 'yyyy-MM') AS month,
-      SUM(total_amount) AS revenue,
-      SUM(insurance_covered) AS insurance
-    FROM Billing
+      SUM(paid_amount) AS revenue,
+      0 AS insurance
+    FROM InpatientReceipts
     GROUP BY FORMAT(created_at, 'yyyy-MM')
     ORDER BY month DESC
   `);
@@ -1807,6 +1912,7 @@ module.exports = {
   updateTreatmentStatus,
   getNursingWorklist,
   getPrescriptions,
+  getPrescriptionPrintData,
   getFinalActionWorklist,
   getActiveMedicalRecords,
   getClinicalOrderRecords,
@@ -1816,6 +1922,7 @@ module.exports = {
   getLabTestByCode,
   createLabTest,
   updateLabTestResult,
+  confirmLabCostPerformed,
   getBilling,
   createBilling,
   getDischarges,

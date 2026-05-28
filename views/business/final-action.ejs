@@ -4,7 +4,7 @@
 
 <section class="module-hero">
   <div>
-    <h2>Kê đơn / nhập viện / chuyển viện / ra viện</h2>
+    <h2>Kê đơn / nhập viện / ra viện</h2>
     <% if (selectedDoctor) { %>
       <p class="text-muted mb-0"><%= selectedDoctor.fullName %> · <%= selectedDoctor.departmentName || selectedDoctor.specialty || 'Bác sĩ điều trị' %></p>
     <% } %>
@@ -50,20 +50,20 @@
                 <span class="module-soft-pill"><%= row.patientCode %> · <%= row.gender || '-' %></span>
                 <%- include('../partials/badge', { text: row.finalDecision }) %>
               </div>
-              <div class="row g-2 text-muted small">
-                <div class="col-md-3">
+              <div class="final-action-meta text-muted small">
+                <div class="final-action-meta-item">
                   <span class="fw-semibold text-dark">Hồ sơ:</span>
                   <%= row.recordCode || 'Chưa có HSBA' %>
                 </div>
-                <div class="col-md-3">
+                <div class="final-action-meta-item">
                   <span class="fw-semibold text-dark">Khoa/Buồng/Giường:</span>
                   <%= location %>
                 </div>
-                <div class="col-md-3">
+                <div class="final-action-meta-item">
                   <span class="fw-semibold text-dark">Bác sĩ:</span>
                   <%= row.doctorName || '-' %>
                 </div>
-                <div class="col-md-3">
+                <div class="final-action-meta-item">
                   <span class="fw-semibold text-dark">Đơn thuốc:</span>
                   <%= row.prescriptionCount || 0 %>
                   <% if (row.latestPrescriptionDate) { %>
@@ -102,12 +102,6 @@
                 </form>
               <% } %>
             <% } else { %>
-              <button class="btn btn-light" type="button" data-bs-toggle="modal" data-bs-target="#finalTransferModal"
-                data-admission-id="<%= row.admissionId %>"
-                data-patient-name="<%= row.patientName %>"
-                data-patient-code="<%= row.patientCode %>">
-                <i class="bi bi-arrow-left-right me-2"></i>Chuyển viện
-              </button>
               <button class="btn btn-light" type="button" data-bs-toggle="modal" data-bs-target="#finalDischargeModal"
                 data-admission-id="<%= row.admissionId %>"
                 data-patient-name="<%= row.patientName %>"
@@ -186,13 +180,6 @@
                     <i class="bi bi-capsule"></i>
                   </button>
                 <% } %>
-                <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#finalTransferModal"
-                  data-admission-id="<%= row.admissionId %>"
-                  data-patient-name="<%= row.patientName %>"
-                  data-patient-code="<%= row.patientCode %>"
-                  title="Chuyển viện">
-                  <i class="bi bi-arrow-left-right"></i>
-                </button>
                 <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#finalDischargeModal"
                   data-admission-id="<%= row.admissionId %>"
                   data-patient-name="<%= row.patientName %>"

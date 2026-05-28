@@ -21,6 +21,7 @@
         startDate: row.startDate,
         endDate: row.endDate,
         routes: new Set(),
+        dispenseStatuses: [],
         items: []
       };
       prescriptionMap.set(key, group);
@@ -29,10 +30,23 @@
 
     const group = prescriptionMap.get(key);
     if (row.route) group.routes.add(row.route);
+    group.dispenseStatuses.push(row.dispenseStatus || 'Chờ thực hiện');
     group.items.push(row);
   });
 
   const routeOptions = [...new Set(rows.map(row => row.route).filter(Boolean))];
+  const fulfilledMedicineStatuses = new Set(['Đã thực hiện', 'Đã tính phí', 'Đã thanh toán']);
+  const getDispenseSummary = (statuses) => {
+    const normalized = statuses.filter(Boolean);
+    const fulfilledCount = normalized.filter(status => fulfilledMedicineStatuses.has(status)).length;
+    if (!normalized.length || fulfilledCount === 0) {
+      return { text: 'Chờ Dược cấp phát', className: 'text-warning border-warning bg-warning bg-opacity-10' };
+    }
+    if (fulfilledCount === normalized.length) {
+      return { text: 'Đã cấp phát thuốc', className: 'text-success border-success bg-success bg-opacity-10' };
+    }
+    return { text: `Cấp phát ${fulfilledCount}/${normalized.length} thuốc`, className: 'text-primary border-primary bg-primary bg-opacity-10' };
+  };
 %>
 
 <section class="module-hero">
@@ -68,6 +82,7 @@
       const routeText = routes.join(', ') || '-';
       const medicinesPreview = group.items.slice(0, 3).map(item => item.medicineName).join(', ');
       const hiddenCount = Math.max(group.items.length - 3, 0);
+      const dispenseSummary = getDispenseSummary(group.dispenseStatuses);
       const searchText = [
         group.prescriptionCode,
         group.patientName,
@@ -117,6 +132,9 @@
               <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
                 <span class="module-soft-pill"><i class="bi bi-capsule-pill me-1"></i><%= group.items.length %> thuốc</span>
                 <span class="module-soft-pill"><%= routeText %></span>
+                <span class="module-soft-pill border <%= dispenseSummary.className %>">
+                  <i class="bi bi-truck me-1"></i><%= dispenseSummary.text %>
+                </span>
                 <span class="text-muted small">
                   <%= medicinesPreview || '-' %><%= hiddenCount ? ` +${hiddenCount} thuốc` : '' %>
                 </span>
@@ -124,6 +142,9 @@
             </div>
           </div>
           <div class="d-flex flex-column flex-sm-row gap-2 flex-shrink-0">
+            <a class="btn btn-light border" href="/prescriptions/<%= group.prescriptionId %>/in-bieu-mau-noi-tru" target="_blank">
+              <i class="bi bi-printer me-2"></i>In biểu mẫu đơn thuốc
+            </a>
             <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#<%= group.modalId %>">
               <i class="bi bi-eye me-2"></i>Xem chi tiết đơn thuốc
             </button>
@@ -224,6 +245,7 @@
                   <th>Lần dùng</th>
                   <th>Đường dùng</th>
                   <th>Số lượng</th>
+                  <th>Trạng thái cấp phát</th>
                 </tr>
               </thead>
               <tbody>
@@ -238,6 +260,7 @@
                     <td><%= item.frequency || '-' %></td>
                     <td><span class="module-soft-pill"><%= item.route || '-' %></span></td>
                     <td><%= item.quantity ? `${item.quantity} ${item.unit || ''}` : '-' %></td>
+                    <td><%- include('../partials/badge', { text: item.dispenseStatus || 'Chờ thực hiện' }) %></td>
                   </tr>
                 <% }) %>
               </tbody>

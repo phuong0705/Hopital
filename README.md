@@ -82,6 +82,7 @@ http://localhost:3003
 | Bac si | bacsi | 123456 |
 | Y ta / dieu duong | dieuduong | 123456 |
 | Tiep nhan / thu ngan | thungan | 123456 |
+| Duoc | duoc | 123456 |
 | Benh nhan | benhnhan | 123456 |
 
 Mat khau seed de dang don gian nham de kiem thu local. Khi dung thuc te, can chuyen toan bo `password_hash` sang bcrypt.

@@ -2,6 +2,9 @@ const patientRepository = require('../repositories/patient.repository');
 const moduleRepository = require('../repositories/module.repository');
 const dashboardRepository = require('../repositories/dashboard.repository');
 const nurseAssignmentRepository = require('../repositories/nurse-assignment.repository');
+const medicineRepository = require('../repositories/medicine.repository');
+const supplyRepository = require('../repositories/supply.repository');
+const treatmentCostRepository = require('../repositories/treatment-cost.repository');
 
 async function getSessionDoctor(req) {
   if (!req.session.user || req.session.user.roleCode !== 'DOCTOR') return null;
@@ -58,6 +61,10 @@ function renderDashboardHome(req, res) {
 
   if (req.session.user.roleCode === 'NURSE') {
     return res.redirect('/dashboard/nurse');
+  }
+
+  if (req.session.user.roleCode === 'PHARMACY') {
+    return res.redirect('/dashboard/pharmacy');
   }
 
   return res.render('dashboard/index', {
@@ -198,6 +205,65 @@ async function nurseShift(req, res, next) {
       statusChart: buildNurseStatusRows(patients),
       shiftChart: buildNurseShiftBlocks(treatments),
       generatedAt: new Date()
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function pharmacy(req, res, next) {
+  try {
+    const [medicines, supplies, pendingMedicineCosts] = await Promise.all([
+      medicineRepository.getMedicines(),
+      supplyRepository.getSupplies(),
+      treatmentCostRepository.getPendingMedicineConfirmations()
+    ]);
+
+    const lowStockMedicines = medicines.filter((row) =>
+      Number(row.currentStock || 0) <= Number(row.stockWarningLevel || 0)
+    );
+    const lowStockSupplies = supplies.filter((row) => row.warningStatus !== 'Ổn định');
+    const medicineStockTotal = medicines.reduce((sum, row) => sum + Number(row.currentStock || 0), 0);
+    const supplyStockTotal = supplies.reduce((sum, row) => sum + Number(row.currentStock || 0), 0);
+
+    return res.render('dashboard/pharmacy', {
+      title: 'Tổng quan Dược',
+      activeMenu: 'dashboard',
+      medicines,
+      supplies,
+      lowStockMedicines,
+      lowStockSupplies,
+      pendingMedicineCosts,
+      kpis: [
+        {
+          label: 'Danh mục thuốc',
+          value: medicines.length,
+          detail: `${medicineStockTotal} đơn vị tồn kho`,
+          icon: 'bi-capsule-pill',
+          tone: 'sky'
+        },
+        {
+          label: 'Thuốc cần kiểm tra',
+          value: lowStockMedicines.length,
+          detail: 'Dưới hoặc bằng ngưỡng cảnh báo',
+          icon: 'bi-exclamation-triangle',
+          tone: 'rose'
+        },
+        {
+          label: 'Danh mục vật tư',
+          value: supplies.length,
+          detail: `${supplyStockTotal} đơn vị tồn kho`,
+          icon: 'bi-box-seam',
+          tone: 'emerald'
+        },
+        {
+          label: 'Vật tư cảnh báo',
+          value: lowStockSupplies.length,
+          detail: 'Sắp hết, hết hàng hoặc dưới định mức',
+          icon: 'bi-clipboard2-pulse',
+          tone: 'amber'
+        }
+      ]
     });
   } catch (error) {
     return next(error);
@@ -407,5 +473,6 @@ module.exports = {
   index,
   home,
   nurseShift,
+  pharmacy,
   doctorSummary
 };

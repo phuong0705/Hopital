@@ -5,6 +5,6 @@ const { requireRole } = require('../middlewares/role.middleware');
 const router = express.Router();
 
 router.get('/', requireRole(['ADMIN', 'DOCTOR', 'NURSE']), modulesController.treatments);
-router.post('/:id/status', requireRole(['ADMIN', 'DOCTOR', 'NURSE']), modulesController.updateTreatmentStatus);
+router.post('/:id/status', requireRole(['ADMIN', 'NURSE']), modulesController.updateTreatmentStatus);
 
 module.exports = router;

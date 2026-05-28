@@ -1,6 +1,8 @@
 <%
   const canCreateLabTest = currentUser && ['ADMIN', 'DOCTOR'].includes(currentUser.roleCode);
   const canViewLabDetail = currentUser && ['ADMIN', 'DOCTOR', 'NURSE', 'LAB'].includes(currentUser.roleCode);
+  const canConfirmLabCost = currentUser && ['ADMIN', 'LAB'].includes(currentUser.roleCode);
+  const canShowActions = canViewLabDetail || canConfirmLabCost;
   const doctorFilterOptions = [...new Set(rows.map(row => row.doctorName).filter(Boolean))];
   const toDateInputValue = (value) => {
     if (!value) return '';
@@ -55,7 +57,7 @@
           <th>Trạng thái</th>
           <th>Kết quả</th>
           <th>Bác sĩ</th>
-          <% if (canViewLabDetail) { %>
+          <% if (canShowActions) { %>
             <th class="text-end">Hành động</th>
           <% } %>
         </tr>
@@ -74,36 +76,52 @@
             </td>
             <td><%= row.testType %></td>
             <td><%= format.datetime(row.orderedDate) %></td>
-            <td><%- include('../partials/badge', { text: row.status }) %></td>
+            <td>
+              <%- include('../partials/badge', { text: row.status }) %>
+              <% if (row.labCostStatus) { %>
+                <small class="d-block text-muted mt-1">Viện phí: <%= row.labCostStatus %></small>
+              <% } %>
+            </td>
             <td class="text-wrap-cell compact"><%= row.resultSummary || 'Chưa có kết quả' %></td>
             <td><%= row.doctorName %></td>
-            <% if (canViewLabDetail) { %>
+            <% if (canShowActions) { %>
               <td class="text-end">
-                <button
-                  class="btn btn-sm btn-primary"
-                  type="button"
-                  data-bs-toggle="modal"
-                  data-bs-target="#labOrderDetailModal"
-                  data-test-code="<%= row.testCode %>"
-                  data-patient-name="<%= row.patientName || '' %>"
-                  data-patient-code="<%= row.patientCode || '' %>"
-                  data-patient-gender="<%= row.gender || '' %>"
-                  data-patient-dob="<%= row.dateOfBirth ? format.date(row.dateOfBirth) : '' %>"
-                  data-patient-phone="<%= row.phone || '' %>"
-                  data-department="<%= row.departmentName || '' %>"
-                  data-doctor="<%= row.doctorName || '' %>"
-                  data-ordered-date="<%= row.orderedDate ? format.datetime(row.orderedDate) : '' %>"
-                  data-diagnosis="<%= row.preliminaryDiagnosis || '' %>"
-                  data-test-type="<%= row.testType || '' %>">
-                  <i class="bi bi-card-list me-1"></i>Xem chi tiết
-                </button>
+                <div class="d-inline-flex flex-wrap justify-content-end gap-2">
+                  <% if (canConfirmLabCost && row.labCostStatus === 'Chờ thực hiện') { %>
+                    <form action="/labtests/<%= row.testCode %>/confirm-cost" method="post" class="d-inline">
+                      <button class="btn btn-sm btn-success" type="submit">
+                        <i class="bi bi-check2-square me-1"></i>Xác nhận đã xét nghiệm
+                      </button>
+                    </form>
+                  <% } %>
+                  <% if (canViewLabDetail) { %>
+                    <button
+                      class="btn btn-sm btn-primary"
+                      type="button"
+                      data-bs-toggle="modal"
+                      data-bs-target="#labOrderDetailModal"
+                      data-test-code="<%= row.testCode %>"
+                      data-patient-name="<%= row.patientName || '' %>"
+                      data-patient-code="<%= row.patientCode || '' %>"
+                      data-patient-gender="<%= row.gender || '' %>"
+                      data-patient-dob="<%= row.dateOfBirth ? format.date(row.dateOfBirth) : '' %>"
+                      data-patient-phone="<%= row.phone || '' %>"
+                      data-department="<%= row.departmentName || '' %>"
+                      data-doctor="<%= row.doctorName || '' %>"
+                      data-ordered-date="<%= row.orderedDate ? format.datetime(row.orderedDate) : '' %>"
+                      data-diagnosis="<%= row.preliminaryDiagnosis || '' %>"
+                      data-test-type="<%= row.testType || '' %>">
+                      <i class="bi bi-card-list me-1"></i>Xem chi tiết
+                    </button>
+                  <% } %>
+                </div>
               </td>
             <% } %>
           </tr>
         <% }) %>
         <% if (!rows.length) { %>
           <tr data-empty-row="true">
-            <td colspan="<%= canViewLabDetail ? 7 : 6 %>" class="text-center py-4 text-muted">Chưa có chỉ định xét nghiệm nào</td>
+            <td colspan="<%= canShowActions ? 7 : 6 %>" class="text-center py-4 text-muted">Chưa có chỉ định xét nghiệm nào</td>
           </tr>
         <% } %>
       </tbody>
@@ -293,7 +311,17 @@
               </div>
               <div class="col-12">
                 <label class="form-label">Loại xét nghiệm</label>
-                <input class="form-control" name="testType" placeholder="Ví dụ: Công thức máu, CRP, X-quang phổi" required>
+                <select class="form-select" name="testType" required>
+                  <option value="">Chọn từ danh mục dịch vụ</option>
+                  <% (clinicalServices || []).forEach(service => { %>
+                    <option value="<%= service.serviceName %>">
+                      <%= service.serviceGroup %> · <%= service.serviceName %>
+                      <% if (Number(service.unitPrice || 0) > 0) { %>
+                        · <%= format.currency(service.unitPrice) %>
+                      <% } %>
+                    </option>
+                  <% }) %>
+                </select>
               </div>
             </div>
           <% } else { %>

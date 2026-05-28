@@ -81,7 +81,7 @@ async function addSupplyTransaction(data, createdBy) {
     INSERT INTO SupplyTransactions (supply_id, transaction_type, quantity, note, created_by)
     VALUES (@supplyId, @transactionType, @quantity, NULLIF(@note, ''), @createdBy);
 
-    IF @transactionType = N'Xuất sử dụng'
+    IF @transactionType IN (N'Xuất sử dụng', N'Cấp phát')
     BEGIN
       UPDATE SupplyCatalog
       SET current_stock = CASE WHEN current_stock >= @quantity THEN current_stock - @quantity ELSE 0 END,
@@ -89,7 +89,7 @@ async function addSupplyTransaction(data, createdBy) {
       WHERE supply_id = @supplyId;
     END;
 
-    IF @transactionType = N'Nhập kho'
+    IF @transactionType IN (N'Nhập kho', N'Hoàn trả')
     BEGIN
       UPDATE SupplyCatalog
       SET current_stock = current_stock + @quantity,

@@ -1,71 +1,95 @@
+<%
+  const dueAmount = (data.treatmentCosts || [])
+    .filter(item => ['Đã thực hiện', 'Đã tính phí'].includes(item.status))
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const paidAmount = (data.inpatientReceipts || [])
+    .reduce((sum, item) => sum + Number(item.paidAmount || 0), 0);
+%>
+
 <section class="dashboard-grid mt-4">
   <div class="panel">
     <div class="panel-header">
       <div>
-        <h2>Viện phí / thanh toán</h2>
+        <h2>Viện phí đến hạn</h2>
+        <small>Bệnh nhân/người nhà thanh toán tại quầy thu ngân.</small>
       </div>
-      <% if (data.billing) { %>
-        <%- include('../partials/badge', { text: data.billing.paymentStatus }) %>
-      <% } %>
+      <%- include('../partials/badge', { text: dueAmount > 0 ? 'Chờ thanh toán' : 'Không còn phí đến hạn' }) %>
     </div>
-    <% if (data.billing) { %>
-      <div class="p-3">
-        <dl class="info-list">
-          <dt>Chi phí khám</dt><dd><%= format.currency(data.billing.consultationFee) %></dd>
-          <dt>Chi phí giường</dt><dd><%= format.currency(data.billing.bedFee) %></dd>
-          <dt>Chi phí thuốc</dt><dd><%= format.currency(data.billing.medicineFee) %></dd>
-          <dt>Chi phí xét nghiệm</dt><dd><%= format.currency(data.billing.labFee) %></dd>
-          <dt>BHYT hỗ trợ</dt><dd><%= format.currency(data.billing.insuranceCovered) %></dd>
-          <dt>Tổng thanh toán</dt><dd><strong class="fs-4 text-primary"><%= format.currency(data.billing.totalAmount) %></strong></dd>
-        </dl>
-        
-        <% if (data.billing.paymentStatus !== 'Đã thanh toán') { %>
-          <div class="mt-4 p-3 bg-light rounded-3 border">
-            <div class="d-flex align-items-center mb-3">
-              <i class="bi bi-wallet2 text-primary fs-3 me-3"></i>
-              <div>
-                <h6 class="mb-0 fw-bold">Thanh toán trực tuyến</h6>
-                <small class="text-muted">An toàn, nhanh chóng qua thẻ hoặc ví điện tử</small>
-              </div>
-            </div>
-            <form action="/patients/me/billing/<%= data.billing.billingId %>/pay" method="post">
-              <button class="btn btn-primary w-100 py-2 fw-bold">
-                <i class="bi bi-credit-card me-2"></i>THANH TOÁN NGAY
-              </button>
-            </form>
-          </div>
-        <% } else { %>
-          <div class="mt-4 p-3 bg-success bg-opacity-10 rounded-3 border border-success border-opacity-25 text-center">
-            <i class="bi bi-check-circle-fill text-success fs-1 mb-2 d-block"></i>
-            <h6 class="text-success fw-bold mb-0">HÓA ĐƠN ĐÃ ĐƯỢC THANH TOÁN</h6>
-            <small class="text-success opacity-75">Cảm ơn bạn đã sử dụng dịch vụ</small>
-          </div>
-        <% } %>
-      </div>
-    <% } else { %>
-      <div class="p-5 text-center text-muted">Chưa phát sinh hóa đơn viện phí.</div>
-    <% } %>
+    <div class="p-3">
+      <dl class="info-list">
+        <dt>Chi phí đến hạn</dt><dd><strong class="fs-4 text-primary"><%= format.currency(dueAmount) %></strong></dd>
+        <dt>Đã thanh toán</dt><dd><%= format.currency(paidAmount) %></dd>
+        <dt>Hướng dẫn</dt><dd>Vui lòng liên hệ quầy thu ngân để lập phiếu thu và xác nhận thanh toán.</dd>
+      </dl>
+    </div>
   </div>
 
   <div class="panel">
     <div class="panel-header">
       <div>
-        <h2>Chi tiết chi phí</h2>
+        <h2>Phiếu thu đã lập</h2>
       </div>
     </div>
     <div class="list-stack">
-      <% data.billingItems.forEach(item => { %>
+      <% (data.inpatientReceipts || []).forEach(receipt => { %>
         <div class="list-item">
           <span class="list-icon info"><i class="bi bi-receipt"></i></span>
           <div>
-            <strong><%= item.itemName %></strong>
-            <small><%= item.itemType %> · SL <%= item.quantity %> · Đơn giá <%= format.currency(item.unitPrice) %></small>
+            <strong><%= receipt.receiptCode %></strong>
+            <small><%= format.datetime(receipt.createdAt) %> · <%= receipt.paymentMethod %> · <%= receipt.cashierName %></small>
           </div>
-          <strong><%= format.currency(item.amount) %></strong>
+          <div class="text-end">
+            <strong><%= format.currency(receipt.paidAmount) %></strong>
+            <%- include('../partials/badge', { text: receipt.paymentStatus }) %>
+          </div>
         </div>
       <% }) %>
-      <% if (!data.billingItems.length) { %>
+      <% if (!(data.inpatientReceipts || []).length) { %>
+        <div class="p-4 text-center text-muted">Chưa có phiếu thu viện phí.</div>
       <% } %>
     </div>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="panel-header">
+    <div>
+      <h2>Chi tiết chi phí điều trị</h2>
+    </div>
+  </div>
+  <div class="module-table-wrap">
+    <table class="table app-table">
+      <thead>
+        <tr>
+          <th>Ngày phát sinh</th>
+          <th>Loại chi phí</th>
+          <th>Nội dung</th>
+          <th>Khoa/phòng</th>
+          <th>Người ghi nhận</th>
+          <th>Số lượng</th>
+          <th>Đơn giá</th>
+          <th>Thành tiền</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% (data.treatmentCosts || []).forEach(item => { %>
+          <tr>
+            <td><%= format.datetime(item.incurredAt) %></td>
+            <td><%= item.costType %></td>
+            <td class="text-wrap-cell compact"><%= item.content %></td>
+            <td><%= item.departmentName || '-' %></td>
+            <td><%= item.recordedBy || '-' %></td>
+            <td><%= Number(item.quantity || 0).toLocaleString('vi-VN') %></td>
+            <td><%= format.currency(item.unitPrice || 0) %></td>
+            <td><strong><%= format.currency(item.amount || 0) %></strong></td>
+            <td><%- include('../partials/badge', { text: item.status }) %></td>
+          </tr>
+        <% }) %>
+        <% if (!(data.treatmentCosts || []).length) { %>
+          <tr><td colspan="9" class="text-center py-4 text-muted">Chưa có chi phí điều trị phát sinh.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
   </div>
 </section>

@@ -9,7 +9,12 @@
   <a href="/medical-records" class="btn btn-light"><i class="bi bi-arrow-left me-2"></i>Quay lại</a>
 </section>
 
-<section class="dashboard-grid mt-4">
+<ul class="nav nav-pills gap-2 mt-4">
+  <li class="nav-item"><a class="nav-link active" href="#recordClinical">Hồ sơ điều trị</a></li>
+  <li class="nav-item"><a class="nav-link" href="#recordCosts">Chi phí điều trị</a></li>
+</ul>
+
+<section class="dashboard-grid mt-4" id="recordClinical">
   <div class="panel">
     <div class="panel-header"><h2>Thông tin bệnh án</h2></div>
     <dl class="info-list">
@@ -31,6 +36,50 @@
         </div>
       <% }) %>
     </div>
+  </div>
+</section>
+
+<section class="panel mt-4" id="recordCosts">
+  <div class="panel-header">
+    <div>
+      <h2>Chi phí điều trị</h2>
+      <small>Chi phí phát sinh từ thuốc, xét nghiệm và dịch vụ/y lệnh đã thực hiện.</small>
+    </div>
+  </div>
+  <div class="module-table-wrap">
+    <table class="table app-table">
+      <thead>
+        <tr>
+          <th>Ngày phát sinh</th>
+          <th>Loại chi phí</th>
+          <th>Nội dung</th>
+          <th>Khoa/phòng</th>
+          <th>Người ghi nhận</th>
+          <th>Số lượng</th>
+          <th>Đơn giá</th>
+          <th>Thành tiền</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% data.costs.forEach(cost => { %>
+          <tr>
+            <td><%= format.datetime(cost.incurredAt) %></td>
+            <td><%= cost.costType %></td>
+            <td class="text-wrap-cell compact"><%= cost.content %></td>
+            <td><%= cost.departmentName || '-' %></td>
+            <td><%= cost.recordedBy || '-' %></td>
+            <td><%= Number(cost.quantity || 0).toLocaleString('vi-VN') %></td>
+            <td><%= format.currency(cost.unitPrice || 0) %></td>
+            <td><strong><%= format.currency(cost.amount || 0) %></strong></td>
+            <td><%- include('../partials/badge', { text: cost.status }) %></td>
+          </tr>
+        <% }) %>
+        <% if (!data.costs.length) { %>
+          <tr><td colspan="9" class="text-center py-4 text-muted">Chưa có chi phí điều trị phát sinh.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
   </div>
 </section>
 

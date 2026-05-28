@@ -1,0 +1,75 @@
+<section class="module-hero">
+  <div>
+    <h2>Phiếu thu viện phí</h2>
+  </div>
+  <div class="module-actions">
+    <a class="btn btn-light" href="/billing"><i class="bi bi-arrow-left me-2"></i>Quay lại</a>
+    <button class="btn btn-primary" type="button" data-print-page><i class="bi bi-printer me-2"></i>In phiếu thu</button>
+  </div>
+</section>
+
+<section class="panel mt-4">
+  <div class="panel-header">
+    <div>
+      <h2><%= data.receipt.receiptCode %></h2>
+      <small>Lập lúc <%= format.datetime(data.receipt.createdAt) %></small>
+    </div>
+    <%- include('../partials/badge', { text: data.receipt.paymentStatus }) %>
+  </div>
+
+  <div class="row g-4 p-3">
+    <div class="col-md-6">
+      <dl class="info-list compact">
+        <dt>Bệnh nhân</dt><dd><%= data.receipt.patientName %> · <%= data.receipt.patientCode %></dd>
+        <dt>Hồ sơ điều trị</dt><dd><%= data.receipt.recordCode || `#${data.receipt.admissionId}` %></dd>
+        <dt>Khoa/phòng</dt><dd><%= data.receipt.departmentName %></dd>
+      </dl>
+    </div>
+    <div class="col-md-6">
+      <dl class="info-list compact">
+        <dt>Thu ngân</dt><dd><%= data.receipt.cashierName %></dd>
+        <dt>Phương thức</dt><dd><%= data.receipt.paymentMethod %></dd>
+        <dt>Đã thanh toán</dt><dd><strong class="text-primary"><%= format.currency(data.receipt.paidAmount) %></strong></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table">
+      <thead>
+        <tr>
+          <th>Ngày phát sinh</th>
+          <th>Loại chi phí</th>
+          <th>Nội dung</th>
+          <th>Khoa/phòng</th>
+          <th>SL</th>
+          <th>Đơn giá</th>
+          <th>Thành tiền</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% data.items.forEach(item => { %>
+          <tr>
+            <td><%= format.datetime(item.incurredAt) %></td>
+            <td><%= item.costType %></td>
+            <td class="text-wrap-cell compact"><%= item.content %></td>
+            <td><%= item.departmentName || '-' %></td>
+            <td><%= Number(item.quantity || 0).toLocaleString('vi-VN') %></td>
+            <td><%= format.currency(item.unitPrice || 0) %></td>
+            <td><strong><%= format.currency(item.amount || 0) %></strong></td>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="6" class="text-end">Tổng tiền</th>
+          <th><%= format.currency(data.receipt.totalAmount) %></th>
+        </tr>
+        <tr>
+          <th colspan="6" class="text-end">Số tiền thanh toán</th>
+          <th><%= format.currency(data.receipt.paidAmount) %></th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>

@@ -80,6 +80,24 @@ async function getServices() {
   `);
 }
 
+async function getClinicalOrderServices() {
+  await ensureServiceCatalog();
+
+  return query(`
+    SELECT
+      service_id AS serviceId,
+      service_code AS serviceCode,
+      service_name AS serviceName,
+      service_group AS serviceGroup,
+      department_name AS departmentName,
+      unit_price AS unitPrice
+    FROM ServiceCatalog
+    WHERE status = N'Đang sử dụng'
+      AND service_group IN (N'Xét nghiệm', N'Chẩn đoán hình ảnh')
+    ORDER BY service_group, service_name
+  `);
+}
+
 async function createService(data) {
   await ensureServiceCatalog();
 
@@ -123,6 +141,7 @@ async function updateServiceStatus(serviceId, status) {
 
 module.exports = {
   getServices,
+  getClinicalOrderServices,
   createService,
   updateServiceStatus
 };

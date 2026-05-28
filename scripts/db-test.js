@@ -4,8 +4,9 @@ const { getPool } = require('../config/db');
 
 async function main() {
   console.log('Dang kiem tra ket noi SQL Server bang mssql...');
+  console.log(`Auth: ${process.env.DB_AUTH || 'sql'}`);
   console.log(`Server: ${process.env.DB_SERVER}`);
-  console.log(`Database: ${process.env.DB_NAME}`);
+  console.log(`Database: ${process.env.DB_NAME || process.env.DB_DATABASE}`);
 
   const pool = await getPool();
   const result = await pool.request().query('SELECT DB_NAME() AS databaseName, SUSER_SNAME() AS loginName, @@SERVERNAME AS serverName');

@@ -15,6 +15,7 @@ const backupRepository = require('../repositories/backup.repository');
 const cashierRepository = require('../repositories/cashier.repository');
 const formTemplateRepository = require('../repositories/form-template.repository');
 const nurseAssignmentRepository = require('../repositories/nurse-assignment.repository');
+const treatmentCostRepository = require('../repositories/treatment-cost.repository');
 
 function containsKeyword(value, keywords) {
   const normalized = normalizeText(value);
@@ -243,6 +244,19 @@ async function formTemplates(req, res, next) {
     return next(error);
   }
 }
+
+async function blankInpatientPrescriptionTemplate(req, res, next) {
+  try {
+    return res.render('prescriptions/inpatient-template-print', {
+      title: 'Đơn thuốc nội trú',
+      layout: false,
+      data: null
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function examTicket(req, res, next) {
   try {
     const [patients, departments, doctors, tickets] = await Promise.all([
@@ -718,10 +732,12 @@ async function finalAction(req, res, next) {
       getSessionDoctor(req)
     ]);
 
-    const decisionRows = rows.map((row) => ({
-      ...row,
-      finalDecision: buildFinalActionDecision(row)
-    }));
+    const decisionRows = rows
+      .filter((row) => !row.dischargeId && !statusEquals(row.status, 'Chờ xuất viện'))
+      .map((row) => ({
+        ...row,
+        finalDecision: buildFinalActionDecision(row)
+      }));
 
     const stats = {
       total: decisionRows.length,
@@ -732,7 +748,7 @@ async function finalAction(req, res, next) {
     };
 
     return res.render('business/final-action', {
-      title: 'Kê đơn / nhập viện / chuyển viện / ra viện',
+      title: 'Kê đơn / nhập viện / ra viện',
       activeMenu: req.query.activeMenu || 'doctor-final-action',
       rows: decisionRows,
       activeRecords,
@@ -818,7 +834,7 @@ async function feeExam(req, res, next) {
 
 async function invoiceList(req, res, next) {
   try {
-    const rows = await moduleRepository.getBilling();
+    const rows = await cashierRepository.getPrintableDocuments();
     res.render('business/invoices', {
       title: 'Quản lý hóa đơn',
       activeMenu: req.query.activeMenu || 'invoice',
@@ -1118,14 +1134,34 @@ async function updateBedStatus(req, res, next) {
 
 async function wardMeds(req, res, next) {
   try {
-    const rows = await medicineRepository.getMedicines();
+    const [rows, pendingMedicineCosts] = await Promise.all([
+      medicineRepository.getMedicines(),
+      req.session.user.roleCode === 'PHARMACY'
+        ? treatmentCostRepository.getPendingMedicineConfirmations()
+        : Promise.resolve([])
+    ]);
     res.render('business/ward-meds', {
       title: 'Quản lý thuốc tại khoa',
       activeMenu: req.query.activeMenu || 'nurse-meds',
-      rows
+      rows,
+      pendingMedicineCosts
     });
   } catch (error) {
     next(error);
+  }
+}
+
+async function confirmMedicineCost(req, res, next) {
+  try {
+    await treatmentCostRepository.confirmMedicineCost(req.params.costId, req.session.user.fullName || 'Dược');
+    req.flash('success', 'Dược đã xác nhận cấp phát thuốc. Chi phí được chuyển sang Đã thực hiện.');
+    return res.redirect('/nghiep-vu/quan-ly-thuoc-tai-khoa?activeMenu=pharmacy-ward-meds');
+  } catch (error) {
+    if (error.number === 51043) {
+      req.flash('error', 'Không tìm thấy thuốc chờ Dược xác nhận.');
+      return res.redirect('/nghiep-vu/quan-ly-thuoc-tai-khoa?activeMenu=pharmacy-ward-meds');
+    }
+    return next(error);
   }
 }
 
@@ -1141,6 +1177,12 @@ async function medicineHistory(req, res, next) {
 async function addMedicineTransaction(req, res, next) {
   try {
     const { medicineId, transactionType, quantity, note } = req.body;
+    const pharmacyOnlyTypes = ['Cấp phát', 'Hoàn trả', 'Hủy thuốc'];
+    if (pharmacyOnlyTypes.includes(transactionType) && req.session.user.roleCode !== 'PHARMACY') {
+      req.flash('error', 'Chỉ tài khoản Dược được thực hiện giao dịch cấp phát, hoàn trả hoặc hủy thuốc.');
+      return res.redirect('/nghiep-vu/quan-ly-thuoc-tai-khoa');
+    }
+
     await medicineRepository.addInventoryTransaction({
       medicineId: Number(medicineId),
       transactionType,
@@ -1184,10 +1226,15 @@ async function supplies(req, res, next) {
 
 async function addSupplyTransaction(req, res, next) {
   try {
+    const transactionType = req.body.transactionType || 'Yêu cầu lĩnh';
+    const pharmacyOnlyTypes = ['Cấp phát', 'Hoàn trả', 'Nhập kho'];
+    if (pharmacyOnlyTypes.includes(transactionType) && req.session.user.roleCode !== 'PHARMACY') {
+      req.flash('error', 'Chỉ tài khoản Dược được thực hiện giao dịch cấp phát, hoàn trả hoặc nhập kho vật tư.');
+      return res.redirect('/nghiep-vu/vat-tu-tieu-hao');
+    }
+
     await supplyRepository.addSupplyTransaction(req.body, req.session.user.userId);
-    req.flash('success', req.body.transactionType === 'Xuất sử dụng'
-      ? 'Đã cập nhật xuất sử dụng vật tư.'
-      : 'Đã ghi nhận yêu cầu vật tư.');
+    req.flash('success', `${transactionType} vật tư thành công.`);
     res.redirect('/nghiep-vu/vat-tu-tieu-hao');
   } catch (error) {
     next(error);
@@ -1205,6 +1252,7 @@ module.exports = {
   updateMedicineStatus,
   serviceCatalog,
   formTemplates,
+  blankInpatientPrescriptionTemplate,
   createService,
   updateServiceStatus,
   examTicket,
@@ -1254,6 +1302,7 @@ module.exports = {
   roomStatusUpdate,
   updateBedStatus,
   wardMeds,
+  confirmMedicineCost,
   medicineHistory,
   addMedicineTransaction,
   createMedicineProvision,

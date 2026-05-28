@@ -5,8 +5,9 @@ const { uploadLabResultFiles } = require('../middlewares/lab-result-upload.middl
 
 const router = express.Router();
 
-router.get('/', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'LAB']), modulesController.labtests);
+router.get('/', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'LAB', 'RECEPTIONIST']), modulesController.labtests);
 router.post('/', requireRole(['ADMIN', 'DOCTOR']), modulesController.createLabTest);
-router.post('/:testCode/result', requireRole(['ADMIN', 'NURSE', 'LAB']), uploadLabResultFiles.array('resultFiles', 10), modulesController.updateLabTestResult);
+router.post('/:testCode/result', requireRole(['ADMIN', 'LAB']), uploadLabResultFiles.array('resultFiles', 10), modulesController.updateLabTestResult);
+router.post('/:testCode/confirm-cost', requireRole(['ADMIN', 'LAB']), modulesController.confirmLabCost);
 
 module.exports = router;

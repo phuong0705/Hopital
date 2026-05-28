@@ -107,7 +107,7 @@ app.post('/forgot-password', redirectIfAuthenticated, authController.resetPasswo
 app.post('/logout', authController.logout);
 
 app.use('/_next', proxyToReportsFrontend);
-app.use('/reports', requireAuth, requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), proxyToReportsFrontend);
+app.use('/reports', requireAuth, requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'PHARMACY']), proxyToReportsFrontend);
 app.use('/doctor-dashboard', requireAuth, requireRole(['DOCTOR']), proxyToReportsFrontend);
 app.use(routes);
 

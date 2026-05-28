@@ -21,6 +21,13 @@ const defaultTemplates = [
     type: 'Hồ sơ bệnh án',
     description: 'Biểu mẫu tổng hợp hành chính, thông tin bệnh án, hướng điều trị và xác nhận hồ sơ bệnh án nội trú.',
     fileUrl: '/form-templates/bm-nt-05-ho-so-benh-an-noi-tru.pdf'
+  },
+  {
+    code: 'BM-NT-15',
+    name: 'Đơn thuốc nội trú',
+    type: 'Điều trị nội trú',
+    description: 'Biểu mẫu kê đơn thuốc nội trú gồm thông tin người bệnh, khoa/buồng/giường, chẩn đoán, dị ứng thuốc, danh mục thuốc và phần xác nhận.',
+    fileUrl: '/nghiep-vu/bieu-mau/don-thuoc-noi-tru'
   }
 ];
 

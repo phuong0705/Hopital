@@ -1,11 +1,12 @@
+<% const canCollectPayment = currentUser && ['ADMIN', 'RECEPTIONIST'].includes(currentUser.roleCode); %>
+
 <section class="module-hero">
   <div>
-    <h2>Viện phí / thanh toán</h2>
+    <h2>Tổng hợp viện phí</h2>
   </div>
   <div class="module-actions">
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
-    <button class="btn btn-light" type="button" data-export-table="billingTable" data-filename="vien-phi.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
-    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#billingModal"><i class="bi bi-receipt me-2"></i>Lập phiếu thu</button>
+    <button class="btn btn-light" type="button" data-export-table="billingSummaryTable" data-filename="tong-hop-vien-phi.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
   </div>
 </section>
 
@@ -13,115 +14,158 @@
   <div class="module-toolbar">
     <div class="module-search">
       <i class="bi bi-search"></i>
-      <input class="form-control" type="search" placeholder="Tìm mã phiếu hoặc bệnh nhân" data-module-search="billingTable">
+      <input class="form-control" type="search" placeholder="Tìm bệnh nhân, mã BN, khoa hoặc bác sĩ" data-module-search="billingSummaryTable">
     </div>
-    <select class="form-select" data-module-filter="billingTable" data-filter-key="status">
-      <option value="">Tất cả trạng thái</option>
-      <% [...new Set(rows.map(row => row.paymentStatus))].forEach(status => { %>
-        <option><%= status %></option>
-      <% }) %>
-    </select>
   </div>
 
   <div class="module-table-wrap">
-    <table class="table app-table module-table billing-table" id="billingTable">
+    <table class="table app-table module-table billing-table" id="billingSummaryTable">
       <thead>
         <tr>
-          <th>Phiếu thu</th>
           <th>Bệnh nhân</th>
-          <th>Chi phí</th>
-          <th>BHYT hỗ trợ</th>
-          <th>Tổng thanh toán</th>
-          <th>Trạng thái</th>
+          <th>Khoa / bác sĩ</th>
+          <th>Chờ thực hiện</th>
+          <th>Đến hạn thu</th>
+          <th>Đã thanh toán</th>
+          <th>Phát sinh gần nhất</th>
+          <% if (canCollectPayment) { %>
+            <th class="text-end">Thao tác</th>
+          <% } %>
         </tr>
       </thead>
       <tbody>
         <% rows.forEach(row => {
-          const feeSummary = `Khám ${format.currency(row.consultationFee)} · Giường ${format.currency(row.bedFee)} · Thuốc ${format.currency(row.medicineFee)} · XN ${format.currency(row.labFee)}`;
+          const rowPayableAmount = Number(row.payableAmount || 0);
+          const canConfirmDischarge = row.admissionStatus === 'Chờ xuất viện'
+            && Number(row.hasDischargeRecord || 0) === 1
+            && rowPayableAmount <= 0;
         %>
-          <tr data-search="<%= `${row.billCode} ${row.patientName}`.toLowerCase() %>" data-status="<%= row.paymentStatus %>">
+          <tr data-search="<%= `${row.patientCode} ${row.patientName} ${row.departmentName} ${row.doctorName}`.toLowerCase() %>">
             <td>
               <div class="module-primary">
-                <strong><%= row.billCode %></strong>
-                <small><%= format.datetime(row.createdAt) %></small>
+                <strong><%= row.patientName %></strong>
+                <small><%= row.patientCode %></small>
               </div>
             </td>
-            <td><%= row.patientName %></td>
-            <td class="text-wrap-cell compact"><%= feeSummary %></td>
-            <td><%= format.currency(row.insuranceCovered) %></td>
-            <td><strong class="module-money"><%= format.currency(row.totalAmount) %></strong></td>
-            <td><%- include('../partials/badge', { text: row.paymentStatus }) %></td>
+            <td>
+              <%= row.departmentName %>
+              <small><%= row.doctorName %></small>
+            </td>
+            <td><%= format.currency(row.waitingAmount || 0) %></td>
+            <td><strong class="module-money"><%= format.currency(row.payableAmount || 0) %></strong></td>
+            <td><%= format.currency(row.paidAmount || 0) %></td>
+            <td><%= row.latestCostAt ? format.datetime(row.latestCostAt) : '-' %></td>
+            <% if (canCollectPayment) { %>
+              <td class="text-end">
+                <div class="d-inline-flex gap-2">
+                  <button class="btn btn-sm btn-light" type="button" data-bs-toggle="modal" data-bs-target="#costModal<%= row.admissionId %>">
+                    Chi tiết
+                  </button>
+                  <% if (rowPayableAmount > 0) { %>
+                    <form action="/billing/admissions/<%= row.admissionId %>/notify" method="post" class="d-inline">
+                      <button class="btn btn-sm btn-outline-primary" type="submit">
+                        <i class="bi bi-bell me-1"></i>Nhắc phí
+                      </button>
+                    </form>
+                  <% } else if (canConfirmDischarge) { %>
+                    <form action="/billing/admissions/<%= row.admissionId %>/confirm-discharge" method="post" class="d-inline">
+                      <button class="btn btn-sm btn-success" type="submit">
+                        <i class="bi bi-box-arrow-right me-1"></i>Xác nhận xuất viện
+                      </button>
+                    </form>
+                  <% } else { %>
+                    <button class="btn btn-sm btn-light" type="button" disabled>
+                      Chưa có phí đến hạn
+                    </button>
+                  <% } %>
+                </div>
+              </td>
+            <% } %>
           </tr>
         <% }) %>
+        <% if (!rows.length) { %>
+          <tr><td colspan="<%= canCollectPayment ? 7 : 6 %>" class="text-center py-4 text-muted">Chưa có chi phí điều trị phát sinh.</td></tr>
+        <% } %>
       </tbody>
     </table>
   </div>
-
-  <div class="empty-inline module-empty d-none" data-empty-for="billingTable">
-    <i class="bi bi-search"></i>
-    <strong>Không tìm thấy phiếu viện phí phù hợp</strong>
-  </div>
 </section>
 
-<div class="modal fade" id="billingModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content app-modal">
-      <form action="/billing" method="post">
+<% if (canCollectPayment) rows.forEach(row => {
+  const costs = costGroups[row.admissionId] || [];
+  const payableAmount = Number(row.payableAmount || 0);
+%>
+  <div class="modal fade" id="costModal<%= row.admissionId %>" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content app-modal">
         <div class="modal-header">
-          <h5 class="modal-title">Lập phiếu thu viện phí</h5>
+          <div>
+            <h5 class="modal-title">Chi phí điều trị - <%= row.patientName %></h5>
+            <small class="text-muted"><%= row.patientCode %> · <%= row.departmentName %></small>
+          </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-12">
-              <label class="form-label">Bệnh nhân / lượt nhập viện</label>
-              <select name="admissionId" class="form-select" required>
-                <% activeAdmissions.forEach(item => { %>
-                  <option value="<%= item.admissionId %>"><%= item.patientName %> · <%= item.departmentName %></option>
+          <div class="module-table-wrap">
+            <table class="table app-table">
+              <thead>
+                <tr>
+                  <th>Ngày phát sinh</th>
+                  <th>Loại chi phí</th>
+                  <th>Nội dung</th>
+                  <th>Khoa/phòng</th>
+                  <th>Người ghi nhận</th>
+                  <th>Số lượng</th>
+                  <th>Đơn giá</th>
+                  <th>Thành tiền</th>
+                  <th>Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% costs.forEach(cost => { %>
+                  <tr>
+                    <td><%= format.datetime(cost.incurredAt) %></td>
+                    <td><%= cost.costType %></td>
+                    <td class="text-wrap-cell compact"><%= cost.content %></td>
+                    <td><%= cost.departmentName || '-' %></td>
+                    <td><%= cost.recordedBy || '-' %></td>
+                    <td><%= Number(cost.quantity || 0).toLocaleString('vi-VN') %></td>
+                    <td><%= format.currency(cost.unitPrice || 0) %></td>
+                    <td><strong><%= format.currency(cost.amount || 0) %></strong></td>
+                    <td><%- include('../partials/badge', { text: cost.status }) %></td>
+                  </tr>
                 <% }) %>
-              </select>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Chi phí khám</label>
-              <input name="consultationFee" type="number" min="0" value="0" class="form-control billing-input">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Chi phí giường</label>
-              <input name="bedFee" type="number" min="0" value="0" class="form-control billing-input">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Chi phí thuốc</label>
-              <input name="medicineFee" type="number" min="0" value="0" class="form-control billing-input">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Chi phí xét nghiệm</label>
-              <input name="labFee" type="number" min="0" value="0" class="form-control billing-input">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">BHYT hỗ trợ</label>
-              <input name="insuranceCovered" type="number" min="0" value="0" class="form-control billing-input">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Trạng thái</label>
-              <select name="paymentStatus" class="form-select">
-                <option>Chưa thanh toán</option>
-                <option>Một phần</option>
-                <option>Đã thanh toán</option>
-              </select>
-            </div>
-            <div class="col-12">
-              <div class="billing-preview">
-                <span>Tạm tính</span>
-                <strong id="billingPreviewTotal">0 đ</strong>
-              </div>
-            </div>
+              </tbody>
+            </table>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
-          <button class="btn btn-primary"><i class="bi bi-save me-2"></i>Lưu phiếu thu</button>
+        <div class="modal-footer justify-content-between">
+          <div>
+            <small class="text-muted d-block">Đến hạn thu</small>
+            <strong class="fs-5 text-primary"><%= format.currency(payableAmount) %></strong>
+          </div>
+          <form action="/billing" method="post" class="d-flex align-items-end gap-2 flex-wrap">
+            <input type="hidden" name="admissionId" value="<%= row.admissionId %>">
+            <div>
+              <label class="form-label">Số tiền thanh toán</label>
+              <input class="form-control" name="paidAmount" type="number" min="0" max="<%= payableAmount %>" value="<%= payableAmount %>">
+            </div>
+            <div>
+              <label class="form-label">Phương thức</label>
+              <select class="form-select" name="paymentMethod">
+                <option>Tiền mặt</option>
+                <option>Chuyển khoản</option>
+                <option>Thẻ</option>
+                <option>Ví điện tử</option>
+              </select>
+            </div>
+            <input type="hidden" name="printAfterSave" value="1">
+            <button class="btn btn-primary" <%= payableAmount > 0 ? '' : 'disabled' %>>
+              <i class="bi bi-receipt me-2"></i>Lập phiếu thu
+            </button>
+          </form>
         </div>
-      </form>
+      </div>
     </div>
   </div>
-</div>
+<% }) %>
