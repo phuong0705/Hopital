@@ -288,7 +288,8 @@ async function examTicket(req, res, next) {
       initialReason: req.query.reason
     });
   } catch (error) {
-    next(error);
+    req.flash('error', error.message || 'Thao tác thất bại');
+    return res.redirect('/nghiep-vu/quan-ly-thuoc-tai-khoa?activeMenu=pharmacy-ward-meds');
   }
 }
 
@@ -304,7 +305,8 @@ async function createExamTicket(req, res, next) {
     req.flash('success', `Đã lập phiếu khám ${ticket.ticketCode}.`);
     res.redirect('/nghiep-vu/lap-phieu-kham');
   } catch (error) {
-    next(error);
+    req.flash('error', error.message || 'Thao tác thất bại');
+    return res.redirect('/nghiep-vu/quan-ly-thuoc-tai-khoa?activeMenu=pharmacy-ward-meds');
   }
 }
 
@@ -1210,24 +1212,32 @@ async function medicineHistory(req, res, next) {
 
 async function addMedicineTransaction(req, res, next) {
   try {
-    const { medicineId, transactionType, quantity, note } = req.body;
+    const { medicineId, transactionType, quantity, note, warehouseName } = req.body;
     const pharmacyOnlyTypes = ['Cấp phát', 'Hoàn trả', 'Hủy thuốc'];
-    if (pharmacyOnlyTypes.includes(transactionType) && req.session.user.roleCode !== 'PHARMACY') {
+    const normalizedPharmacyTypes = [...pharmacyOnlyTypes, 'Cấp phát', 'Hoàn trả', 'Hủy thuốc', 'Nhập kho'];
+    if (normalizedPharmacyTypes.includes(transactionType) && req.session.user.roleCode !== 'PHARMACY') {
       req.flash('error', 'Chỉ tài khoản Dược được thực hiện giao dịch cấp phát, hoàn trả hoặc hủy thuốc.');
       return res.redirect('/nghiep-vu/quan-ly-thuoc-tai-khoa');
     }
 
-    await medicineRepository.addInventoryTransaction({
+    if (!medicineId || Number(quantity || 0) <= 0) {
+      req.flash('warning', 'Vui lòng nhập đầy đủ thông tin');
+      return res.redirect('/nghiep-vu/quan-ly-thuoc-tai-khoa?activeMenu=pharmacy-ward-meds');
+    }
+
+    const result = await medicineRepository.addInventoryTransaction({
       medicineId: Number(medicineId),
       transactionType,
       quantity: Number(quantity),
       performedBy: req.session.user.userId,
+      warehouseName,
       note
     });
     req.flash('success', `${transactionType} thành công.`);
-    res.redirect('/nghiep-vu/quan-ly-thuoc-tai-khoa');
+    res.redirect('/nghiep-vu/quan-ly-thuoc-tai-khoa?activeMenu=pharmacy-ward-meds');
   } catch (error) {
-    next(error);
+    req.flash('error', error.message || 'Thao tác thất bại');
+    return res.redirect('/nghiep-vu/quan-ly-thuoc-tai-khoa?activeMenu=pharmacy-ward-meds');
   }
 }
 
@@ -1262,14 +1272,30 @@ async function addSupplyTransaction(req, res, next) {
   try {
     const transactionType = req.body.transactionType || 'Yêu cầu lĩnh';
     const pharmacyOnlyTypes = ['Cấp phát', 'Hoàn trả', 'Nhập kho'];
-    if (pharmacyOnlyTypes.includes(transactionType) && req.session.user.roleCode !== 'PHARMACY') {
+    const normalizedPharmacyTypes = [...pharmacyOnlyTypes, 'Cấp phát', 'Hoàn trả', 'Nhập kho'];
+    if (normalizedPharmacyTypes.includes(transactionType) && req.session.user.roleCode !== 'PHARMACY') {
       req.flash('error', 'Chỉ tài khoản Dược được thực hiện giao dịch cấp phát, hoàn trả hoặc nhập kho vật tư.');
       return res.redirect('/nghiep-vu/vat-tu-tieu-hao');
     }
 
+    if (!req.body.supplyId || Number(req.body.quantity || 0) <= 0) {
+      req.flash('warning', 'Vui lòng nhập đầy đủ thông tin');
+      return res.redirect('/nghiep-vu/vat-tu-tieu-hao?activeMenu=pharmacy-supplies');
+    }
+
     await supplyRepository.addSupplyTransaction(req.body, req.session.user.userId);
     req.flash('success', `${transactionType} vật tư thành công.`);
-    res.redirect('/nghiep-vu/vat-tu-tieu-hao');
+    res.redirect('/nghiep-vu/vat-tu-tieu-hao?activeMenu=pharmacy-supplies');
+  } catch (error) {
+    req.flash('error', error.message || 'Thao tác thất bại');
+    return res.redirect('/nghiep-vu/vat-tu-tieu-hao?activeMenu=pharmacy-supplies');
+  }
+}
+
+async function supplyHistory(req, res, next) {
+  try {
+    const history = await supplyRepository.getSupplyHistory(req.params.id);
+    res.json(history);
   } catch (error) {
     next(error);
   }
@@ -1342,5 +1368,6 @@ module.exports = {
   addMedicineTransaction,
   createMedicineProvision,
   supplies,
-  addSupplyTransaction
+  addSupplyTransaction,
+  supplyHistory
 };

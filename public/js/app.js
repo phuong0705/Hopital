@@ -30,6 +30,60 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.innerWidth >= 992) setSidebarOpen(false);
   });
 
+  const pageLoadingSkeleton = document.getElementById('pageLoadingSkeleton');
+  let pageLoadingTimer = null;
+
+  const showPageLoading = () => {
+    if (!pageLoadingSkeleton || document.body.classList.contains('is-page-loading')) return;
+    window.clearTimeout(pageLoadingTimer);
+    pageLoadingTimer = window.setTimeout(() => {
+      document.body.classList.add('is-page-loading');
+    }, 0);
+  };
+
+  const hidePageLoading = () => {
+    window.clearTimeout(pageLoadingTimer);
+    document.body.classList.remove('is-page-loading');
+  };
+
+  const isModifiedClick = (event) => event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
+
+  const shouldShowLoadingForLink = (link) => {
+    if (!link) return false;
+    if (link.target && link.target !== '_self') return false;
+    if (link.hasAttribute('download')) return false;
+    if (link.dataset.noPageLoading === 'true') return false;
+    if (link.dataset.bsToggle || link.dataset.bsDismiss || link.getAttribute('role') === 'button') return false;
+
+    const href = link.getAttribute('href') || '';
+    if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+      return false;
+    }
+
+    try {
+      const url = new URL(href, window.location.href);
+      return url.origin === window.location.origin && url.href !== window.location.href;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  document.addEventListener('click', (event) => {
+    if (event.defaultPrevented || isModifiedClick(event)) return;
+
+    const link = event.target.closest('a[href]');
+    if (shouldShowLoadingForLink(link)) showPageLoading();
+  }, true);
+
+  document.addEventListener('submit', (event) => {
+    const form = event.target;
+    if (!form || form.dataset.noPageLoading === 'true') return;
+    if (form.target && form.target !== '_self') return;
+    showPageLoading();
+  }, true);
+
+  window.addEventListener('pageshow', hidePageLoading);
+
   const cleanupModalState = () => {
     document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
     document.body.classList.remove('modal-open');
@@ -79,14 +133,82 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  setTimeout(() => {
-    document.querySelectorAll('.app-alert').forEach((alert) => {
-      alert.style.transition = 'opacity .25s ease, transform .25s ease';
-      alert.style.opacity = '0';
-      alert.style.transform = 'translateY(-6px)';
-      setTimeout(() => alert.remove(), 300);
-    });
-  }, 4200);
+  const flashStack = document.getElementById('flashStack');
+  const flashIcons = {
+    success: 'bi-check-circle-fill',
+    error: 'bi-exclamation-triangle-fill',
+    warning: 'bi-info-circle-fill',
+    permission: 'bi-shield-lock-fill'
+  };
+  const flashDefaults = {
+    success: 'Thao tác thành công',
+    error: 'Thao tác thất bại',
+    warning: 'Vui lòng nhập đầy đủ thông tin',
+    permission: 'Bạn không có quyền thực hiện chức năng này'
+  };
+
+  const normalizeFlashType = (type) => (['success', 'error', 'warning', 'permission'].includes(type) ? type : 'error');
+
+  const escapeFlashHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  }[char]));
+
+  const hideFlash = (element) => {
+    if (!element || element.dataset.closing === '1') return;
+    element.dataset.closing = '1';
+    element.classList.add('is-hiding');
+    setTimeout(() => element.remove(), 240);
+  };
+
+  const showFlash = (type, message, options = {}) => {
+    if (!flashStack) return;
+    const flashType = normalizeFlashType(type);
+    const item = document.createElement('div');
+    item.className = `flash-notification is-${flashType}`;
+    item.setAttribute('role', flashType === 'error' || flashType === 'permission' ? 'alert' : 'status');
+    item.innerHTML = `
+      <i class="bi ${flashIcons[flashType]}"></i>
+      <span>${escapeFlashHtml(message || flashDefaults[flashType])}</span>
+      <button type="button" aria-label="Đóng thông báo"><i class="bi bi-x"></i></button>
+    `;
+    flashStack.appendChild(item);
+    item.querySelector('button')?.addEventListener('click', () => hideFlash(item));
+    setTimeout(() => item.classList.add('is-visible'), 20);
+    setTimeout(() => hideFlash(item), Number(options.duration || 2600));
+  };
+
+  window.AppFlash = {
+    show: showFlash,
+    success: (message, options) => showFlash('success', message, options),
+    error: (message, options) => showFlash('error', message, options),
+    warning: (message, options) => showFlash('warning', message, options),
+    permission: (message, options) => showFlash('permission', message, options),
+    remember(type, message) {
+      sessionStorage.setItem('appFlashAfterReload', JSON.stringify({ type, message }));
+    }
+  };
+
+  try {
+    const serverItems = JSON.parse(flashStack?.dataset.flash || '[]');
+    serverItems.forEach((item) => showFlash(item.type, item.message));
+  } catch (error) {
+    // Ignore malformed flash payloads and keep the page interactive.
+  }
+
+  try {
+    const remembered = sessionStorage.getItem('appFlashAfterReload');
+    if (remembered) {
+      sessionStorage.removeItem('appFlashAfterReload');
+      const item = JSON.parse(remembered);
+      showFlash(item.type, item.message);
+    }
+  } catch (error) {
+    sessionStorage.removeItem('appFlashAfterReload');
+  }
 
   const admissionCanvas = document.getElementById('admissionTrendChart');
   if (admissionCanvas) {

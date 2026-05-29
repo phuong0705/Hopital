@@ -57,6 +57,7 @@ router.post('/quan-ly-thuoc-tai-khoa/chi-phi-thuoc/:costId/xac-nhan', requireRol
 router.post('/quan-ly-thuoc-tai-khoa/transaction', requireRole(['ADMIN', 'NURSE', 'PHARMACY']), businessController.addMedicineTransaction);
 router.post('/quan-ly-thuoc-tai-khoa/provision', requireRole(['ADMIN', 'NURSE', 'PHARMACY']), businessController.createMedicineProvision);
 router.get('/vat-tu-tieu-hao', requireRole(['ADMIN', 'NURSE', 'PHARMACY']), businessController.supplies);
+router.get('/vat-tu-tieu-hao/:id/history', requireRole(['ADMIN', 'NURSE', 'PHARMACY']), businessController.supplyHistory);
 router.post('/vat-tu-tieu-hao/transaction', requireRole(['ADMIN', 'NURSE', 'PHARMACY']), businessController.addSupplyTransaction);
 
 // Finance Module

@@ -13,7 +13,12 @@ router.get('/me/labtests', requireRole(['PATIENT']), patientsController.labTests
 router.get('/me/billing', requireRole(['PATIENT']), patientsController.billingPage);
 router.get('/me/discharge', requireRole(['PATIENT']), patientsController.dischargePage);
 router.get('/me/support', requireRole(['PATIENT']), patientsController.supportPage);
-router.get('/me/bhyt', requireRole(['PATIENT']), patientsController.bhytPage);
+router.get('/me/bhyt', requireRole(['PATIENT']), (req, res) => {
+  res.status(403).render('errors/403', {
+    title: 'Không có quyền truy cập',
+    activeMenu: 'patient-profile'
+  });
+});
 router.get('/me/booking', requireRole(['PATIENT']), patientsController.bookingPage);
 router.post('/me/booking', requireRole(['PATIENT']), patientsController.submitBooking);
 router.get('/me/notifications', requireRole(['PATIENT']), patientsController.notificationsPage);

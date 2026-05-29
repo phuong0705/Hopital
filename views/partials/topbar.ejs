@@ -19,6 +19,7 @@
         <input name="keyword" type="search" placeholder="Tìm bệnh nhân, CCCD, mã hồ sơ">
       </form>
     <% } %>
+    <% if (isPatient) { %>
     <button class="icon-btn position-relative" data-bs-toggle="tooltip" data-bs-title="Thông báo" onclick="window.location.href='/patients/me/notifications'">
       <i class="bi bi-bell-fill"></i>
       <% if (locals.unreadCount > 0) { %>
@@ -29,6 +30,7 @@
         <span class="notification-dot"></span>
       <% } %>
     </button>
+    <% } %>
     <% if (canQuickReception) { %>
       <a class="btn btn-primary btn-soft" href="/patients/reception">
         <i class="bi bi-plus-lg"></i>

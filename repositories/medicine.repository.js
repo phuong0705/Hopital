@@ -66,6 +66,20 @@ async function ensureMedicineTables() {
     END;
   `);
 
+  const historyColumns = [
+    ['receipt_code', 'VARCHAR(30) NULL'],
+    ['warehouse_name', 'NVARCHAR(150) NULL']
+  ];
+
+  for (const [name, type] of historyColumns) {
+    await execute(`
+      IF COL_LENGTH('MedicineInventoryHistory', '${name}') IS NULL
+      BEGIN
+        ALTER TABLE MedicineInventoryHistory ADD ${name} ${type};
+      END;
+    `);
+  }
+
   await execute(`
     IF OBJECT_ID(N'MedicineProvisionRequests', N'U') IS NULL
     BEGIN
@@ -177,12 +191,17 @@ async function getMedicineHistory(medicineId) {
   return query(`
     SELECT
       h.history_id AS historyId,
+      h.receipt_code AS receiptCode,
+      m.medicine_name AS itemName,
+      m.unit,
       h.transaction_type AS transactionType,
       h.quantity,
       h.transaction_date AS transactionDate,
+      h.warehouse_name AS warehouseName,
       h.note,
       u.full_name AS performedBy
     FROM MedicineInventoryHistory h
+    INNER JOIN MedicineCatalog m ON m.medicine_id = h.medicine_id
     LEFT JOIN Users u ON h.performed_by = u.user_id
     WHERE h.medicine_id = @medicineId
     ORDER BY h.transaction_date DESC
@@ -192,14 +211,42 @@ async function getMedicineHistory(medicineId) {
 async function addInventoryTransaction(data) {
   await ensureMedicineTables();
 
-  const { medicineId, transactionType, quantity, performedBy, note } = data;
+  const { medicineId, transactionType, performedBy, note } = data;
+  const quantity = Number(data.quantity || 0);
+  const warehouseName = data.warehouseName || 'Kho Dược';
+
+  if (!medicineId || !Number.isInteger(Number(medicineId))) {
+    throw new Error('Vui lòng chọn thuốc/vật tư.');
+  }
+
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    throw new Error('Vui lòng nhập số lượng hợp lệ.');
+  }
+
+  if (!warehouseName.trim()) {
+    throw new Error('Vui lòng nhập kho nhận.');
+  }
+
+  const rows = await query(`
+    DECLARE @nextNumber INT;
+    SELECT @nextNumber = ISNULL(MAX(TRY_CONVERT(INT, SUBSTRING(receipt_code, 4, 20))), 0) + 1
+    FROM MedicineInventoryHistory
+    WHERE receipt_code LIKE 'PNK%';
+
+    SELECT CONCAT('PNK', RIGHT(CONCAT('000000', @nextNumber), 6)) AS receiptCode;
+  `);
+  const receiptCode = rows[0]?.receiptCode || `PNK${Date.now()}`;
 
   await execute(`
     SET XACT_ABORT ON;
     BEGIN TRANSACTION;
     
-    INSERT INTO MedicineInventoryHistory (medicine_id, transaction_type, quantity, transaction_date, performed_by, note)
-    VALUES (@medicineId, @transactionType, @quantity, SYSDATETIME(), @performedBy, @note);
+    INSERT INTO MedicineInventoryHistory (
+      medicine_id, receipt_code, transaction_type, quantity, transaction_date, performed_by, warehouse_name, note
+    )
+    VALUES (
+      @medicineId, @receiptCode, @transactionType, @quantity, SYSDATETIME(), @performedBy, NULLIF(@warehouseName, ''), NULLIF(@note, '')
+    );
 
     UPDATE MedicineCatalog
     SET current_stock = CASE
@@ -213,11 +260,15 @@ async function addInventoryTransaction(data) {
     COMMIT TRANSACTION;
   `, {
     medicineId,
+    receiptCode,
     transactionType,
     quantity,
     performedBy,
-    note
+    warehouseName,
+    note: note || ''
   });
+
+  return { receiptCode };
 }
 
 async function createProvisionRequest(data) {

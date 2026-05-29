@@ -204,7 +204,7 @@ export function DoctorDashboardShell({
   async function refreshDashboard() {
     setIsRefreshing(true);
     try {
-      const response = await fetch("/api/dashboard/doctor", { cache: "no-store" });
+      const response = await fetch("/api/dashboard/summary", { cache: "no-store" });
       if (response.ok) {
         setPayload(await response.json());
       } else {

@@ -2,6 +2,7 @@
 
 const { withTransaction } = require('./base.repository');
 const treatmentCostRepository = require('./treatment-cost.repository');
+const cache = require('../services/cache');
 
 async function getMedicalRecords(doctorId = null, filters = {}) {
   const pageSize = Number(filters.pageSize || 0);
@@ -252,6 +253,8 @@ async function createDepartment(data) {
     location: data.location || '',
     status: data.status || 'Hoạt động'
   });
+  cache.delByPrefix('categories:departments');
+  cache.delByPrefix('categories:rooms');
 }
 
 async function updateDepartment(departmentId, data) {
@@ -273,6 +276,8 @@ async function updateDepartment(departmentId, data) {
     location: data.location,
     status: data.status
   });
+  cache.delByPrefix('categories:departments');
+  cache.delByPrefix('categories:rooms');
 }
 
 async function deleteDepartment(departmentId) {
@@ -286,6 +291,8 @@ async function deleteDepartment(departmentId) {
 
     DELETE FROM Departments WHERE department_id = @departmentId;
   `, { departmentId: Number(departmentId) });
+  cache.delByPrefix('categories:departments');
+  cache.delByPrefix('categories:rooms');
 }
 
 async function getDepartmentRooms(departmentId) {
@@ -360,6 +367,7 @@ async function createRoom(data) {
     floorNo: Number(data.floorNo || 1),
     roomType: data.roomType || 'Thường'
   });
+  cache.delByPrefix('categories:rooms');
 }
 
 async function updateRoom(roomId, data) {
@@ -374,10 +382,12 @@ async function updateRoom(roomId, data) {
     floorNo: Number(data.floorNo),
     roomType: data.roomType
   });
+  cache.delByPrefix('categories:rooms');
 }
 
 async function deleteRoom(roomId) {
   await execute(`DELETE FROM Rooms WHERE room_id = @roomId`, { roomId: Number(roomId) });
+  cache.delByPrefix('categories:rooms');
 }
 
 async function createBed(data) {
@@ -748,6 +758,7 @@ async function createDoctor(data) {
     shiftName: data.shiftName || '',
     status: data.status || 'Đang làm việc'
   });
+  cache.delByPrefix('categories:doctors');
 }
 
 async function updateDoctor(doctorId, data) {
@@ -773,6 +784,7 @@ async function updateDoctor(doctorId, data) {
     shiftName: data.shiftName,
     status: data.status
   });
+  cache.delByPrefix('categories:doctors');
 }
 
 async function deleteDoctor(doctorId) {
@@ -782,6 +794,7 @@ async function deleteDoctor(doctorId) {
     throw new Error('Không thể xóa bác sĩ đang có hồ sơ điều trị.');
   }
   await execute(`DELETE FROM Doctors WHERE doctor_id = @doctorId`, { doctorId: Number(doctorId) });
+  cache.delByPrefix('categories:doctors');
 }
 
 async function getTreatmentDoctorsOverview() {
@@ -1338,6 +1351,7 @@ async function createPrescription(data, enforcedDoctorId = null) {
 
 async function getLabTests(doctorId = null) {
   await treatmentCostRepository.syncExistingTreatmentCosts();
+  await ensureLabResultColumns();
 
   const whereDoctor = doctorId ? 'WHERE lt.doctor_id = @doctorId' : '';
 
@@ -1347,6 +1361,7 @@ async function getLabTests(doctorId = null) {
       COALESCE(NULLIF(mr.diagnosis_on_admission, N''), a.initial_diagnosis) AS preliminaryDiagnosis,
       lt.test_type AS testType,
       lt.ordered_date AS orderedDate, lt.status, lt.result_summary AS resultSummary,
+      lt.result_note AS resultNote,
       lt.result_files AS resultFilesJson,
       doc.full_name AS doctorName, d.department_name AS departmentName,
       labCost.status AS labCostStatus
@@ -1382,9 +1397,24 @@ async function getLabTests(doctorId = null) {
   });
 }
 
+async function ensureLabResultColumns() {
+  await execute(`
+    IF COL_LENGTH('LabTests', 'result_files') IS NULL
+    BEGIN
+      ALTER TABLE LabTests ADD result_files NVARCHAR(MAX) NULL;
+    END;
+
+    IF COL_LENGTH('LabTests', 'result_note') IS NULL
+    BEGIN
+      ALTER TABLE LabTests ADD result_note NVARCHAR(1000) NULL;
+    END;
+  `);
+}
+
 async function getLabTestByCode(testCode) {
+  await ensureLabResultColumns();
   const rows = await query(`
-    SELECT test_code AS testCode, result_files AS resultFilesJson
+    SELECT test_code AS testCode, result_files AS resultFilesJson, result_note AS resultNote
     FROM LabTests
     WHERE test_code = @testCode
   `, { testCode });
@@ -1392,12 +1422,14 @@ async function getLabTestByCode(testCode) {
   return rows[0] || null;
 }
 
-async function updateLabTestResult(testCode, status, resultSummary, resultFiles = null, doctorId = null) {
+async function updateLabTestResult(testCode, status, resultSummary, resultNote = '', resultFiles = null, doctorId = null) {
+  await ensureLabResultColumns();
   const whereDoctor = doctorId ? 'AND a.doctor_id = @doctorId' : '';
   const params = {
     testCode,
     status,
     resultSummary,
+    resultNote: resultNote || '',
     resultFiles: resultFiles ? JSON.stringify(resultFiles) : null
   };
   if (doctorId) params.doctorId = Number(doctorId);
@@ -1406,6 +1438,7 @@ async function updateLabTestResult(testCode, status, resultSummary, resultFiles 
     UPDATE lt
     SET lt.status = @status,
         lt.result_summary = @resultSummary,
+        lt.result_note = NULLIF(@resultNote, ''),
         lt.result_files = COALESCE(@resultFiles, lt.result_files)
     FROM LabTests lt
     INNER JOIN MedicalRecords mr ON mr.record_id = lt.record_id

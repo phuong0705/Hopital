@@ -2,6 +2,8 @@
   const recordFilters = locals.filters || {};
   const pager = locals.pagination || { page: 1, pageSize: 10, totalRows: rows.length, totalPages: 1 };
   const menuKey = activeMenu || 'medical-records';
+  const roleCode = currentUser ? currentUser.roleCode : '';
+  const canTransferFromRecord = Boolean(locals.canTransferRoomBed) && roleCode === 'NURSE';
 
   function formatCareLocation(row) {
     const department = row.departmentName || 'Chưa phân khoa';
@@ -40,6 +42,10 @@
   </div>
 </section>
 
+<% if (canTransferFromRecord) { %>
+  <%- include('../partials/action-modals', { activeAdmissions, availableBeds, transferReturnTo }) %>
+<% } %>
+
 <section class="panel module-panel mt-4">
   <form class="module-toolbar medical-record-filter-toolbar" method="get" action="/medical-records">
     <input type="hidden" name="activeMenu" value="<%= menuKey %>">
@@ -77,6 +83,19 @@
           <h4 class="mb-0"><%= row.patientName %></h4>
           <span class="module-soft-pill"><%= row.patientCode %> · <%= row.gender || '-' %></span>
           <%- include('../partials/badge', { text: row.recordAdmissionState }) %>
+          <div class="ms-auto d-flex flex-wrap gap-2">
+            <a class="btn btn-sm btn-light" href="/medical-records/<%= row.recordId %>?activeMenu=<%= menuKey %>">
+              <i class="bi bi-journal-text me-1"></i> Xem HSBA
+            </a>
+            <% if (canTransferFromRecord && row.admissionId && row.recordAdmissionState !== 'Đã xuất viện') { %>
+              <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#transferModal"
+                data-admission-id="<%= row.admissionId %>"
+                data-patient-name="<%= row.patientName %>"
+                data-patient-code="<%= row.patientCode %>">
+                <i class="bi bi-arrow-left-right me-1"></i> Chuyển phòng / giường
+              </button>
+            <% } %>
+          </div>
         </div>
         <div class="medical-record-summary-grid">
           <div>

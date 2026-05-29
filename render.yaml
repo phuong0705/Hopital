@@ -31,3 +31,13 @@ services:
         value: true
       - key: DB_TRUST_SERVER_CERTIFICATE
         value: false
+  - type: cron
+    name: ql-noi-tru-health-ping
+    runtime: node
+    rootDir: .
+    schedule: "*/10 * * * *"
+    buildCommand: npm install --omit=optional
+    startCommand: npm run health:ping
+    envVars:
+      - key: HEALTHCHECK_URL
+        sync: false

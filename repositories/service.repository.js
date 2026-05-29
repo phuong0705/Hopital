@@ -1,4 +1,7 @@
 const { query, execute } = require('./base.repository');
+const cache = require('../services/cache');
+
+const SERVICE_TTL_SECONDS = 10 * 60;
 
 async function ensureServiceCatalog() {
   await execute(`
@@ -62,7 +65,7 @@ async function ensureServiceCatalog() {
 async function getServices() {
   await ensureServiceCatalog();
 
-  return query(`
+  const { value } = await cache.getOrSet('categories:services', SERVICE_TTL_SECONDS, () => query(`
     SELECT
       service_id AS serviceId,
       service_code AS serviceCode,
@@ -77,13 +80,14 @@ async function getServices() {
       status
     FROM ServiceCatalog
     ORDER BY service_group, service_name
-  `);
+  `));
+  return value;
 }
 
 async function getClinicalOrderServices() {
   await ensureServiceCatalog();
 
-  return query(`
+  const { value } = await cache.getOrSet('categories:services:clinical-orders', SERVICE_TTL_SECONDS, () => query(`
     SELECT
       service_id AS serviceId,
       service_code AS serviceCode,
@@ -95,7 +99,8 @@ async function getClinicalOrderServices() {
     WHERE status = N'Đang sử dụng'
       AND service_group IN (N'Xét nghiệm', N'Chẩn đoán hình ảnh')
     ORDER BY service_group, service_name
-  `);
+  `));
+  return value;
 }
 
 async function createService(data) {
@@ -123,6 +128,7 @@ async function createService(data) {
     description: data.description || '',
     status: data.status || 'Đang sử dụng'
   });
+  cache.delByPrefix('categories:services');
 }
 
 async function updateServiceStatus(serviceId, status) {
@@ -137,6 +143,7 @@ async function updateServiceStatus(serviceId, status) {
     serviceId: Number(serviceId),
     status
   });
+  cache.delByPrefix('categories:services');
 }
 
 module.exports = {

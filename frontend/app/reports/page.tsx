@@ -1,7 +1,15 @@
 import { cookies } from "next/headers";
-import { ReportsShell } from "@/components/reports/reports-shell";
+import dynamic from "next/dynamic";
+import { ReportsLoading } from "@/components/reports/reports-loading";
 import type { ReportsPayload } from "@/components/reports/types";
 import { API_URL } from "@/lib/api";
+
+const ReportsShell = dynamic(
+  () => import("@/components/reports/reports-shell").then((mod) => mod.ReportsShell),
+  {
+    loading: () => <ReportsLoading />
+  }
+);
 
 async function getReports(): Promise<ReportsPayload | null> {
   const cookieStore = await cookies();
@@ -20,9 +28,16 @@ async function getReports(): Promise<ReportsPayload | null> {
 export default async function ReportsPage({
   searchParams
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; q?: string }>;
 }) {
   const [payload, params] = await Promise.all([getReports(), searchParams]);
 
-  return <ReportsShell initialPayload={payload} initialTab={params.tab} apiBaseUrl={API_URL} />;
+  return (
+    <ReportsShell
+      initialPayload={payload}
+      initialTab={params.tab}
+      initialQuery={params.q || ""}
+      apiBaseUrl={API_URL}
+    />
+  );
 }

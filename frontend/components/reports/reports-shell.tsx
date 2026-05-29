@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import {
   Activity,
   BedDouble,
@@ -18,10 +18,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type {
   DischargeRow,
   InpatientRow,
@@ -31,153 +29,80 @@ import type {
   RevenueRow,
   VisitRow
 } from "@/components/reports/types";
-import { compactNumber, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, compactNumber, formatCurrency, formatDate } from "@/lib/utils";
 
-const tabLabels: Record<ReportKey, string> = {
-  inpatient: "Nội trú",
-  revenue: "Doanh thu",
-  visits: "Lượt khám",
-  medicines: "Thuốc",
-  discharges: "Xuất viện"
-};
-
-const tabIcons: Record<ReportKey, React.ReactNode> = {
-  inpatient: <BedDouble className="h-4 w-4" />,
-  revenue: <WalletCards className="h-4 w-4" />,
-  visits: <CalendarDays className="h-4 w-4" />,
-  medicines: <Pill className="h-4 w-4" />,
-  discharges: <FileBarChart className="h-4 w-4" />
-};
+const reportTabs: Array<{ key: ReportKey; label: string; icon: ReactNode }> = [
+  { key: "inpatient", label: "Nội trú", icon: <BedDouble className="h-4 w-4" /> },
+  { key: "revenue", label: "Doanh thu", icon: <WalletCards className="h-4 w-4" /> },
+  { key: "visits", label: "Lượt khám", icon: <CalendarDays className="h-4 w-4" /> },
+  { key: "medicines", label: "Thuốc", icon: <Pill className="h-4 w-4" /> },
+  { key: "discharges", label: "Xuất viện", icon: <FileBarChart className="h-4 w-4" /> }
+];
 
 const roleDescriptions: Record<string, string> = {
-  ADMIN: "Dashboard quản trị tổng hợp toàn viện.",
-  DOCTOR: "Dashboard theo phạm vi bệnh nhân và chỉ định của bác sĩ đang đăng nhập.",
-  NURSE: "Dashboard theo khoa hoặc bác sĩ điều dưỡng đang phụ trách.",
-  RECEPTIONIST: "Dashboard thu ngân/tiếp nhận gồm doanh thu, lượt khám và hồ sơ xuất viện.",
-  PHARMACY: "Dashboard dược chỉ gồm dữ liệu thuốc và cấp phát.",
-  LAB: "Tài khoản xét nghiệm chưa có dashboard báo cáo riêng trong module này."
+  ADMIN: "Tổng hợp dữ liệu nội trú, viện phí, lượt khám, thuốc và xuất viện toàn viện.",
+  DOCTOR: "Báo cáo theo phạm vi bệnh nhân và chỉ định của bác sĩ đang đăng nhập.",
+  NURSE: "Báo cáo theo khoa hoặc bác sĩ điều dưỡng đang phụ trách.",
+  RECEPTIONIST: "Báo cáo thu ngân/tiếp nhận gồm doanh thu, lượt khám và hồ sơ xuất viện.",
+  PHARMACY: "Báo cáo dược tập trung vào dữ liệu thuốc và cấp phát.",
+  LAB: "Vai trò xét nghiệm thao tác kết quả tại module xét nghiệm, không có báo cáo riêng."
 };
 
 function numberValue(value: unknown) {
   return Number(value || 0);
 }
 
-function paymentVariant(status: string): "success" | "warning" | "danger" | "secondary" {
-  const normalized = status.toLowerCase();
-  if (normalized.includes("đã") || normalized.includes("da")) return "success";
-  if (normalized.includes("chưa") || normalized.includes("chua")) return "warning";
-  if (normalized.includes("quá") || normalized.includes("qua")) return "danger";
-  return "secondary";
+function normalize(value: unknown) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 function visibleTabs(payload: ReportsPayload | null): ReportKey[] {
-  if (!payload) return ["inpatient", "revenue", "visits", "medicines", "discharges"];
-  return (Object.keys(tabLabels) as ReportKey[]).filter((key) => payload.permissions[key]);
+  if (!payload) return reportTabs.map((tab) => tab.key);
+  return reportTabs.filter((tab) => payload.permissions[tab.key]).map((tab) => tab.key);
 }
 
-function downloadJson(payload: ReportsPayload | null) {
-  if (!payload) return;
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `bao-cao-thong-ke-${new Date().toISOString().slice(0, 10)}.json`;
-  anchor.click();
-  URL.revokeObjectURL(url);
+function reportHref(tab: ReportKey, query = "") {
+  const params = new URLSearchParams({ tab });
+  if (query.trim()) params.set("q", query.trim());
+  return `/reports?${params.toString()}`;
+}
+
+function paymentVariant(status: string): "success" | "warning" | "danger" | "secondary" {
+  const normalized = normalize(status);
+  if (normalized.includes("da")) return "success";
+  if (normalized.includes("chua")) return "warning";
+  if (normalized.includes("qua")) return "danger";
+  return "secondary";
+}
+
+function PrintButton() {
+  return (
+    <Button variant="outline" type="button" onClick={() => window.print()}>
+      <Printer className="h-4 w-4" />
+      In
+    </Button>
+  );
 }
 
 export function ReportsShell({
   initialPayload,
   initialTab,
+  initialQuery = "",
   apiBaseUrl
 }: {
   initialPayload: ReportsPayload | null;
   initialTab?: string;
+  initialQuery?: string;
   apiBaseUrl: string;
 }) {
-  const [payload, setPayload] = useState<ReportsPayload | null>(initialPayload);
+  const payload = initialPayload;
   const tabs = visibleTabs(payload);
-  const firstTab = tabs[0] || "inpatient";
-  const [activeTab, setActiveTab] = useState<ReportKey>(
-    tabs.includes(initialTab as ReportKey) ? (initialTab as ReportKey) : firstTab
-  );
-  const [query, setQuery] = useState("");
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const kpis = useMemo(() => {
-    const inpatientRows = payload?.data.inpatient || [];
-    const revenueRows = payload?.data.revenue || [];
-    const visitRows = payload?.data.visits || [];
-    const medicineRows = payload?.data.medicines || [];
-    const dischargeRows = payload?.data.discharges || [];
-
-    const totalPatients = inpatientRows.reduce((sum, row) => sum + numberValue(row.patientCount), 0);
-    const totalBeds = inpatientRows.reduce((sum, row) => sum + numberValue(row.totalBeds), 0);
-    const occupancy = totalBeds ? Math.round((totalPatients / totalBeds) * 100) : 0;
-    const totalRevenue = revenueRows.reduce(
-      (sum, row) => sum + numberValue(row.revenue) + numberValue(row.insurance),
-      0
-    );
-    const totalVisits = visitRows.reduce((sum, row) => sum + numberValue(row.visitCount), 0);
-    const totalMedicine = medicineRows.reduce((sum, row) => sum + numberValue(row.totalUsed), 0);
-
-    return [
-      {
-        label: "Bệnh nhân nội trú",
-        value: compactNumber(totalPatients),
-        detail: `${occupancy}% công suất giường`,
-        icon: <BedDouble className="h-5 w-5 text-sky-700" />,
-        show: payload?.permissions.inpatient
-      },
-      {
-        label: "Doanh thu tổng hợp",
-        value: formatCurrency(totalRevenue),
-        detail: `${revenueRows.length} kỳ ghi nhận`,
-        icon: <WalletCards className="h-5 w-5 text-emerald-700" />,
-        show: payload?.permissions.revenue
-      },
-      {
-        label: "Lượt khám 30 ngày",
-        value: compactNumber(totalVisits),
-        detail: `${visitRows.length} ngày có dữ liệu`,
-        icon: <Activity className="h-5 w-5 text-indigo-700" />,
-        show: payload?.permissions.visits
-      },
-      {
-        label: "Thuốc đã sử dụng",
-        value: compactNumber(totalMedicine),
-        detail: `${medicineRows.length} loại thuốc`,
-        icon: <Pill className="h-5 w-5 text-amber-700" />,
-        show: payload?.permissions.medicines
-      },
-      {
-        label: "Hồ sơ xuất viện",
-        value: compactNumber(dischargeRows.length),
-        detail: "Theo trạng thái thanh toán",
-        icon: <FileBarChart className="h-5 w-5 text-rose-700" />,
-        show: payload?.permissions.discharges
-      }
-    ].filter((item) => item.show);
-  }, [payload]);
-
-  async function refreshReports() {
-    setIsRefreshing(true);
-    try {
-      const response = await fetch("/api/reports/summary", { cache: "no-store" });
-      if (response.ok) {
-        setPayload(await response.json());
-      }
-    } finally {
-      setIsRefreshing(false);
-    }
-  }
-
-  function updateTab(value: string) {
-    const nextTab = value as ReportKey;
-    setActiveTab(nextTab);
-    window.history.replaceState(null, "", `/reports?tab=${nextTab}`);
-    setQuery("");
-  }
+  const activeTab = tabs.includes(initialTab as ReportKey) ? (initialTab as ReportKey) : tabs[0];
+  const query = initialQuery.trim();
 
   if (!payload) {
     return (
@@ -185,23 +110,25 @@ export function ReportsShell({
         <Card className="mx-auto mt-16 max-w-xl">
           <CardHeader>
             <CardTitle>Chưa lấy được dữ liệu báo cáo</CardTitle>
-            <CardDescription>
-              Đăng nhập ở backend Express rồi mở lại dashboard Next để dùng session hiện tại.
-            </CardDescription>
+            <CardDescription>Đăng nhập ở hệ thống chính rồi mở lại trang báo cáo.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3">
             <Button asChild>
               <a href={`${apiBaseUrl}/login`}>Đăng nhập</a>
             </Button>
-            <Button variant="outline" onClick={refreshReports} type="button">
-              <RefreshCw className="h-4 w-4" />
-              Tải lại
+            <Button variant="outline" asChild>
+              <a href="/reports">
+                <RefreshCw className="h-4 w-4" />
+                Tải lại
+              </a>
             </Button>
           </CardContent>
         </Card>
       </main>
     );
   }
+
+  const kpis = buildKpis(payload);
 
   return (
     <main className="min-h-screen bg-background report-grid-bg">
@@ -214,9 +141,7 @@ export function ReportsShell({
                 <ShieldCheck className="h-3.5 w-3.5" />
                 {payload.user.roleCode}
               </Badge>
-              <span className="text-sm text-muted-foreground">
-                Cập nhật {formatDate(payload.generatedAt)}
-              </span>
+              <span className="text-sm text-muted-foreground">Cập nhật {formatDate(payload.generatedAt)}</span>
             </div>
             <h1 className="text-3xl font-extrabold tracking-normal text-foreground sm:text-4xl">
               Báo cáo - thống kê
@@ -227,23 +152,24 @@ export function ReportsShell({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" type="button" asChild>
+            <Button variant="outline" asChild>
               <a href={`${apiBaseUrl}/`}>
                 <Home className="h-4 w-4" />
                 Trang chủ
               </a>
             </Button>
-            <Button variant="outline" type="button" onClick={() => window.print()}>
-              <Printer className="h-4 w-4" />
-              In
+            <PrintButton />
+            <Button variant="outline" asChild>
+              <a href="/api/reports/summary" target="_blank" rel="noopener">
+                <Download className="h-4 w-4" />
+                JSON
+              </a>
             </Button>
-            <Button variant="outline" type="button" onClick={() => downloadJson(payload)}>
-              <Download className="h-4 w-4" />
-              JSON
-            </Button>
-            <Button type="button" onClick={refreshReports} disabled={isRefreshing}>
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-              Làm mới
+            <Button asChild>
+              <a href={activeTab ? reportHref(activeTab, query) : "/reports"}>
+                <RefreshCw className="h-4 w-4" />
+                Làm mới
+              </a>
             </Button>
           </div>
         </div>
@@ -252,9 +178,7 @@ export function ReportsShell({
           {kpis.map((item) => (
             <Card key={item.label}>
               <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="rounded-md bg-muted p-2">{item.icon}</div>
-                </div>
+                <div className="rounded-md bg-muted p-2 w-fit">{item.icon}</div>
                 <div className="mt-4">
                   <p className="text-sm text-muted-foreground">{item.label}</p>
                   <strong className="mt-1 block text-2xl font-extrabold">{item.value}</strong>
@@ -265,55 +189,121 @@ export function ReportsShell({
           ))}
         </div>
 
-        {tabs.length ? (
-          <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <Tabs value={activeTab} onValueChange={updateTab}>
-              <TabsList>
-                {tabs.map((tab) => (
-                  <TabsTrigger key={tab} value={tab} className="gap-2">
-                    {tabIcons[tab]}
-                    {tabLabels[tab]}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+        {activeTab ? (
+          <>
+            <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <nav className="grid gap-2 rounded-lg border bg-card p-1 shadow-sm sm:flex" aria-label="Báo cáo">
+                {reportTabs
+                  .filter((tab) => tabs.includes(tab.key))
+                  .map((tab) => (
+                    <a
+                      key={tab.key}
+                      href={reportHref(tab.key)}
+                      className={cn(
+                        "inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors",
+                        activeTab === tab.key
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                      aria-current={activeTab === tab.key ? "page" : undefined}
+                    >
+                      {tab.icon}
+                      {tab.label}
+                    </a>
+                  ))}
+              </nav>
 
-            <div className="relative w-full lg:w-80">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="pl-9"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Tìm trong bảng hiện tại"
-              />
+              <form className="relative w-full lg:w-80" method="get" action="/reports">
+                <input type="hidden" name="tab" value={activeTab} />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  name="q"
+                  defaultValue={query}
+                  placeholder="Tìm trong bảng hiện tại"
+                />
+              </form>
             </div>
-          </div>
+
+            {activeTab === "inpatient" && <InpatientReport payload={payload} query={query} />}
+            {activeTab === "revenue" && <RevenueReport payload={payload} query={query} />}
+            {activeTab === "visits" && <VisitsReport payload={payload} query={query} />}
+            {activeTab === "medicines" && <MedicinesReport payload={payload} query={query} />}
+            {activeTab === "discharges" && <DischargesReport payload={payload} query={query} />}
+          </>
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle>Chưa có dashboard báo cáo cho vai trò này</CardTitle>
+              <CardTitle>Chưa có báo cáo cho vai trò này</CardTitle>
               <CardDescription>Vui lòng dùng module nghiệp vụ tương ứng với tài khoản hiện tại.</CardDescription>
             </CardHeader>
           </Card>
         )}
-
-        {payload.permissions.inpatient && activeTab === "inpatient" && <InpatientReport payload={payload} query={query} />}
-        {payload.permissions.revenue && activeTab === "revenue" && <RevenueReport payload={payload} query={query} />}
-        {payload.permissions.visits && activeTab === "visits" && <VisitsReport payload={payload} query={query} />}
-        {payload.permissions.medicines && activeTab === "medicines" && <MedicinesReport payload={payload} query={query} />}
-        {payload.permissions.discharges && activeTab === "discharges" && <DischargesReport payload={payload} query={query} />}
       </section>
     </main>
   );
 }
 
+function buildKpis(payload: ReportsPayload) {
+  const inpatientRows = payload.data.inpatient || [];
+  const revenueRows = payload.data.revenue || [];
+  const visitRows = payload.data.visits || [];
+  const medicineRows = payload.data.medicines || [];
+  const dischargeRows = payload.data.discharges || [];
+
+  const totalPatients = inpatientRows.reduce((sum, row) => sum + numberValue(row.patientCount), 0);
+  const totalBeds = inpatientRows.reduce((sum, row) => sum + numberValue(row.totalBeds), 0);
+  const occupancy = totalBeds ? Math.round((totalPatients / totalBeds) * 100) : 0;
+  const totalRevenue = revenueRows.reduce((sum, row) => sum + numberValue(row.revenue) + numberValue(row.insurance), 0);
+  const totalVisits = visitRows.reduce((sum, row) => sum + numberValue(row.visitCount), 0);
+  const totalMedicine = medicineRows.reduce((sum, row) => sum + numberValue(row.totalUsed), 0);
+
+  return [
+    {
+      label: "Bệnh nhân nội trú",
+      value: compactNumber(totalPatients),
+      detail: `${occupancy}% công suất giường`,
+      icon: <BedDouble className="h-5 w-5 text-sky-700" />,
+      show: payload.permissions.inpatient
+    },
+    {
+      label: "Doanh thu tổng hợp",
+      value: formatCurrency(totalRevenue),
+      detail: `${revenueRows.length} kỳ ghi nhận`,
+      icon: <WalletCards className="h-5 w-5 text-emerald-700" />,
+      show: payload.permissions.revenue
+    },
+    {
+      label: "Lượt khám 30 ngày",
+      value: compactNumber(totalVisits),
+      detail: `${visitRows.length} ngày có dữ liệu`,
+      icon: <Activity className="h-5 w-5 text-indigo-700" />,
+      show: payload.permissions.visits
+    },
+    {
+      label: "Thuốc đã sử dụng",
+      value: compactNumber(totalMedicine),
+      detail: `${medicineRows.length} loại thuốc`,
+      icon: <Pill className="h-5 w-5 text-amber-700" />,
+      show: payload.permissions.medicines
+    },
+    {
+      label: "Hồ sơ xuất viện",
+      value: compactNumber(dischargeRows.length),
+      detail: "Theo trạng thái thanh toán",
+      icon: <FileBarChart className="h-5 w-5 text-rose-700" />,
+      show: payload.permissions.discharges
+    }
+  ].filter((item) => item.show);
+}
+
 function InpatientReport({ payload, query }: { payload: ReportsPayload; query: string }) {
-  const rows = payload.data.inpatient;
-  const filteredRows = rows.filter((row) => row.departmentName.toLowerCase().includes(query.toLowerCase()));
+  const rows = payload.data.inpatient || [];
+  const filteredRows = rows.filter((row) => normalize(row.departmentName).includes(normalize(query)));
   const chartRows = [...rows].sort((a, b) => numberValue(b.patientCount) - numberValue(a.patientCount));
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
+    <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
       <OccupancyPanel rows={chartRows} />
       <Card>
         <CardHeader>
@@ -322,25 +312,21 @@ function InpatientReport({ payload, query }: { payload: ReportsPayload; query: s
         </CardHeader>
         <CardContent className="space-y-4">
           {chartRows.slice(0, 6).map((row) => {
-            const occupancy = numberValue(row.totalBeds)
-              ? Math.round((numberValue(row.patientCount) / numberValue(row.totalBeds)) * 100)
-              : 0;
+            const occupancy = percentValue(numberValue(row.patientCount), numberValue(row.totalBeds));
             return (
               <div key={row.departmentName}>
                 <div className="mb-2 flex items-center justify-between gap-2 text-sm">
                   <span className="font-semibold">{row.departmentName}</span>
                   <Badge variant={occupancy > 90 ? "danger" : occupancy > 75 ? "warning" : "success"}>{occupancy}%</Badge>
                 </div>
-                <Progress
-                  value={occupancy}
-                  indicatorClassName={occupancy > 90 ? "bg-rose-500" : occupancy > 75 ? "bg-amber-500" : "bg-emerald-500"}
-                />
+                <Progress value={occupancy} indicatorClassName={occupancy > 90 ? "bg-rose-500" : occupancy > 75 ? "bg-amber-500" : "bg-emerald-500"} />
               </div>
             );
           })}
+          {!chartRows.length ? <EmptyReportState /> : null}
         </CardContent>
       </Card>
-      <ReportTable>
+      <ReportTable className="xl:col-span-2">
         <TableHeader>
           <TableRow>
             <TableHead>Khoa</TableHead>
@@ -352,9 +338,7 @@ function InpatientReport({ payload, query }: { payload: ReportsPayload; query: s
         </TableHeader>
         <TableBody>
           {filteredRows.map((row) => {
-            const occupancy = numberValue(row.totalBeds)
-              ? Math.round((numberValue(row.patientCount) / numberValue(row.totalBeds)) * 100)
-              : 0;
+            const occupancy = percentValue(numberValue(row.patientCount), numberValue(row.totalBeds));
             return (
               <TableRow key={row.departmentName}>
                 <TableCell className="font-semibold">{row.departmentName}</TableCell>
@@ -370,6 +354,7 @@ function InpatientReport({ payload, query }: { payload: ReportsPayload; query: s
               </TableRow>
             );
           })}
+          {!filteredRows.length ? <EmptyTableRow colSpan={5} /> : null}
         </TableBody>
       </ReportTable>
     </div>
@@ -377,8 +362,8 @@ function InpatientReport({ payload, query }: { payload: ReportsPayload; query: s
 }
 
 function RevenueReport({ payload, query }: { payload: ReportsPayload; query: string }) {
-  const rows = [...payload.data.revenue].reverse();
-  const filteredRows = rows.filter((row) => row.month.toLowerCase().includes(query.toLowerCase()));
+  const rows = [...(payload.data.revenue || [])].reverse();
+  const filteredRows = rows.filter((row) => normalize(row.month).includes(normalize(query)));
 
   return (
     <div className="grid gap-5">
@@ -401,6 +386,7 @@ function RevenueReport({ payload, query }: { payload: ReportsPayload; query: str
               <TableCell className="font-bold">{formatCurrency(numberValue(row.revenue) + numberValue(row.insurance))}</TableCell>
             </TableRow>
           ))}
+          {!filteredRows.length ? <EmptyTableRow colSpan={4} /> : null}
         </TableBody>
       </ReportTable>
     </div>
@@ -408,8 +394,8 @@ function RevenueReport({ payload, query }: { payload: ReportsPayload; query: str
 }
 
 function VisitsReport({ payload, query }: { payload: ReportsPayload; query: string }) {
-  const rows = [...payload.data.visits].reverse();
-  const filteredRows = rows.filter((row) => formatDate(row.date).includes(query) || String(row.visitCount).includes(query));
+  const rows = [...(payload.data.visits || [])].reverse();
+  const filteredRows = rows.filter((row) => normalize(formatDate(row.date)).includes(normalize(query)) || String(row.visitCount).includes(query));
 
   return (
     <div className="grid gap-5">
@@ -436,6 +422,7 @@ function VisitsReport({ payload, query }: { payload: ReportsPayload; query: stri
               </TableRow>
             );
           })}
+          {!filteredRows.length ? <EmptyTableRow colSpan={3} /> : null}
         </TableBody>
       </ReportTable>
     </div>
@@ -443,8 +430,8 @@ function VisitsReport({ payload, query }: { payload: ReportsPayload; query: stri
 }
 
 function MedicinesReport({ payload, query }: { payload: ReportsPayload; query: string }) {
-  const rows = payload.data.medicines;
-  const filteredRows = rows.filter((row) => row.medicineName.toLowerCase().includes(query.toLowerCase()));
+  const rows = payload.data.medicines || [];
+  const filteredRows = rows.filter((row) => normalize(row.medicineName).includes(normalize(query)));
   const topRows = rows.slice(0, 12);
   const maxUsed = Math.max(...rows.map((row) => numberValue(row.totalUsed)), 1);
 
@@ -476,6 +463,7 @@ function MedicinesReport({ payload, query }: { payload: ReportsPayload; query: s
               </TableCell>
             </TableRow>
           ))}
+          {!filteredRows.length ? <EmptyTableRow colSpan={4} /> : null}
         </TableBody>
       </ReportTable>
     </div>
@@ -483,12 +471,9 @@ function MedicinesReport({ payload, query }: { payload: ReportsPayload; query: s
 }
 
 function DischargesReport({ payload, query }: { payload: ReportsPayload; query: string }) {
-  const rows = payload.data.discharges;
+  const rows = payload.data.discharges || [];
   const filteredRows = rows.filter((row) =>
-    [row.patientName, row.patientCode, row.paymentStatus, row.dischargeCondition]
-      .join(" ")
-      .toLowerCase()
-      .includes(query.toLowerCase())
+    normalize([row.patientName, row.patientCode, row.paymentStatus, row.dischargeCondition].join(" ")).includes(normalize(query))
   );
   const byPayment = rows.reduce<Record<string, number>>((acc, row) => {
     acc[row.paymentStatus] = (acc[row.paymentStatus] || 0) + 1;
@@ -498,7 +483,7 @@ function DischargesReport({ payload, query }: { payload: ReportsPayload; query: 
   return (
     <div className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
       <PaymentStatusPanel rows={Object.entries(byPayment)} />
-      <ReportTable className="xl:col-span-1">
+      <ReportTable>
         <TableHeader>
           <TableRow>
             <TableHead>Bệnh nhân</TableHead>
@@ -521,6 +506,7 @@ function DischargesReport({ payload, query }: { payload: ReportsPayload; query: 
               </TableCell>
             </TableRow>
           ))}
+          {!filteredRows.length ? <EmptyTableRow colSpan={4} /> : null}
         </TableBody>
       </ReportTable>
     </div>
@@ -535,8 +521,18 @@ function percentValue(value: number, total: number) {
 function EmptyReportState() {
   return (
     <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-      Chưa có dữ liệu phù hợp với bộ lọc hiện tại.
+      Chưa có dữ liệu phù hợp.
     </div>
+  );
+}
+
+function EmptyTableRow({ colSpan }: { colSpan: number }) {
+  return (
+    <TableRow>
+      <TableCell colSpan={colSpan} className="py-8 text-center text-muted-foreground">
+        Không tìm thấy dữ liệu phù hợp.
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -560,14 +556,9 @@ function OccupancyPanel({ rows }: { rows: InpatientRow[] }) {
                       {row.patientCount}/{row.totalBeds} giường đang sử dụng
                     </p>
                   </div>
-                  <Badge variant={occupancy > 90 ? "danger" : occupancy > 75 ? "warning" : "success"}>
-                    {occupancy}%
-                  </Badge>
+                  <Badge variant={occupancy > 90 ? "danger" : occupancy > 75 ? "warning" : "success"}>{occupancy}%</Badge>
                 </div>
-                <Progress
-                  value={occupancy}
-                  indicatorClassName={occupancy > 90 ? "bg-rose-500" : occupancy > 75 ? "bg-amber-500" : "bg-sky-600"}
-                />
+                <Progress value={occupancy} indicatorClassName={occupancy > 90 ? "bg-rose-500" : occupancy > 75 ? "bg-amber-500" : "bg-sky-600"} />
               </div>
             );
           })
@@ -722,13 +713,7 @@ function PaymentStatusPanel({ rows }: { rows: Array<[string, number]> }) {
   );
 }
 
-function ReportTable({
-  children,
-  className
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+function ReportTable({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <Card className={className}>
       <CardContent className="p-0">

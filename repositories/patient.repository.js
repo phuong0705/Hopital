@@ -222,9 +222,21 @@ async function getPatientPortal(patientId, filters = {}) {
     labParams.endDate = filters.endDate + ' 23:59:59';
   }
 
+  await execute(`
+    IF COL_LENGTH('LabTests', 'result_files') IS NULL
+    BEGIN
+      ALTER TABLE LabTests ADD result_files NVARCHAR(MAX) NULL;
+    END;
+
+    IF COL_LENGTH('LabTests', 'result_note') IS NULL
+    BEGIN
+      ALTER TABLE LabTests ADD result_note NVARCHAR(1000) NULL;
+    END;
+  `);
+
   const labTests = await query(`
     SELECT ${filters.startDate || filters.endDate ? '' : 'TOP 10'} lt.test_code AS testCode, lt.test_type AS testType, lt.ordered_date AS orderedDate,
-      lt.status, lt.result_summary AS resultSummary
+      lt.status, lt.result_summary AS resultSummary, lt.result_note AS resultNote, lt.result_files AS resultFilesJson
     FROM LabTests lt
     INNER JOIN MedicalRecords mr ON mr.record_id = lt.record_id
     ${labWhere}
@@ -271,7 +283,15 @@ async function getPatientPortal(patientId, filters = {}) {
     patient: patientRows[0],
     treatments,
     prescriptions,
-    labTests,
+    labTests: labTests.map((row) => {
+      let resultFiles = [];
+      try {
+        resultFiles = row.resultFilesJson ? JSON.parse(row.resultFilesJson) : [];
+      } catch (error) {
+        resultFiles = [];
+      }
+      return { ...row, resultFiles };
+    }),
     billing: billingRows[0],
     billingItems,
     discharge: dischargeRows[0],

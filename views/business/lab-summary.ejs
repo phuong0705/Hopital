@@ -52,7 +52,7 @@
               <% } %>
             </td>
             <td class="text-end">
-              <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#updateResultModal" data-test-code="<%= row.testCode %>" data-status="<%= row.status %>" data-result="<%= row.resultSummary || '' %>" data-files="<%= encodeURIComponent(JSON.stringify(row.resultFiles || [])) %>">
+              <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#updateResultModal" data-test-code="<%= row.testCode %>" data-status="<%= row.status %>" data-result="<%= row.resultSummary || '' %>" data-note="<%= row.resultNote || '' %>" data-files="<%= encodeURIComponent(JSON.stringify(row.resultFiles || [])) %>">
                 <i class="bi bi-clipboard2-data me-1"></i>Xem kết quả
               </button>
             </td>
@@ -91,10 +91,14 @@
             <textarea class="form-control" id="resultInput" name="resultSummary" rows="4" required <%= canEditLabResult ? '' : 'readonly' %>></textarea>
           </div>
           <div class="mb-3">
+            <label class="form-label">Ghi chú</label>
+            <textarea class="form-control" id="resultNoteInput" name="resultNote" rows="3" <%= canEditLabResult ? '' : 'readonly' %>></textarea>
+          </div>
+          <div class="mb-3">
             <label class="form-label">Ảnh / tệp kết quả</label>
             <div class="list-group mb-2" id="resultFilesList"></div>
             <% if (canEditLabResult) { %>
-              <input class="form-control" id="resultFilesInput" name="resultFiles" type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv">
+              <input class="form-control" id="resultFilesInput" name="resultFiles" type="file" multiple accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
               <div class="form-text">Có thể upload nhiều ảnh hoặc tệp kết quả, tối đa 10MB/tệp.</div>
             <% } %>
           </div>
@@ -123,7 +127,7 @@
     const isImageFile = file => {
       const mimeType = (file.mimeType || '').toLowerCase();
       const name = (file.originalName || file.fileName || '').toLowerCase();
-      return mimeType.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif)$/i.test(name);
+      return mimeType.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(name);
     };
     const renderResultFile = file => {
       const url = escapeHtml(file.url);
@@ -154,6 +158,7 @@
       document.getElementById('testCodeInput').value = button.getAttribute('data-test-code') || '';
       document.getElementById('statusInput').value = button.getAttribute('data-status') || 'Chờ lấy mẫu';
       document.getElementById('resultInput').value = button.getAttribute('data-result') || '';
+      document.getElementById('resultNoteInput').value = button.getAttribute('data-note') || '';
       const fileInput = document.getElementById('resultFilesInput');
       if (fileInput) fileInput.value = '';
 
@@ -222,13 +227,14 @@
         });
         const data = await response.json();
         if (response.ok) {
+          window.AppFlash?.remember('success', data.message || 'Cập nhật thành công');
           window.location.reload();
           return;
         }
-        alert(data.error || 'Có lỗi xảy ra');
+        window.AppFlash?.error(data.error || 'Thao tác thất bại');
       } catch (error) {
         console.error(error);
-        alert('Không thể kết nối đến máy chủ');
+        window.AppFlash?.error('Thao tác thất bại');
       } finally {
         saveResultBtn.disabled = false;
       }

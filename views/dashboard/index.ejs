@@ -1,3 +1,38 @@
+<%
+  const role = currentUser ? currentUser.roleCode : '';
+  const actionMap = {
+    ADMIN: [
+      { label: 'Quản lý người dùng', icon: 'bi-people', href: '/users' },
+      { label: 'Danh mục thuốc', icon: 'bi-capsule-pill', href: '/nghiep-vu/danh-muc-thuoc?activeMenu=catalog-medicines' },
+      { label: 'Báo cáo thống kê', icon: 'bi-bar-chart-line', href: '/reports?activeMenu=report-statistics' },
+      { label: 'Phân quyền', icon: 'bi-shield-check', href: '/admin/roles-permissions' }
+    ],
+    DOCTOR: [
+      { label: 'Tiếp nhận & khám bệnh', icon: 'bi-stethoscope', href: '/nghiep-vu/tiep-nhan-kham-benh?activeMenu=doctor-reception-exam' },
+      { label: 'Chỉ định cận lâm sàng', icon: 'bi-clipboard2-plus', href: '/labtests?activeMenu=doctor-lab-orders' },
+      { label: 'Kết quả xét nghiệm', icon: 'bi-clipboard2-data', href: '/nghiep-vu/tong-hop-ket-qua-xet-nghiem?activeMenu=doctor-diagnostic-results' },
+      { label: 'Hồ sơ bệnh án', icon: 'bi-journal-medical', href: '/medical-records?activeMenu=doctor-medical-records' }
+    ],
+    LAB: [
+      { label: 'Nhận chỉ định xét nghiệm', icon: 'bi-clipboard2-pulse', href: '/labtests?activeMenu=lab-orders' },
+      { label: 'Cập nhật kết quả', icon: 'bi-image', href: '/nghiep-vu/tong-hop-ket-qua-xet-nghiem?activeMenu=lab-orders' }
+    ],
+    NURSE: [
+      { label: 'Theo dõi sinh hiệu', icon: 'bi-graph-up', href: '/nghiep-vu/theo-doi-sinh-hieu?activeMenu=nurse-vitals' },
+      { label: 'Hồ sơ bệnh án', icon: 'bi-journal-medical', href: '/medical-records?activeMenu=nurse-medical-records' },
+      { label: 'Sơ đồ giường / Phòng', icon: 'bi-grid-3x3-gap', href: '/beds?activeMenu=nurse-beds' },
+      { label: 'Báo cáo nội trú', icon: 'bi-bar-chart-line', href: '/reports?activeMenu=report-statistics' }
+    ],
+    RECEPTIONIST: [
+      { label: 'Tiếp nhận bệnh nhân', icon: 'bi-person-plus', href: '/patients/reception?activeMenu=cashier-reception' },
+      { label: 'Đặt lịch hẹn', icon: 'bi-calendar-plus', href: '/thu-ngan/dat-lich-hen-kham' },
+      { label: 'Viện phí', icon: 'bi-credit-card', href: '/billing?activeMenu=cashier-billing' },
+      { label: 'Hóa đơn', icon: 'bi-file-earmark', href: '/nghiep-vu/hoa-don?activeMenu=cashier-invoices' }
+    ]
+  };
+  const actions = actionMap[role] || actionMap.ADMIN;
+%>
+
 <section class="dashboard-welcome">
   <div class="dashboard-welcome-content">
     <div class="login-brand dashboard-brand">
@@ -9,4 +44,13 @@
     </div>
     <h1>Trung tâm quản lý người bệnh nội trú, hồ sơ điều trị và phối hợp chăm sóc lâm sàng.</h1>
   </div>
+</section>
+
+<section class="patient-action-grid compact mt-4">
+  <% actions.forEach(action => { %>
+    <a class="patient-action-card text-decoration-none" href="<%= action.href %>">
+      <i class="bi <%= action.icon %>"></i>
+      <strong><%= action.label %></strong>
+    </a>
+  <% }) %>
 </section>

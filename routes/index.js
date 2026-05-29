@@ -18,6 +18,7 @@ router.get('/', (req, res) => {
 
 router.use('/', require('./auth.routes'));
 router.use('/api/reports', require('./reports-api.routes'));
+router.get('/api/dashboard/summary', requireAuth, dashboardController.dashboardSummary);
 router.get('/api/dashboard/doctor', requireAuth, dashboardController.doctorSummary);
 router.get('/reports', requireAuth, (req, res) => {
   const target = new URL(process.env.REPORTS_FRONTEND_URL || 'http://localhost:3003/reports');

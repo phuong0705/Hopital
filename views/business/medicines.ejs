@@ -13,6 +13,7 @@
 </section>
 
 <section class="panel module-panel mt-4">
+  <% if (currentUser.roleCode !== 'PHARMACY') { %>
   <div class="module-toolbar three">
     <div class="module-search">
       <i class="bi bi-search"></i>
@@ -30,6 +31,7 @@
       <option value="Ngưng sử dụng">Ngưng sử dụng</option>
     </select>
   </div>
+  <% } %>
 
   <div class="module-table-wrap">
     <table class="table app-table module-table" id="medicinesTable">

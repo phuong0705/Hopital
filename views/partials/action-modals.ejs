@@ -53,6 +53,9 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content app-modal">
       <form action="/beds/transfer" method="post">
+        <% if (locals.transferReturnTo) { %>
+          <input type="hidden" name="returnTo" value="<%= transferReturnTo %>">
+        <% } %>
         <div class="modal-header">
           <h5 class="modal-title">Xếp / chuyển phòng / giường</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

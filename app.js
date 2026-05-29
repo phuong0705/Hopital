@@ -18,6 +18,11 @@ const { getPool } = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 3003;
+const getHealthPayload = () => ({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+  uptime: `${Math.floor(process.uptime())}s`
+});
 const allowedOrigins = [
   process.env.CLIENT_URL,
   process.env.REPORTS_FRONTEND_URL,
@@ -83,7 +88,7 @@ app.locals.databaseStatusLabel = process.env.DB_SERVER && process.env.DB_SERVER.
   : 'SQL Server';
 
 app.use((req, res, next) => {
-  if (req.originalUrl !== '/api/health') {
+  if (!['/health', '/api/health'].includes(req.originalUrl)) {
     console.log(`${req.method} ${req.originalUrl}`);
   }
   next();
@@ -92,10 +97,11 @@ app.use((req, res, next) => {
 app.use('/api', cors(corsOptions));
 
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    message: 'Backend dang hoat dong'
-  });
+  res.json(getHealthPayload());
+});
+
+app.get('/health', (req, res) => {
+  res.json(getHealthPayload());
 });
 
 app.get('/login', redirectIfAuthenticated, authController.showLogin);

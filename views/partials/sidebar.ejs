@@ -76,7 +76,7 @@
       items: [
         { key: 'nurse-vitals', label: 'Theo dõi sinh hiệu', icon: 'bi-graph-up', href: '/nghiep-vu/theo-doi-sinh-hieu?activeMenu=nurse-vitals' },
         { key: 'nurse-treatments', label: 'Thực hiện y lệnh', icon: 'bi-check2-square', href: '/treatments?activeMenu=nurse-treatments' },
-        { key: 'nurse-patients', label: 'Danh sách bệnh nhân trong khoa', icon: 'bi-person', href: '/patients/list?activeMenu=nurse-patients' }
+        { key: 'nurse-medical-records', label: 'Hồ sơ bệnh án', icon: 'bi-journal-medical', href: '/medical-records?activeMenu=nurse-medical-records' }
       ]
     },
     {
@@ -144,7 +144,6 @@
       items: [
         { key: 'patient-booking', label: 'Đặt lịch tái khám', icon: 'bi-calendar-plus', href: '/patients/me/booking' },
         { key: 'patient-billing', label: 'Hóa đơn & Thanh toán', icon: 'bi-credit-card', href: '/patients/me/billing' },
-        { key: 'patient-bhyt', label: 'Thẻ BHYT của tôi', icon: 'bi-card-checklist', href: '/patients/me/bhyt' },
         { key: 'patient-discharge', label: 'Thông tin xuất viện', icon: 'bi-box-arrow-right', href: '/patients/me/discharge' }
       ]
     },
@@ -162,6 +161,13 @@
       { key: 'report-statistics', label: 'Báo cáo thống kê', icon: 'bi-bar-chart', href: '/reports?activeMenu=report-statistics' }
     ]
   };
+  const hiddenNurseMenuKeys = new Set(['nurse-dashboard', 'nurse-treatments', 'nurse-meds', 'nurse-supplies']);
+  const visibleNurseMenuSections = nurseMenuSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !hiddenNurseMenuKeys.has(item.key))
+    }))
+    .filter((section) => section.items.length);
 %>
 <aside class="sidebar" id="appSidebar">
   <a class="brand" href="<%= isPatient ? '/patients/me' : '/dashboard/home' %>">
@@ -244,7 +250,7 @@
           <small class="text-white-50 d-block">Khoa: <%= currentUser.supervisorDepartmentName || currentUser.departmentName || 'Chưa phân khoa' %></small>
         </div>
       </div>
-      <% [...nurseMenuSections, commonReportSection].forEach(section => { %>
+      <% [...visibleNurseMenuSections, commonReportSection].forEach(section => { %>
         <div class="nav-section-label"><%= section.label %></div>
         <% section.items.forEach(item => { %>
           <a class="nav-link doctor-nav-link <%= activeMenu === item.key ? 'active' : '' %>" href="<%= item.href %>">
@@ -263,7 +269,7 @@
           <small class="text-white-50">Viện xét nghiệm</small>
         </div>
       </div>
-      <% [...labMenuSections, commonReportSection].forEach(section => { %>
+      <% labMenuSections.forEach(section => { %>
         <div class="nav-section-label"><%= section.label %></div>
         <% section.items.forEach(item => { %>
           <a class="nav-link doctor-nav-link <%= activeMenu === item.key ? 'active' : '' %>" href="<%= item.href %>">

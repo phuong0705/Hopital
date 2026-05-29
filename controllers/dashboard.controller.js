@@ -59,10 +59,6 @@ function renderDashboardHome(req, res) {
     });
   }
 
-  if (req.session.user.roleCode === 'NURSE') {
-    return res.redirect('/dashboard/nurse');
-  }
-
   if (req.session.user.roleCode === 'PHARMACY') {
     return res.redirect('/dashboard/pharmacy');
   }
@@ -126,6 +122,10 @@ function buildNurseShiftBlocks(treatments) {
 
 async function nurseShift(req, res, next) {
   try {
+    if (req.session.user.roleCode === 'NURSE') {
+      return res.redirect('/dashboard/home');
+    }
+
     const nurseSupervisor = await nurseAssignmentRepository.getNurseSupervisor(req.session.user.userId);
     const userDepartment = nurseSupervisor?.departmentName || req.session.user.departmentName || '';
     const nurseDoctorId = nurseSupervisor?.doctorId || -1;
@@ -469,10 +469,67 @@ async function doctorSummary(req, res, next) {
   }
 }
 
+async function dashboardSummary(req, res, next) {
+  try {
+    const roleCode = req.session.user?.roleCode;
+
+    if (roleCode === 'DOCTOR') {
+      return doctorSummary(req, res, next);
+    }
+
+    if (roleCode === 'PHARMACY') {
+      const [medicines, supplies, pendingMedicineCosts] = await Promise.all([
+        medicineRepository.getMedicines(),
+        supplyRepository.getSupplies(),
+        treatmentCostRepository.getPendingMedicineConfirmations()
+      ]);
+      const lowStockMedicines = medicines.filter((row) =>
+        Number(row.currentStock || 0) <= Number(row.stockWarningLevel || 0)
+      );
+      const lowStockSupplies = supplies.filter((row) => row.warningStatus !== 'á»”n Ä‘á»‹nh');
+
+      return res.json({
+        generatedAt: new Date().toISOString(),
+        user: {
+          fullName: req.session.user.fullName,
+          roleCode
+        },
+        summary: {
+          medicineCount: medicines.length,
+          supplyCount: supplies.length,
+          lowStockMedicineCount: lowStockMedicines.length,
+          lowStockSupplyCount: lowStockSupplies.length,
+          pendingMedicineCostCount: pendingMedicineCosts.length
+        },
+        data: {
+          lowStockMedicines: lowStockMedicines.slice(0, 10),
+          lowStockSupplies: lowStockSupplies.slice(0, 10),
+          pendingMedicineCosts: pendingMedicineCosts.slice(0, 10)
+        }
+      });
+    }
+
+    return res.json({
+      generatedAt: new Date().toISOString(),
+      user: {
+        fullName: req.session.user.fullName,
+        roleCode
+      },
+      summary: {
+        roleCode,
+        dashboardUrl: '/dashboard/home'
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   index,
   home,
   nurseShift,
   pharmacy,
+  dashboardSummary,
   doctorSummary
 };

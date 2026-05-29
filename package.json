@@ -10,7 +10,9 @@
     "reports:dev": "npm --prefix frontend run dev",
     "reports:build": "npm --prefix frontend run build",
     "db:test": "node scripts/db-test.js",
-    "db:migrate:indexes": "node scripts/run-sql-file.js sql/migrations/add-performance-indexes.sql"
+    "db:migrate:indexes": "node scripts/run-sql-file.js sql/migrations/add-performance-indexes.sql",
+    "db:migrate:cache-indexes": "node scripts/run-sql-file.js sql/migrations/add-cache-optimization-indexes.sql",
+    "health:ping": "node scripts/ping-health.js"
   },
   "keywords": [
     "hospital",

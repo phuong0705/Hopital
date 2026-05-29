@@ -4,6 +4,7 @@ const cashierRepository = require('../repositories/cashier.repository');
 const examRepository = require('../repositories/exam.repository');
 const moduleRepository = require('../repositories/module.repository');
 const nurseAssignmentRepository = require('../repositories/nurse-assignment.repository');
+const { buildFlashNotifications } = require('../services/flash-notification');
 
 function requireAuth(req, res, next) {
   if (!req.session.user) {
@@ -23,11 +24,13 @@ function redirectIfAuthenticated(req, res, next) {
 async function exposeUser(req, res, next) {
   res.locals.currentUser = req.session.user || null;
   res.locals.businessGroups = businessGroups;
-  res.locals.flash = {
-    success: req.flash('success'),
-    error: req.flash('error'),
-    warning: req.flash('warning')
-  };
+  const flashNotifications = buildFlashNotifications((type) => req.flash(type));
+  res.locals.flash = flashNotifications.reduce((map, item) => {
+    map[item.type] = map[item.type] || [];
+    map[item.type].push(item.message);
+    return map;
+  }, {});
+  res.locals.flashNotifications = flashNotifications;
 
   res.locals.unreadCount = 0;
   res.locals.doctorPendingTickets = 0;

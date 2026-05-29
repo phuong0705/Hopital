@@ -1,6 +1,7 @@
 const express = require('express');
 const moduleRepository = require('../repositories/module.repository');
 const nurseAssignmentRepository = require('../repositories/nurse-assignment.repository');
+const cache = require('../services/cache');
 
 const router = express.Router();
 
@@ -64,6 +65,15 @@ router.get('/summary', requireApiAuth, async (req, res, next) => {
     const { user } = req.session;
     const roleCode = user.roleCode;
     const scope = await getReportScope(user);
+    const scopeKey = [
+      `role:${roleCode}`,
+      `user:${user.userId || 'unknown'}`,
+      `doctor:${scope.doctorId || 'all'}`,
+      `department:${scope.departmentId || 'all'}`
+    ].join(':');
+    const cacheKey = `dashboard:reports:${scopeKey}`;
+
+    const cached = await cache.getOrSet(cacheKey, 60, async () => {
     const permissions = Object.fromEntries(
       ['inpatient', 'revenue', 'visits', 'medicines', 'discharges'].map((reportKey) => [
         reportKey,
@@ -107,7 +117,7 @@ router.get('/summary', requireApiAuth, async (req, res, next) => {
         : Promise.resolve()
     ]);
 
-    return res.json({
+    return {
       generatedAt: new Date().toISOString(),
       user: {
         fullName: user.fullName,
@@ -116,7 +126,12 @@ router.get('/summary', requireApiAuth, async (req, res, next) => {
       },
       permissions,
       data
+    };
     });
+
+    res.set('X-Cache', cached.hit ? 'HIT' : 'MISS');
+    res.set('Cache-Control', 'private, max-age=30');
+    return res.json(cached.value);
   } catch (error) {
     return next(error);
   }

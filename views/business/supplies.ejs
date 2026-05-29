@@ -3,28 +3,34 @@
 <section class="module-hero">
   <div>
     <h2>Quản lý vật tư tiêu hao</h2>
+    <p>Theo dõi tồn kho vật tư, nhập hàng trực tiếp và xem lịch sử nhận hàng.</p>
   </div>
   <div class="module-actions">
-    <button class="btn btn-light" type="button" data-bs-toggle="modal" data-bs-target="#requestSupplyModal"><i class="bi bi-cart-plus me-2"></i>Lĩnh vật tư</button>
+    <a class="btn btn-light" href="#suppliesTable"><i class="bi bi-boxes me-2"></i>Xem tồn kho</a>
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#supplyTransactionModal">
+      <i class="bi bi-plus-lg me-2"></i><%= isPharmacyUser ? 'Nhập hàng' : 'Lĩnh vật tư' %>
+    </button>
   </div>
 </section>
 
 <section class="panel mt-4">
-  <div class="module-toolbar">
-    <div class="module-search">
-      <i class="bi bi-search"></i>
-      <input class="form-control" type="search" placeholder="Tìm tên hoặc mã vật tư" data-module-search="suppliesTable">
+  <% if (!isPharmacyUser) { %>
+    <div class="module-toolbar">
+      <div class="module-search">
+        <i class="bi bi-search"></i>
+        <input class="form-control" type="search" placeholder="Tìm tên hoặc mã vật tư" data-module-search="suppliesTable">
+      </div>
     </div>
-  </div>
+  <% } %>
 
   <div class="module-table-wrap">
-    <table class="table app-table module-table" id="suppliesTable">
+    <table class="table app-table module-table pharmacy-table" id="suppliesTable">
       <thead>
         <tr>
           <th>Mã vật tư</th>
           <th>Tên vật tư</th>
           <th>Đơn vị</th>
-          <th>Tồn kho khoa</th>
+          <th>Tồn kho</th>
           <th>Định mức</th>
           <th>Cảnh báo</th>
           <th class="text-end">Thao tác</th>
@@ -42,12 +48,9 @@
               <td><%= row.stockNorm %></td>
               <td><span class="badge <%= badgeClass %>"><%= row.warningStatus %></span></td>
               <td class="text-end">
-                <form action="/nghiep-vu/vat-tu-tieu-hao/transaction" method="post" class="d-inline">
-                  <input type="hidden" name="supplyId" value="<%= row.supplyId %>">
-                  <input type="hidden" name="transactionType" value="Xuất sử dụng">
-                  <input type="hidden" name="quantity" value="1">
-                  <button class="btn btn-sm btn-light" type="submit">Xuất 1 <%= row.unit %></button>
-                </form>
+                <button class="btn btn-sm btn-light" type="button" onclick="showSupplyHistory('<%= row.supplyId %>', '<%= row.supplyName %>')">
+                  <i class="bi bi-clock-history me-1"></i>Lịch sử nhận hàng
+                </button>
               </td>
             </tr>
           <% }) %>
@@ -59,17 +62,17 @@
   </div>
 </section>
 
-<div class="modal fade" id="requestSupplyModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="supplyTransactionModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content app-modal">
       <form action="/nghiep-vu/vat-tu-tieu-hao/transaction" method="post">
         <div class="modal-header">
-          <h5 class="modal-title">Lĩnh vật tư y tế</h5>
+          <h5 class="modal-title"><%= isPharmacyUser ? 'Nhập vật tư vào kho' : 'Lĩnh vật tư y tế' %></h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label">Vật tư cần lĩnh</label>
+            <label class="form-label">Vật tư</label>
             <select class="form-select" name="supplyId" required>
               <option value="" disabled selected>-- Chọn vật tư --</option>
               <% rows.forEach(row => { %>
@@ -78,21 +81,20 @@
             </select>
           </div>
           <% if (isPharmacyUser) { %>
-            <div class="mb-3">
-              <label class="form-label">Loại giao dịch</label>
-              <select class="form-select" name="transactionType">
-                <option value="Cấp phát">Cấp phát</option>
-                <option value="Hoàn trả">Hoàn trả</option>
-                <option value="Nhập kho">Nhập kho</option>
-              </select>
-            </div>
+            <input type="hidden" name="transactionType" value="Nhập kho">
           <% } else { %>
             <input type="hidden" name="transactionType" value="Yêu cầu lĩnh">
           <% } %>
           <div class="mb-3">
-            <label class="form-label">Số lượng yêu cầu</label>
+            <label class="form-label"><%= isPharmacyUser ? 'Số lượng nhập' : 'Số lượng yêu cầu' %></label>
             <input type="number" class="form-control" name="quantity" value="100" min="1" required>
           </div>
+          <% if (isPharmacyUser) { %>
+            <div class="mb-3">
+              <label class="form-label">Kho nhận</label>
+              <input class="form-control" name="warehouseName" value="Kho Dược" required>
+            </div>
+          <% } %>
           <div class="mb-3">
             <label class="form-label">Ghi chú</label>
             <textarea class="form-control" name="note" rows="2"></textarea>
@@ -100,9 +102,78 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-          <button type="submit" class="btn btn-primary">Gửi yêu cầu</button>
+          <button type="submit" class="btn btn-primary"><%= isPharmacyUser ? 'Nhập hàng' : 'Gửi yêu cầu' %></button>
         </div>
       </form>
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="supplyHistoryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content app-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Lịch sử nhận hàng: <span id="supplyHistoryName"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Mã phiếu nhập</th>
+                <th>Thuốc/vật tư</th>
+                <th>Số lượng</th>
+                <th>Đơn vị</th>
+                <th>Ngày nhập</th>
+                <th>Người nhập</th>
+                <th>Kho nhận</th>
+                <th>Ghi chú</th>
+              </tr>
+            </thead>
+            <tbody id="supplyHistoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function escapeSupplyHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[char]));
+  }
+
+  function showSupplyHistory(supplyId, supplyName) {
+    document.getElementById('supplyHistoryName').textContent = supplyName;
+    const body = document.getElementById('supplyHistoryBody');
+    body.innerHTML = '<tr><td colspan="8" class="text-center">Đang tải...</td></tr>';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('supplyHistoryModal')).show();
+
+    fetch(`/nghiep-vu/vat-tu-tieu-hao/${supplyId}/history`)
+      .then(response => response.json())
+      .then(rows => {
+        body.innerHTML = rows.length ? rows.map(item => `
+          <tr>
+            <td>${escapeSupplyHtml(item.receiptCode || '-')}</td>
+            <td>${escapeSupplyHtml(item.itemName || '-')}</td>
+            <td><strong>${Number(item.quantity || 0).toLocaleString('vi-VN')}</strong></td>
+            <td>${escapeSupplyHtml(item.unit || '-')}</td>
+            <td>${item.transactionDate ? new Date(item.transactionDate).toLocaleString('vi-VN') : '-'}</td>
+            <td>${escapeSupplyHtml(item.performedBy || 'Hệ thống')}</td>
+            <td>${escapeSupplyHtml(item.warehouseName || 'Kho Dược')}</td>
+            <td><small>${escapeSupplyHtml(item.note || '-')}</small></td>
+          </tr>
+        `).join('') : '<tr><td colspan="8" class="text-center text-muted py-4">Chưa có lịch sử nhận hàng.</td></tr>';
+      })
+      .catch(() => {
+        body.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Không thể tải lịch sử.</td></tr>';
+      });
+  }
+</script>

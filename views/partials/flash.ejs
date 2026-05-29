@@ -1,15 +1,10 @@
-<% if (flash.success && flash.success.length) { %>
-  <% flash.success.forEach(message => { %>
-    <div class="alert alert-success app-alert"><i class="bi bi-check-circle-fill"></i><%= message %></div>
-  <% }) %>
-<% } %>
-<% if (flash.error && flash.error.length) { %>
-  <% flash.error.forEach(message => { %>
-    <div class="alert alert-danger app-alert"><i class="bi bi-exclamation-triangle-fill"></i><%= message %></div>
-  <% }) %>
-<% } %>
-<% if (flash.warning && flash.warning.length) { %>
-  <% flash.warning.forEach(message => { %>
-    <div class="alert alert-warning app-alert"><i class="bi bi-info-circle-fill"></i><%= message %></div>
-  <% }) %>
-<% } %>
+<%
+  const serverFlashNotifications = Array.isArray(flashNotifications) ? flashNotifications : [];
+%>
+<div
+  class="flash-stack"
+  id="flashStack"
+  aria-live="polite"
+  aria-atomic="false"
+  data-flash='<%- JSON.stringify(serverFlashNotifications).replace(/</g, '\\u003c') %>'>
+</div>

@@ -31,6 +31,7 @@
           <th>Thời gian</th>
           <th>Loại xét nghiệm</th>
           <th>Kết quả</th>
+          <th>Ghi chú / ảnh</th>
           <th>Trạng thái</th>
         </tr>
       </thead>
@@ -40,11 +41,28 @@
             <td><strong><%= format.datetime(item.orderedDate) %></strong></td>
             <td><%= item.testType %></td>
             <td><%= item.resultSummary || 'Chưa có kết quả' %></td>
+            <td class="text-wrap-cell compact">
+              <% if (item.resultNote) { %>
+                <div><%= item.resultNote %></div>
+              <% } %>
+              <% if (item.resultFiles && item.resultFiles.length) { %>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                  <% item.resultFiles.forEach(file => { %>
+                    <a class="btn btn-sm btn-light" href="<%= file.url %>" target="_blank" rel="noopener">
+                      <i class="bi bi-image me-1"></i>Ảnh
+                    </a>
+                  <% }) %>
+                </div>
+              <% } %>
+              <% if (!item.resultNote && !(item.resultFiles && item.resultFiles.length)) { %>
+                <span class="text-muted">-</span>
+              <% } %>
+            </td>
             <td><%- include('../partials/badge', { text: item.status }) %></td>
           </tr>
         <% }) %>
         <% if (!data.labTests.length) { %>
-          <tr><td colspan="4" class="text-center py-4 text-muted">Không tìm thấy dữ liệu trong khoảng thời gian này.</td></tr>
+          <tr><td colspan="5" class="text-center py-4 text-muted">Không tìm thấy dữ liệu trong khoảng thời gian này.</td></tr>
         <% } %>
       </tbody>
     </table>
