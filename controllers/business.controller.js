@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const {
   businessGroups,
   businessItems,
@@ -16,6 +18,23 @@ const cashierRepository = require('../repositories/cashier.repository');
 const formTemplateRepository = require('../repositories/form-template.repository');
 const nurseAssignmentRepository = require('../repositories/nurse-assignment.repository');
 const treatmentCostRepository = require('../repositories/treatment-cost.repository');
+const { convertWordToPdf } = require('../services/document-converter');
+
+const publicDir = path.join(__dirname, '..', 'public');
+const formTemplatePdfDir = path.join(publicDir, 'form-templates');
+
+function toPublicUrl(filePath) {
+  return `/${path.relative(publicDir, filePath).split(path.sep).join('/')}`;
+}
+
+function removeFileIfExists(filePath) {
+  if (!filePath) return;
+  try {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch (error) {
+    console.warn(`Khong the xoa file tam: ${filePath}`, error.message);
+  }
+}
 
 function containsKeyword(value, keywords) {
   const normalized = normalizeText(value);
@@ -109,7 +128,7 @@ async function diseaseCatalog(req, res, next) {
   try {
     const rows = await diseaseRepository.getDiseases();
     return res.render('business/diseases', {
-      title: 'Thư viện bệnh',
+      title: 'Danh mục bệnh',
       activeMenu: req.query.activeMenu || 'catalog-diseases',
       rows
     });
@@ -132,6 +151,26 @@ async function createDisease(req, res, next) {
   } catch (error) {
     if (error.number === 2627 || error.number === 2601) {
       req.flash('error', 'Mã bệnh đã tồn tại trong thư viện.');
+      return res.redirect('/nghiep-vu/danh-muc-benh');
+    }
+    return next(error);
+  }
+}
+
+async function updateDisease(req, res, next) {
+  try {
+    const { diseaseCode, icd10Code, diseaseName, specialty } = req.body;
+    if (!diseaseCode || !icd10Code || !diseaseName || !specialty) {
+      req.flash('error', 'Vui lòng nhập đầy đủ mã bệnh, mã ICD-10, tên bệnh và chuyên khoa.');
+      return res.redirect('/nghiep-vu/danh-muc-benh');
+    }
+
+    await diseaseRepository.updateDisease(req.params.id, req.body);
+    req.flash('success', 'Cập nhật thông tin bệnh thành công.');
+    return res.redirect('/nghiep-vu/danh-muc-benh');
+  } catch (error) {
+    if (error.number === 2627 || error.number === 2601) {
+      req.flash('error', 'Mã bệnh đã tồn tại trong danh mục.');
       return res.redirect('/nghiep-vu/danh-muc-benh');
     }
     return next(error);
@@ -190,6 +229,26 @@ async function createMedicine(req, res, next) {
   }
 }
 
+async function updateMedicine(req, res, next) {
+  try {
+    const { medicineCode, medicineName, medicineGroup, dosageForm } = req.body;
+    if (!medicineCode || !medicineName || !medicineGroup || !dosageForm) {
+      req.flash('error', 'Vui lòng nhập đầy đủ mã thuốc, tên thuốc, nhóm thuốc và dạng bào chế.');
+      return res.redirect('/nghiep-vu/danh-muc-thuoc');
+    }
+
+    await medicineRepository.updateMedicine(req.params.id, req.body);
+    req.flash('success', 'Cập nhật thông tin thuốc thành công.');
+    return res.redirect('/nghiep-vu/danh-muc-thuoc');
+  } catch (error) {
+    if (error.number === 2627 || error.number === 2601) {
+      req.flash('error', 'Mã thuốc đã tồn tại trong danh mục.');
+      return res.redirect('/nghiep-vu/danh-muc-thuoc');
+    }
+    return next(error);
+  }
+}
+
 async function updateMedicineStatus(req, res, next) {
   try {
     await medicineRepository.updateMedicineStatus(req.params.id, req.body.status || 'Ngưng sử dụng');
@@ -233,6 +292,26 @@ async function createService(req, res, next) {
   }
 }
 
+async function updateService(req, res, next) {
+  try {
+    const { serviceCode, serviceName, serviceGroup } = req.body;
+    if (!serviceCode || !serviceName || !serviceGroup) {
+      req.flash('error', 'Vui lòng nhập đầy đủ mã dịch vụ, tên dịch vụ và nhóm dịch vụ.');
+      return res.redirect('/nghiep-vu/danh-muc-dich-vu');
+    }
+
+    await serviceRepository.updateService(req.params.id, req.body);
+    req.flash('success', 'Cập nhật thông tin dịch vụ thành công.');
+    return res.redirect('/nghiep-vu/danh-muc-dich-vu');
+  } catch (error) {
+    if (error.number === 2627 || error.number === 2601) {
+      req.flash('error', 'Mã dịch vụ đã tồn tại trong danh mục.');
+      return res.redirect('/nghiep-vu/danh-muc-dich-vu');
+    }
+    return next(error);
+  }
+}
+
 async function updateServiceStatus(req, res, next) {
   try {
     await serviceRepository.updateServiceStatus(req.params.id, req.body.status || 'Ngưng sử dụng');
@@ -251,6 +330,76 @@ async function formTemplates(req, res, next) {
       activeMenu: req.query.activeMenu || 'doctor-form-templates',
       rows
     });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function createFormTemplate(req, res, next) {
+  let generatedPdfPath = null;
+
+  try {
+    if (!req.file) {
+      req.flash('error', 'Vui lòng chọn file PDF, DOC hoặc DOCX cho biểu mẫu.');
+      return res.redirect('/nghiep-vu/bieu-mau?activeMenu=admin-form-templates');
+    }
+
+    const requiredFields = ['templateCode', 'templateName', 'templateType'];
+    const hasMissingField = requiredFields.some((field) => !String(req.body[field] || '').trim());
+    if (hasMissingField) {
+      removeFileIfExists(req.file.path);
+      req.flash('error', 'Vui lòng nhập đầy đủ mã, tên và nhóm biểu mẫu.');
+      return res.redirect('/nghiep-vu/bieu-mau?activeMenu=admin-form-templates');
+    }
+
+    const extension = path.extname(req.file.originalname || req.file.filename).toLowerCase();
+    const originalFileUrl = toPublicUrl(req.file.path);
+    const isWordFile = ['.doc', '.docx'].includes(extension);
+    const isPdfFile = extension === '.pdf';
+
+    if (!isWordFile && !isPdfFile) {
+      removeFileIfExists(req.file.path);
+      req.flash('error', 'Chỉ được upload file PDF, DOC hoặc DOCX.');
+      return res.redirect('/nghiep-vu/bieu-mau?activeMenu=admin-form-templates');
+    }
+
+    if (isWordFile) {
+      generatedPdfPath = await convertWordToPdf(req.file.path, formTemplatePdfDir);
+    }
+
+    await formTemplateRepository.createFormTemplate({
+      ...req.body,
+      fileUrl: isPdfFile ? originalFileUrl : toPublicUrl(generatedPdfPath),
+      originalFileUrl,
+      originalFileType: extension.replace('.', '').toUpperCase()
+    });
+
+    req.flash('success', 'Thêm biểu mẫu thành công.');
+    return res.redirect('/nghiep-vu/bieu-mau?activeMenu=admin-form-templates');
+  } catch (error) {
+    removeFileIfExists(req.file?.path);
+    removeFileIfExists(generatedPdfPath);
+
+    if (error.number === 2627 || error.number === 2601) {
+      req.flash('error', 'Mã biểu mẫu đã tồn tại.');
+      return res.redirect('/nghiep-vu/bieu-mau?activeMenu=admin-form-templates');
+    }
+
+    if (String(error.message || '').includes('LibreOffice')) {
+      req.flash('error', error.message);
+      return res.redirect('/nghiep-vu/bieu-mau?activeMenu=admin-form-templates');
+    }
+
+    return next(error);
+  }
+}
+
+async function updateFormTemplateStatus(req, res, next) {
+  try {
+    const status = req.body.status === 'Đang sử dụng' ? 'Đang sử dụng' : 'Khóa';
+    await formTemplateRepository.updateFormTemplateStatus(req.params.id, status);
+    req.flash('success', status === 'Khóa' ? 'Đã khóa biểu mẫu.' : 'Đã mở khóa biểu mẫu.');
+    return res.redirect('/nghiep-vu/bieu-mau?activeMenu=admin-form-templates');
   } catch (error) {
     return next(error);
   }
@@ -1305,15 +1454,20 @@ module.exports = {
   showBusiness,
   diseaseCatalog,
   createDisease,
+  updateDisease,
   updateDiseaseStatus,
   medicineCatalog,
   searchMedicines,
   createMedicine,
+  updateMedicine,
   updateMedicineStatus,
   serviceCatalog,
   formTemplates,
+  createFormTemplate,
+  updateFormTemplateStatus,
   blankInpatientPrescriptionTemplate,
   createService,
+  updateService,
   updateServiceStatus,
   examTicket,
   createExamTicket,

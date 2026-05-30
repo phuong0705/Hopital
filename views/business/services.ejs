@@ -41,7 +41,6 @@
           <th>Khoa thực hiện</th>
           <th>Đơn vị</th>
           <th>Đơn giá</th>
-          <th>BHYT</th>
           <th>Thời gian</th>
           <th>Trạng thái</th>
           <th class="text-end no-export">Hành động</th>
@@ -66,20 +65,19 @@
             <td><%= row.departmentName || '-' %></td>
             <td><%= row.unit %></td>
             <td><strong><%= Number(row.unitPrice || 0).toLocaleString('vi-VN') %> đ</strong></td>
-            <td><%= row.insuranceRate %>%</td>
             <td><%= row.turnaroundTime || '-' %></td>
             <td><span class="status-badge <%= statusClass %>"><%= row.status %></span></td>
             <td class="text-end no-export">
+              <div class="table-actions justify-content-end">
+                <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#serviceDetail<%= row.serviceId %>" data-bs-title="Xem chi tiết">
+                  <i class="bi bi-eye"></i>
+                </button>
               <% if (['ADMIN', 'RECEPTIONIST'].includes(currentUser.roleCode)) { %>
-                <form action="/nghiep-vu/danh-muc-dich-vu/<%= row.serviceId %>/status" method="post" class="d-inline">
-                  <input type="hidden" name="status" value="<%= row.status === 'Đang sử dụng' ? 'Ngưng sử dụng' : 'Đang sử dụng' %>">
-                  <button class="btn btn-sm btn-light action-icon" type="submit">
-                    <i class="bi <%= row.status === 'Đang sử dụng' ? 'bi-lock' : 'bi-unlock' %>"></i>
-                  </button>
-                </form>
-              <% } else { %>
-                <span class="text-muted">-</span>
+                <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#serviceEdit<%= row.serviceId %>" data-bs-title="Chỉnh sửa">
+                  <i class="bi bi-pencil-square"></i>
+                </button>
               <% } %>
+              </div>
             </td>
           </tr>
         <% }) %>
@@ -92,6 +90,71 @@
     <strong>Không tìm thấy dịch vụ phù hợp</strong>
   </div>
 </section>
+
+<% rows.forEach(row => { %>
+  <div class="modal fade" id="serviceDetail<%= row.serviceId %>" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content app-modal">
+        <div class="modal-header">
+          <div>
+            <span class="module-code"><%= row.serviceCode %></span>
+            <h5 class="modal-title"><%= row.serviceName %></h5>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <div class="info-list compact">
+            <div><small>Nhóm dịch vụ</small><strong><%= row.serviceGroup %></strong></div>
+            <div><small>Khoa thực hiện</small><strong><%= row.departmentName || '-' %></strong></div>
+            <div><small>Đơn vị</small><strong><%= row.unit %></strong></div>
+            <div><small>Đơn giá</small><strong><%= Number(row.unitPrice || 0).toLocaleString('vi-VN') %> đ</strong></div>
+            <div><small>BHYT hỗ trợ</small><strong><%= row.insuranceRate %>%</strong></div>
+            <div><small>Thời gian trả kết quả</small><strong><%= row.turnaroundTime || '-' %></strong></div>
+            <div><small>Trạng thái</small><strong><%= row.status %></strong></div>
+          </div>
+          <div class="mt-3 disease-detail-block">
+            <i class="bi bi-journal-text"></i>
+            <h6>Mô tả</h6>
+            <p><%= row.description || 'Chưa cập nhật mô tả.' %></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <% if (['ADMIN', 'RECEPTIONIST'].includes(currentUser.roleCode)) { %>
+    <div class="modal fade" id="serviceEdit<%= row.serviceId %>" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content app-modal">
+          <div class="modal-header">
+            <h5 class="modal-title">Chỉnh sửa thông tin dịch vụ</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+          </div>
+          <form action="/nghiep-vu/danh-muc-dich-vu/<%= row.serviceId %>/update" method="post">
+            <div class="modal-body">
+              <div class="form-grid">
+                <div><label class="form-label">Mã dịch vụ</label><input class="form-control" name="serviceCode" value="<%= row.serviceCode %>" required></div>
+                <div><label class="form-label">Tên dịch vụ</label><input class="form-control" name="serviceName" value="<%= row.serviceName %>" required></div>
+                <div><label class="form-label">Nhóm dịch vụ</label><input class="form-control" name="serviceGroup" value="<%= row.serviceGroup %>" required></div>
+                <div><label class="form-label">Khoa thực hiện</label><input class="form-control" name="departmentName" value="<%= row.departmentName || '' %>"></div>
+                <div><label class="form-label">Đơn vị</label><input class="form-control" name="unit" value="<%= row.unit %>"></div>
+                <div><label class="form-label">Đơn giá</label><input class="form-control" name="unitPrice" type="number" min="0" value="<%= row.unitPrice || 0 %>"></div>
+                <div><label class="form-label">BHYT hỗ trợ (%)</label><input class="form-control" name="insuranceRate" type="number" min="0" max="100" value="<%= row.insuranceRate || 0 %>"></div>
+                <div><label class="form-label">Thời gian trả kết quả</label><input class="form-control" name="turnaroundTime" value="<%= row.turnaroundTime || '' %>"></div>
+                <div class="span-2"><label class="form-label">Mô tả</label><textarea class="form-control" name="description" rows="3"><%= row.description || '' %></textarea></div>
+                <div><label class="form-label">Trạng thái</label><select class="form-select" name="status"><option <%= row.status === 'Đang sử dụng' ? 'selected' : '' %>>Đang sử dụng</option><option <%= row.status === 'Ngưng sử dụng' ? 'selected' : '' %>>Ngưng sử dụng</option></select></div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+              <button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>Lưu thay đổi</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  <% } %>
+<% }) %>
 
 <% if (['ADMIN', 'RECEPTIONIST'].includes(currentUser.roleCode)) { %>
   <div class="modal fade" id="serviceModal" tabindex="-1" aria-hidden="true">

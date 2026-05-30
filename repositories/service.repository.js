@@ -131,6 +131,39 @@ async function createService(data) {
   cache.delByPrefix('categories:services');
 }
 
+async function updateService(serviceId, data) {
+  await ensureServiceCatalog();
+
+  await execute(`
+    UPDATE ServiceCatalog
+    SET service_code = @serviceCode,
+      service_name = @serviceName,
+      service_group = @serviceGroup,
+      department_name = NULLIF(@departmentName, ''),
+      unit = @unit,
+      unit_price = @unitPrice,
+      insurance_rate = @insuranceRate,
+      turnaround_time = NULLIF(@turnaroundTime, ''),
+      description = NULLIF(@description, ''),
+      status = @status,
+      updated_at = SYSDATETIME()
+    WHERE service_id = @serviceId
+  `, {
+    serviceId: Number(serviceId),
+    serviceCode: data.serviceCode,
+    serviceName: data.serviceName,
+    serviceGroup: data.serviceGroup,
+    departmentName: data.departmentName || '',
+    unit: data.unit || 'lần',
+    unitPrice: Number(data.unitPrice || 0),
+    insuranceRate: Number(data.insuranceRate || 0),
+    turnaroundTime: data.turnaroundTime || '',
+    description: data.description || '',
+    status: data.status || 'Đang sử dụng'
+  });
+  cache.delByPrefix('categories:services');
+}
+
 async function updateServiceStatus(serviceId, status) {
   await ensureServiceCatalog();
 
@@ -150,5 +183,6 @@ module.exports = {
   getServices,
   getClinicalOrderServices,
   createService,
+  updateService,
   updateServiceStatus
 };

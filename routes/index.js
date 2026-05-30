@@ -1,6 +1,9 @@
 const express = require('express');
 const { requireAuth } = require('../middlewares/auth.middleware');
+const { requireRole } = require('../middlewares/role.middleware');
 const dashboardController = require('../controllers/dashboard.controller');
+const shiftAssignmentController = require('../controllers/shift-assignment.controller');
+const shiftAssignmentApiRoutes = require('./shift-assignments.routes');
 
 const router = express.Router();
 
@@ -18,6 +21,13 @@ router.get('/', (req, res) => {
 
 router.use('/', require('./auth.routes'));
 router.use('/api/reports', require('./reports-api.routes'));
+router.use('/api/shift-assignments', requireAuth, require('./shift-assignments.routes'));
+router.use('/api/admin/shift-assignments', requireAuth, requireRole(['ADMIN']), shiftAssignmentApiRoutes.buildRouter('admin'));
+router.use('/api/manager/shift-assignments', requireAuth, requireRole(shiftAssignmentController.MANAGER_ROLES), shiftAssignmentApiRoutes.buildRouter('manager'));
+router.get('/api/my-shifts', requireAuth, requireRole(shiftAssignmentController.STAFF_VIEW_ROLES), shiftAssignmentController.myShiftsApi);
+router.get('/api/doctor/my-shifts', requireAuth, requireRole(['DOCTOR']), shiftAssignmentController.myShiftsApi);
+router.get('/api/nurse/my-shifts', requireAuth, requireRole(['NURSE']), shiftAssignmentController.myShiftsApi);
+router.get('/api/staff/my-shifts', requireAuth, requireRole(shiftAssignmentController.STAFF_ROLES), shiftAssignmentController.myShiftsApi);
 router.get('/api/dashboard/summary', requireAuth, dashboardController.dashboardSummary);
 router.get('/api/dashboard/doctor', requireAuth, dashboardController.doctorSummary);
 router.get('/reports', requireAuth, (req, res) => {
@@ -44,6 +54,14 @@ router.use('/discharges', requireAuth, require('./discharges.routes'));
 router.use('/users', requireAuth, require('./users.routes'));
 router.use('/settings', requireAuth, require('./settings.routes'));
 router.use('/admin', requireAuth, require('./admin.routes'));
+router.use('/manager', requireAuth, require('./manager.routes'));
+router.use('/department-manager', requireAuth, require('./manager.routes'));
+router.get('/doctor/phan-ca-cua-toi', requireAuth, requireRole(['DOCTOR']), shiftAssignmentController.doctorPage);
+router.get('/doctor/my-shifts', requireAuth, requireRole(['DOCTOR']), shiftAssignmentController.doctorPage);
+router.get('/nurse/phan-ca-cua-toi', requireAuth, requireRole(['NURSE']), shiftAssignmentController.nursePage);
+router.get('/nurse/my-shifts', requireAuth, requireRole(['NURSE']), shiftAssignmentController.nursePage);
+router.get('/staff/phan-ca-cua-toi', requireAuth, requireRole(shiftAssignmentController.STAFF_ROLES), shiftAssignmentController.staffPage);
+router.get('/staff/my-shifts', requireAuth, requireRole(shiftAssignmentController.STAFF_ROLES), shiftAssignmentController.staffPage);
 router.use('/thu-ngan', requireAuth, require('./cashier.routes'));
 router.use('/nghiep-vu', requireAuth, require('./business.routes'));
 

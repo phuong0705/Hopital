@@ -1,8 +1,15 @@
+<% const canManageFormTemplates = currentUser && currentUser.roleCode === 'ADMIN'; %>
+
 <section class="module-hero">
   <div>
     <h2>Danh mục biểu mẫu</h2>
   </div>
   <div class="module-actions">
+    <% if (canManageFormTemplates) { %>
+      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createFormTemplateModal">
+        <i class="bi bi-file-earmark-plus me-2"></i>Thêm biểu mẫu
+      </button>
+    <% } %>
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
     <button class="btn btn-light" type="button" data-export-table="formTemplatesTable" data-filename="danh-muc-bieu-mau.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
   </div>
@@ -32,6 +39,9 @@
           <th>Mô tả</th>
           <th>Trạng thái</th>
           <th class="text-end no-export">Tệp</th>
+          <% if (canManageFormTemplates) { %>
+            <th class="text-end no-export">Thao tác</th>
+          <% } %>
         </tr>
       </thead>
       <tbody>
@@ -44,18 +54,39 @@
             <td><%- include('../partials/badge', { text: row.status }) %></td>
             <td class="text-end no-export">
               <% if (row.fileUrl) { %>
-                <a class="btn btn-sm btn-light action-icon" href="<%= row.fileUrl %>" target="_blank" data-bs-toggle="tooltip" title="Mở biểu mẫu">
+                <a class="btn btn-sm btn-light action-icon" href="<%= row.fileUrl %>" target="_blank" data-bs-toggle="tooltip" title="Mở PDF">
                   <i class="bi bi-file-earmark-text"></i>
                 </a>
+                <% if (row.originalFileUrl && row.originalFileUrl !== row.fileUrl) { %>
+                  <a class="btn btn-sm btn-light action-icon" href="<%= row.originalFileUrl %>" target="_blank" data-bs-toggle="tooltip" title="Mở file Word gốc">
+                    <i class="bi bi-file-earmark-word"></i>
+                  </a>
+                <% } %>
               <% } else { %>
                 <span class="text-muted small">Chưa có tệp</span>
               <% } %>
             </td>
+            <% if (canManageFormTemplates) { %>
+              <td class="text-end no-export">
+                <form action="/nghiep-vu/bieu-mau/<%= row.templateId %>/status" method="post" class="d-inline">
+                  <% const isLocked = row.status === 'Khóa'; %>
+                  <input type="hidden" name="status" value="<%= isLocked ? 'Đang sử dụng' : 'Khóa' %>">
+                  <button
+                    class="btn btn-sm <%= isLocked ? 'btn-light' : 'btn-light text-danger' %> action-icon action-icon-xs"
+                    type="submit"
+                    data-bs-toggle="tooltip"
+                    title="<%= isLocked ? 'Mở khóa biểu mẫu' : 'Khóa biểu mẫu' %>"
+                    aria-label="<%= isLocked ? 'Mở khóa biểu mẫu' : 'Khóa biểu mẫu' %>">
+                    <i class="bi <%= isLocked ? 'bi-unlock' : 'bi-lock' %>"></i>
+                  </button>
+                </form>
+              </td>
+            <% } %>
           </tr>
         <% }) %>
         <% if (!rows.length) { %>
           <tr>
-            <td colspan="6" class="text-center py-4 text-muted">Chưa có biểu mẫu nào trong danh mục.</td>
+            <td colspan="<%= canManageFormTemplates ? 7 : 6 %>" class="text-center py-4 text-muted">Chưa có biểu mẫu nào trong danh mục.</td>
           </tr>
         <% } %>
       </tbody>
@@ -67,3 +98,47 @@
     <strong>Không tìm thấy biểu mẫu phù hợp</strong>
   </div>
 </section>
+
+<% if (canManageFormTemplates) { %>
+  <div class="modal fade" id="createFormTemplateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content app-modal">
+        <form action="/nghiep-vu/bieu-mau" method="post" enctype="multipart/form-data">
+          <div class="modal-header">
+            <h5 class="modal-title">Thêm biểu mẫu</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Mã biểu mẫu</label>
+                <input type="text" name="templateCode" class="form-control" placeholder="VD: BM-NT-20" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Nhóm biểu mẫu</label>
+                <input type="text" name="templateType" class="form-control" placeholder="VD: Điều trị nội trú" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Tên biểu mẫu</label>
+                <input type="text" name="templateName" class="form-control" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label">File biểu mẫu</label>
+                <input type="file" name="templateFile" class="form-control" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
+                <small class="text-muted">Hỗ trợ PDF, DOC, DOCX. File Word sẽ tự chuyển sang PDF nếu máy chủ có LibreOffice.</small>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Mô tả</label>
+                <textarea name="description" class="form-control" rows="3"></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save me-2"></i>Lưu biểu mẫu</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+<% } %>

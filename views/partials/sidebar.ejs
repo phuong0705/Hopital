@@ -6,6 +6,7 @@
   const isNurse = role === 'NURSE';
   const isReceptionist = role === 'RECEPTIONIST';
   const isLab = role === 'LAB';
+  const isManager = ['MANAGER', 'DEPARTMENT_HEAD', 'HEAD_DOCTOR'].includes(role);
   const canGroup = (group) => isAdmin || group.roles.includes(role);
   const canItem = (item, group) => isAdmin || (item.roles || group.roles).includes(role);
   const adminMenuSections = [
@@ -21,27 +22,13 @@
     {
       label: 'DANH MỤC HỆ THỐNG',
       items: [
-        { key: 'catalog-diseases', label: 'Danh mục bệnh (ICD)', icon: 'bi-circle', href: '/nghiep-vu/danh-muc-benh?activeMenu=catalog-diseases' },
+        { key: 'catalog-diseases', label: 'Danh mục bệnh', icon: 'bi-circle', href: '/nghiep-vu/danh-muc-benh?activeMenu=catalog-diseases' },
         { key: 'catalog-medicines', label: 'Danh mục thuốc', icon: 'bi-plus-circle', href: '/nghiep-vu/danh-muc-thuoc?activeMenu=catalog-medicines' },
-        { key: 'catalog-services', label: 'Danh mục dịch vụ & Giá', icon: 'bi-headphones', href: '/nghiep-vu/danh-muc-dich-vu?activeMenu=catalog-services' }
+        { key: 'catalog-services', label: 'Danh mục dịch vụ & Giá', icon: 'bi-headphones', href: '/nghiep-vu/danh-muc-dich-vu?activeMenu=catalog-services' },
+        { key: 'admin-shift-assignments', label: 'Quản lý phân ca', icon: 'bi-calendar2-week', href: '/admin/phan-ca?activeMenu=admin-shift-assignments' },
+        { key: 'admin-form-templates', label: 'Quản lý biểu mẫu', icon: 'bi-file-earmark-text', href: '/nghiep-vu/bieu-mau?activeMenu=admin-form-templates' }
       ]
     },
-    {
-      label: 'CẤU HÌNH & HỆ THỐNG',
-      items: [
-        { key: 'settings', label: 'Cấu hình hệ thống', icon: 'bi-gear', href: '/settings' },
-        { key: 'admin-modules', label: 'Quản lý Module', icon: 'bi-grid', href: '/admin/modules' },
-        { key: 'admin-integrations', label: 'Tích hợp HIS / LIS / PACS', icon: 'bi-braces', href: '/admin/integrations' },
-        { key: 'admin-backup', label: 'Sao lưu & Phục hồi dữ liệu', icon: 'bi-upload', href: '/admin/backup-restore' }
-      ]
-    },
-    {
-      label: 'BÁO CÁO & GIÁM SÁT',
-      items: [
-        { key: 'admin-audit', label: 'Nhật ký hệ thống (Audit log)', icon: 'bi-file-earmark', href: '/admin/audit-log' },
-        { key: 'admin-monitoring', label: 'Giám sát hệ thống realtime', icon: 'bi-activity', href: '/admin/monitoring' }
-      ]
-    }
   ];
   const doctorMenuSections = [
     {
@@ -59,6 +46,7 @@
     {
       label: 'THEO DÕI & TÀI LIỆU',
       items: [
+        { key: 'doctor-my-shifts', label: 'Lịch trực của tôi', icon: 'bi-calendar2-week', href: '/doctor/phan-ca-cua-toi?activeMenu=doctor-my-shifts' },
         { key: 'doctor-form-templates', label: 'Biểu mẫu', icon: 'bi-file-earmark-text', href: '/nghiep-vu/bieu-mau?activeMenu=doctor-form-templates' },
         { key: 'doctor-prescription-history', label: 'Lịch sử đơn thuốc', icon: 'bi-capsule-pill', href: '/prescriptions?activeMenu=doctor-prescription-history' }
       ]
@@ -68,7 +56,8 @@
     {
       label: 'TỔNG QUAN',
       items: [
-        { key: 'nurse-dashboard', label: 'Dashboard ca trực', icon: 'bi-house-door', href: '/dashboard/nurse?activeMenu=nurse-dashboard' }
+        { key: 'nurse-dashboard', label: 'Dashboard ca trực', icon: 'bi-house-door', href: '/dashboard/nurse?activeMenu=nurse-dashboard' },
+        { key: 'nurse-my-shifts', label: 'Lịch trực của tôi', icon: 'bi-calendar2-week', href: '/nurse/phan-ca-cua-toi?activeMenu=nurse-my-shifts' }
       ]
     },
     {
@@ -97,6 +86,7 @@
     {
       label: 'VIỆN XÉT NGHIỆM',
       items: [
+        { key: 'staff-my-shifts', label: 'Lịch làm việc của tôi', icon: 'bi-calendar2-week', href: '/staff/phan-ca-cua-toi?activeMenu=staff-my-shifts' },
         { key: 'lab-orders', label: 'Nhận chỉ định xét nghiệm', icon: 'bi-clipboard2-pulse', href: '/labtests?activeMenu=lab-orders' }
       ]
     }
@@ -119,6 +109,7 @@
     {
       label: 'TRA CỨU & BÁO CÁO',
       items: [
+        { key: 'staff-my-shifts', label: 'Lịch làm việc của tôi', icon: 'bi-calendar2-week', href: '/staff/phan-ca-cua-toi?activeMenu=staff-my-shifts' },
         { key: 'cashier-medical-records', label: 'Hồ sơ bệnh án', icon: 'bi-journal-medical', href: '/medical-records?activeMenu=cashier-medical-records' },
         { key: 'cashier-services', label: 'Danh mục dịch vụ & giá', icon: 'bi-shield', href: '/nghiep-vu/danh-muc-dich-vu?activeMenu=cashier-services' }
       ]
@@ -161,6 +152,15 @@
       { key: 'report-statistics', label: 'Báo cáo thống kê', icon: 'bi-bar-chart', href: '/reports?activeMenu=report-statistics' }
     ]
   };
+  const managerMenuSections = [
+    {
+      label: 'QUẢN LÝ KHOA',
+      items: [
+        { key: 'manager-shift-assignments', label: 'Phân ca khoa của tôi', icon: 'bi-calendar2-week', href: '/manager/phan-ca?activeMenu=manager-shift-assignments' },
+        { key: 'departments', label: 'Khoa / phòng phụ trách', icon: 'bi-hospital', href: '/departments' }
+      ]
+    }
+  ];
   const hiddenNurseMenuKeys = new Set(['nurse-dashboard', 'nurse-treatments', 'nurse-meds', 'nurse-supplies']);
   const visibleNurseMenuSections = nurseMenuSections
     .map((section) => ({
@@ -218,6 +218,22 @@
             <% if (item.badge) { %>
               <span class="badge rounded-pill bg-danger ms-auto"><%= item.badge %></span>
             <% } %>
+          </a>
+        <% }) %>
+      <% }) %>
+    <% } else if (isManager) { %>
+      <div class="px-3 py-4 mb-3 border-bottom border-white border-opacity-10">
+        <div>
+          <h6 class="text-white mb-0 fw-bold"><%= currentUser.fullName %></h6>
+          <small class="text-white-50"><%= currentUser.departmentName || 'Quản lý khoa' %></small>
+        </div>
+      </div>
+      <% [...managerMenuSections, commonReportSection].forEach(section => { %>
+        <div class="nav-section-label"><%= section.label %></div>
+        <% section.items.forEach(item => { %>
+          <a class="nav-link doctor-nav-link <%= activeMenu === item.key ? 'active' : '' %>" href="<%= item.href %>">
+            <i class="bi <%= item.icon %>"></i>
+            <span><%= item.label %></span>
           </a>
         <% }) %>
       <% }) %>
@@ -298,6 +314,10 @@
         <% }) %>
       <% }) %>
     <% } else { %>
+      <a class="nav-link <%= activeMenu === 'staff-my-shifts' ? 'active' : '' %>" href="/staff/phan-ca-cua-toi?activeMenu=staff-my-shifts">
+        <i class="bi bi-calendar2-week"></i>
+        <span>Lịch làm việc của tôi</span>
+      </a>
       <a class="nav-link <%= activeMenu === 'dashboard' ? 'active' : '' %>" href="/dashboard/home">
         <i class="bi bi-grid-1x2-fill"></i>
         <span>Tổng quan</span>

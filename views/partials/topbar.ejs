@@ -47,8 +47,6 @@
       </button>
       <div class="dropdown-menu dropdown-menu-end shadow-sm">
         <span class="dropdown-item-text text-muted small">@<%= user.username %></span>
-        <a class="dropdown-item" href="<%= isPatient ? '/patients/me' : '/settings' %>"><i class="bi bi-person-gear me-2"></i>Hồ sơ cá nhân</a>
-        <div class="dropdown-divider"></div>
         <form action="/logout" method="post">
           <button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</button>
         </form>

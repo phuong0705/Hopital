@@ -326,6 +326,44 @@ async function createMedicine(data) {
   });
 }
 
+async function updateMedicine(medicineId, data) {
+  await ensureMedicineTables();
+
+  await execute(`
+    UPDATE MedicineCatalog
+    SET medicine_code = @medicineCode,
+      medicine_name = @medicineName,
+      active_ingredient = NULLIF(@activeIngredient, ''),
+      medicine_group = @medicineGroup,
+      dosage_form = @dosageForm,
+      strength = NULLIF(@strength, ''),
+      route = NULLIF(@route, ''),
+      unit = @unit,
+      unit_price = @unitPrice,
+      stock_warning_level = @stockWarningLevel,
+      usage_note = NULLIF(@usageNote, ''),
+      contraindications = NULLIF(@contraindications, ''),
+      status = @status,
+      updated_at = SYSDATETIME()
+    WHERE medicine_id = @medicineId
+  `, {
+    medicineId: Number(medicineId),
+    medicineCode: data.medicineCode,
+    medicineName: data.medicineName,
+    activeIngredient: data.activeIngredient || '',
+    medicineGroup: data.medicineGroup,
+    dosageForm: data.dosageForm,
+    strength: data.strength || '',
+    route: data.route || '',
+    unit: data.unit || 'viên',
+    unitPrice: Number(data.unitPrice || 0),
+    stockWarningLevel: Number(data.stockWarningLevel || 20),
+    usageNote: data.usageNote || '',
+    contraindications: data.contraindications || '',
+    status: data.status || 'Đang sử dụng'
+  });
+}
+
 async function updateMedicineStatus(medicineId, status) {
   await ensureMedicineTables();
 
@@ -344,6 +382,7 @@ module.exports = {
   getMedicines,
   searchMedicines,
   createMedicine,
+  updateMedicine,
   updateMedicineStatus,
   getMedicineHistory,
   addInventoryTransaction,

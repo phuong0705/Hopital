@@ -70,17 +70,16 @@
             <td><%= row.stockWarningLevel %> <%= row.unit %></td>
             <td><span class="status-badge <%= statusClass %>"><%= row.status %></span></td>
             <td class="text-end no-export">
-              <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#medicineDetail<%= row.medicineId %>" data-bs-title="Xem chi tiết">
-                <i class="bi bi-eye"></i>
-              </button>
+              <div class="table-actions justify-content-end">
+                <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#medicineDetail<%= row.medicineId %>" data-bs-title="Xem chi tiết">
+                  <i class="bi bi-eye"></i>
+                </button>
               <% if (['ADMIN', 'DOCTOR'].includes(currentUser.roleCode)) { %>
-                <form action="/nghiep-vu/danh-muc-thuoc/<%= row.medicineId %>/status" method="post" class="d-inline">
-                  <input type="hidden" name="status" value="<%= row.status === 'Đang sử dụng' ? 'Ngưng sử dụng' : 'Đang sử dụng' %>">
-                  <button class="btn btn-sm btn-light action-icon" type="submit">
-                    <i class="bi <%= row.status === 'Đang sử dụng' ? 'bi-lock' : 'bi-unlock' %>"></i>
-                  </button>
-                </form>
+                <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#medicineEdit<%= row.medicineId %>" data-bs-title="Chỉnh sửa">
+                  <i class="bi bi-pencil-square"></i>
+                </button>
               <% } %>
+              </div>
             </td>
           </tr>
         <% }) %>
@@ -128,6 +127,41 @@
       </div>
     </div>
   </div>
+  <% if (['ADMIN', 'DOCTOR'].includes(currentUser.roleCode)) { %>
+    <div class="modal fade" id="medicineEdit<%= row.medicineId %>" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content app-modal">
+          <div class="modal-header">
+            <h5 class="modal-title">Chỉnh sửa thông tin thuốc</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+          </div>
+          <form action="/nghiep-vu/danh-muc-thuoc/<%= row.medicineId %>/update" method="post">
+            <div class="modal-body">
+              <div class="form-grid">
+                <div><label class="form-label">Mã thuốc</label><input class="form-control" name="medicineCode" value="<%= row.medicineCode %>" required></div>
+                <div><label class="form-label">Tên thuốc</label><input class="form-control" name="medicineName" value="<%= row.medicineName %>" required></div>
+                <div><label class="form-label">Hoạt chất</label><input class="form-control" name="activeIngredient" value="<%= row.activeIngredient || '' %>"></div>
+                <div><label class="form-label">Nhóm thuốc</label><input class="form-control" name="medicineGroup" value="<%= row.medicineGroup %>" required></div>
+                <div><label class="form-label">Dạng bào chế</label><input class="form-control" name="dosageForm" value="<%= row.dosageForm %>" required></div>
+                <div><label class="form-label">Hàm lượng</label><input class="form-control" name="strength" value="<%= row.strength || '' %>"></div>
+                <div><label class="form-label">Đường dùng</label><input class="form-control" name="route" value="<%= row.route || '' %>"></div>
+                <div><label class="form-label">Đơn vị</label><input class="form-control" name="unit" value="<%= row.unit %>"></div>
+                <div><label class="form-label">Đơn giá</label><input class="form-control" name="unitPrice" type="number" min="0" value="<%= row.unitPrice || 0 %>"></div>
+                <div><label class="form-label">Tồn cảnh báo</label><input class="form-control" name="stockWarningLevel" type="number" min="0" value="<%= row.stockWarningLevel || 0 %>"></div>
+                <div class="span-2"><label class="form-label">Ghi chú sử dụng</label><textarea class="form-control" name="usageNote" rows="3"><%= row.usageNote || '' %></textarea></div>
+                <div class="span-2"><label class="form-label">Chống chỉ định/thận trọng</label><textarea class="form-control" name="contraindications" rows="3"><%= row.contraindications || '' %></textarea></div>
+                <div><label class="form-label">Trạng thái</label><select class="form-select" name="status"><option <%= row.status === 'Đang sử dụng' ? 'selected' : '' %>>Đang sử dụng</option><option <%= row.status === 'Ngưng sử dụng' ? 'selected' : '' %>>Ngưng sử dụng</option></select></div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+              <button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>Lưu thay đổi</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  <% } %>
 <% }) %>
 
 <% if (['ADMIN', 'DOCTOR'].includes(currentUser.roleCode)) { %>

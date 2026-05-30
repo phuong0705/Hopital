@@ -1,20 +1,27 @@
 const express = require('express');
 const businessController = require('../controllers/business.controller');
+const shiftAssignmentController = require('../controllers/shift-assignment.controller');
 const { requireRole } = require('../middlewares/role.middleware');
+const { uploadFormTemplate } = require('../middlewares/form-template-upload.middleware');
 
 const router = express.Router();
 
 router.get('/danh-muc-benh', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), businessController.diseaseCatalog);
 router.post('/danh-muc-benh', requireRole(['ADMIN', 'DOCTOR']), businessController.createDisease);
+router.post('/danh-muc-benh/:id/update', requireRole(['ADMIN', 'DOCTOR']), businessController.updateDisease);
 router.post('/danh-muc-benh/:id/status', requireRole(['ADMIN', 'DOCTOR']), businessController.updateDiseaseStatus);
 router.get('/danh-muc-thuoc', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'PHARMACY']), businessController.medicineCatalog);
 router.get('/tim-thuoc', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'PHARMACY']), businessController.searchMedicines);
 router.post('/danh-muc-thuoc', requireRole(['ADMIN', 'DOCTOR']), businessController.createMedicine);
+router.post('/danh-muc-thuoc/:id/update', requireRole(['ADMIN', 'DOCTOR']), businessController.updateMedicine);
 router.post('/danh-muc-thuoc/:id/status', requireRole(['ADMIN', 'DOCTOR']), businessController.updateMedicineStatus);
 router.get('/danh-muc-dich-vu', requireRole(['ADMIN', 'DOCTOR', 'RECEPTIONIST', 'NURSE']), businessController.serviceCatalog);
 router.post('/danh-muc-dich-vu', requireRole(['ADMIN', 'RECEPTIONIST']), businessController.createService);
+router.post('/danh-muc-dich-vu/:id/update', requireRole(['ADMIN', 'RECEPTIONIST']), businessController.updateService);
 router.post('/danh-muc-dich-vu/:id/status', requireRole(['ADMIN', 'RECEPTIONIST']), businessController.updateServiceStatus);
 router.get('/bieu-mau', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), businessController.formTemplates);
+router.post('/bieu-mau', requireRole(['ADMIN']), uploadFormTemplate, businessController.createFormTemplate);
+router.post('/bieu-mau/:id/status', requireRole(['ADMIN']), businessController.updateFormTemplateStatus);
 router.get('/bieu-mau/don-thuoc-noi-tru', requireRole(['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST']), businessController.blankInpatientPrescriptionTemplate);
 
 // Examination Module
@@ -70,6 +77,7 @@ router.get('/quan-ly-bac-si-truc', requireRole(['ADMIN']), businessController.do
 router.post('/quan-ly-bac-si-truc/new', requireRole(['ADMIN']), businessController.createDoctorDuty);
 router.post('/quan-ly-bac-si-truc/:id', requireRole(['ADMIN']), businessController.updateDoctorDuty);
 router.post('/quan-ly-bac-si-truc/:id/delete', requireRole(['ADMIN']), businessController.removeDoctorDuty);
+router.get('/phan-ca', requireRole(shiftAssignmentController.STAFF_VIEW_ROLES), shiftAssignmentController.redirectByRole);
 router.get('/quan-ly-ca-truc', requireRole(['ADMIN']), businessController.dutyShift);
 router.get('/theo-doi-hieu-suat', requireRole(['ADMIN']), businessController.performance);
 

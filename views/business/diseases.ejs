@@ -1,10 +1,10 @@
 <section class="module-hero">
   <div>
-    <h2>Tra cứu bệnh, triệu chứng và thuốc tham khảo</h2>
+    <h2>Danh mục bệnh</h2>
   </div>
   <div class="module-actions">
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
-    <button class="btn btn-light" type="button" data-export-table="diseasesTable" data-filename="thu-vien-benh.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
+    <button class="btn btn-light" type="button" data-export-table="diseasesTable" data-filename="danh-muc-benh.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
     <% if (['ADMIN', 'DOCTOR'].includes(currentUser.roleCode)) { %>
       <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#diseaseModal">
         Thêm bệnh
@@ -58,13 +58,16 @@
         data-search="<%= searchText %>"
         data-severity="<%= row.severityLevel %>"
         data-specialty="<%= row.specialty %>">
-        <div class="disease-card-head">
+        <div class="disease-card-marker">
           <span class="disease-icon-box"><i class="bi bi-virus"></i></span>
           <span class="status-badge status-info"><%= row.icd10Code %></span>
         </div>
-        <h3><%= row.diseaseName %></h3>
-        <div class="disease-meta">
-          <span><i class="bi bi-hospital"></i> <%= row.specialty %></span>
+        <div class="disease-card-main">
+          <h3><%= row.diseaseName %></h3>
+          <div class="disease-meta">
+            <span><i class="bi bi-hospital"></i> <%= row.specialty %></span>
+            <span><i class="bi bi-activity"></i> <%= row.severityLevel %></span>
+          </div>
         </div>
         <div class="disease-preview">
           <strong>Triệu chứng thường gặp</strong>
@@ -75,16 +78,17 @@
           <p><%= row.recommendedMedicines || 'Chưa có gợi ý thuốc.' %></p>
         </div>
         <div class="disease-card-actions">
-          <button class="btn btn-light btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#diseaseDetail<%= row.diseaseId %>">
-            <i class="bi bi-eye me-2"></i>Xem chi tiết
-          </button>
           <% if (['ADMIN', 'DOCTOR'].includes(currentUser.roleCode)) { %>
-            <form action="/nghiep-vu/danh-muc-benh/<%= row.diseaseId %>/status" method="post">
-              <input type="hidden" name="status" value="<%= row.status === 'Đang sử dụng' ? 'Ngưng sử dụng' : 'Đang sử dụng' %>">
-              <button class="btn btn-sm btn-light action-icon" type="submit" data-bs-toggle="tooltip" data-bs-title="<%= row.status === 'Đang sử dụng' ? 'Ngưng sử dụng' : 'Kích hoạt' %>">
-                <i class="bi <%= row.status === 'Đang sử dụng' ? 'bi-lock' : 'bi-unlock' %>"></i>
-              </button>
-            </form>
+            <button class="btn btn-light btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#diseaseEdit<%= row.diseaseId %>">
+              <i class="bi bi-pencil-square me-2"></i>Chỉnh sửa thông tin
+            </button>
+            <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#diseaseDetail<%= row.diseaseId %>" data-bs-title="Xem chi tiết">
+              <i class="bi bi-eye"></i>
+            </button>
+          <% } else { %>
+            <button class="btn btn-light btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#diseaseDetail<%= row.diseaseId %>">
+              <i class="bi bi-eye me-2"></i>Xem chi tiết
+            </button>
           <% } %>
         </div>
       </article>
@@ -178,19 +182,97 @@
       </div>
     </div>
   </div>
+  <% if (['ADMIN', 'DOCTOR'].includes(currentUser.roleCode)) { %>
+    <div class="modal fade" id="diseaseEdit<%= row.diseaseId %>" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content app-modal disease-form-modal">
+          <div class="modal-header">
+            <h5 class="modal-title">Chỉnh sửa thông tin bệnh</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+          </div>
+          <form action="/nghiep-vu/danh-muc-benh/<%= row.diseaseId %>/update" method="post">
+            <div class="modal-body">
+              <div class="form-grid disease-form-grid">
+                <div>
+                  <label class="form-label">Mã bệnh</label>
+                  <input class="form-control" name="diseaseCode" value="<%= row.diseaseCode %>" required>
+                </div>
+                <div>
+                  <label class="form-label">Mã ICD-10</label>
+                  <input class="form-control" name="icd10Code" value="<%= row.icd10Code %>" required>
+                </div>
+                <div class="span-2">
+                  <label class="form-label">Tên bệnh</label>
+                  <input class="form-control" name="diseaseName" value="<%= row.diseaseName %>" required>
+                </div>
+                <div>
+                  <label class="form-label">Chuyên khoa</label>
+                  <input class="form-control" name="specialty" value="<%= row.specialty %>" required>
+                </div>
+                <div>
+                  <label class="form-label">Mức độ</label>
+                  <select class="form-select" name="severityLevel">
+                    <% ['Thấp', 'Trung bình', 'Cao', 'Nguy cấp'].forEach(level => { %>
+                      <option <%= row.severityLevel === level ? 'selected' : '' %>><%= level %></option>
+                    <% }) %>
+                  </select>
+                </div>
+                <div class="span-2">
+                  <label class="form-label">Triệu chứng thường gặp</label>
+                  <textarea class="form-control" name="commonSymptoms" rows="2"><%= row.commonSymptoms || '' %></textarea>
+                </div>
+                <div class="span-2">
+                  <label class="form-label">Xét nghiệm/cận lâm sàng gợi ý</label>
+                  <textarea class="form-control" name="suggestedTests" rows="2"><%= row.suggestedTests || '' %></textarea>
+                </div>
+                <div class="span-2">
+                  <label class="form-label">Thuốc có thể cân nhắc</label>
+                  <textarea class="form-control" name="recommendedMedicines" rows="2"><%= row.recommendedMedicines || '' %></textarea>
+                </div>
+                <div class="span-2">
+                  <label class="form-label">Hướng xử trí/thực hành lâm sàng</label>
+                  <textarea class="form-control" name="clinicalGuidance" rows="2"><%= row.clinicalGuidance || '' %></textarea>
+                </div>
+                <div class="span-2">
+                  <label class="form-label">Chống chỉ định/thận trọng</label>
+                  <textarea class="form-control" name="contraindications" rows="2"><%= row.contraindications || '' %></textarea>
+                </div>
+                <div>
+                  <label class="form-label">Trạng thái</label>
+                  <select class="form-select" name="status">
+                    <% ['Đang sử dụng', 'Ngưng sử dụng'].forEach(status => { %>
+                      <option <%= row.status === status ? 'selected' : '' %>><%= status %></option>
+                    <% }) %>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label">Mô tả ngắn</label>
+                  <input class="form-control" name="description" value="<%= row.description || '' %>">
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+              <button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>Lưu thay đổi</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  <% } %>
 <% }) %>
 
 <% if (['ADMIN', 'DOCTOR'].includes(currentUser.roleCode)) { %>
   <div class="modal fade" id="diseaseModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content app-modal">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content app-modal disease-form-modal">
         <div class="modal-header">
-          <h5 class="modal-title">Thêm bệnh vào thư viện</h5>
+          <h5 class="modal-title">Thêm bệnh vào danh mục</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
         </div>
         <form action="/nghiep-vu/danh-muc-benh" method="post">
           <div class="modal-body">
-            <div class="form-grid">
+            <div class="form-grid disease-form-grid">
               <div>
                 <label class="form-label">Mã bệnh</label>
                 <input class="form-control" name="diseaseCode" placeholder="BENH007" required>
@@ -218,23 +300,23 @@
               </div>
               <div class="span-2">
                 <label class="form-label">Triệu chứng thường gặp</label>
-                <textarea class="form-control" name="commonSymptoms" rows="3" placeholder="Ho, sốt, khó thở, đau ngực..."></textarea>
+                <textarea class="form-control" name="commonSymptoms" rows="2" placeholder="Ho, sốt, khó thở, đau ngực..."></textarea>
               </div>
               <div class="span-2">
                 <label class="form-label">Xét nghiệm/cận lâm sàng gợi ý</label>
-                <textarea class="form-control" name="suggestedTests" rows="3" placeholder="Công thức máu, CRP, X-quang, siêu âm..."></textarea>
+                <textarea class="form-control" name="suggestedTests" rows="2" placeholder="Công thức máu, CRP, X-quang, siêu âm..."></textarea>
               </div>
               <div class="span-2">
                 <label class="form-label">Thuốc có thể cân nhắc</label>
-                <textarea class="form-control" name="recommendedMedicines" rows="3" placeholder="Tên thuốc hoặc nhóm thuốc, chỉ dùng khi phù hợp chỉ định"></textarea>
+                <textarea class="form-control" name="recommendedMedicines" rows="2" placeholder="Tên thuốc hoặc nhóm thuốc, chỉ dùng khi phù hợp chỉ định"></textarea>
               </div>
               <div class="span-2">
                 <label class="form-label">Hướng xử trí/thực hành lâm sàng</label>
-                <textarea class="form-control" name="clinicalGuidance" rows="3" placeholder="Theo dõi, chăm sóc, mục tiêu điều trị, tiêu chí chuyển nặng..."></textarea>
+                <textarea class="form-control" name="clinicalGuidance" rows="2" placeholder="Theo dõi, chăm sóc, mục tiêu điều trị, tiêu chí chuyển nặng..."></textarea>
               </div>
               <div class="span-2">
                 <label class="form-label">Chống chỉ định/thận trọng</label>
-                <textarea class="form-control" name="contraindications" rows="3" placeholder="Dị ứng thuốc, suy gan thận, thai kỳ, tương tác thuốc..."></textarea>
+                <textarea class="form-control" name="contraindications" rows="2" placeholder="Dị ứng thuốc, suy gan thận, thai kỳ, tương tác thuốc..."></textarea>
               </div>
               <div>
                 <label class="form-label">Trạng thái</label>

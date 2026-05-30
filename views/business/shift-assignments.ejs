@@ -1,0 +1,396 @@
+<%
+  const pageConfig = page || {};
+  const canManage = Boolean(canManageShiftAssignments);
+  const isPersonalPage = pageConfig.tableMode === 'personal';
+  const shiftOptions = ['Ca sáng', 'Ca chiều', 'Ca đêm', 'Ca hành chính'];
+  const statusClass = (status) => ({
+    'Chờ thực hiện': 'pending',
+    'Đang trực': 'active',
+    'Hoàn thành': 'done',
+    'Vắng mặt': 'absent',
+    'Hủy ca': 'cancelled'
+  }[status] || 'pending');
+  const toDateInput = (value) => {
+    if (!value) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const toDateDisplay = (value) => {
+    const input = toDateInput(value);
+    if (!input) return '-';
+    const [year, month, day] = input.split('-');
+    return `${day}/${month}/${year}`;
+  };
+  const selected = (left, right) => String(left || '') === String(right || '') ? 'selected' : '';
+  const weekText = `${toDateDisplay(weekRange.start)} - ${toDateDisplay(weekRange.end)}`;
+  const defaultShiftColumns = ['Ca sáng', 'Ca chiều', 'Ca đêm', 'Ca hành chính'];
+  const defaultShiftTimes = {
+    'Ca sáng': '07:00 - 13:00',
+    'Ca chiều': '13:00 - 21:00',
+    'Ca đêm': '21:00 - 07:00 hôm sau',
+    'Ca hành chính': '07:00 - 17:00'
+  };
+  const extraShiftColumns = [...new Set(rows.map(row => row.shiftName).filter(Boolean))]
+    .filter(name => !defaultShiftColumns.includes(name));
+  const shiftColumns = [...defaultShiftColumns, ...extraShiftColumns];
+  const shiftsByDateAndName = rows.reduce((map, row) => {
+    const dateKey = toDateInput(row.workDate);
+    if (!map[dateKey]) map[dateKey] = {};
+    if (!map[dateKey][row.shiftName]) map[dateKey][row.shiftName] = [];
+    map[dateKey][row.shiftName].push(row);
+    return map;
+  }, {});
+%>
+
+<section class="shift-week-hero">
+  <div class="shift-week-title">
+    <span class="shift-week-icon"><i class="bi bi-calendar2-week"></i></span>
+    <div>
+      <h2><%= pageConfig.title %></h2>
+      <p><%= pageConfig.description %></p>
+    </div>
+  </div>
+  <div class="shift-week-breadcrumb">
+    <a href="/dashboard/home">Trang chủ</a>
+    <i class="bi bi-chevron-right"></i>
+    <span>Phân ca</span>
+    <i class="bi bi-chevron-right"></i>
+    <strong>Phân ca theo tuần</strong>
+  </div>
+</section>
+
+<section class="panel module-panel shift-week-panel">
+  <form class="shift-week-filters" method="get" action="<%= pageConfig.actionPath %>">
+    <input type="hidden" name="activeMenu" value="<%= activeMenu %>">
+    <% if (pageConfig.showDepartmentFilter) { %>
+      <label>
+        <span>Khoa / Phòng</span>
+        <select class="form-select" name="departmentId">
+          <option value="">Tất cả khoa/phòng</option>
+          <% departments.forEach(department => { %>
+            <option value="<%= department.departmentId %>" <%= selected(filters.departmentId, department.departmentId) %>><%= department.departmentName %></option>
+          <% }) %>
+        </select>
+      </label>
+    <% } %>
+    <label>
+      <span>Tuần</span>
+      <input class="form-control" type="date" name="weekStart" value="<%= weekRange.start %>">
+    </label>
+    <% if (pageConfig.showSearch) { %>
+      <label>
+        <span>Nhân viên</span>
+        <span class="shift-week-search">
+          <input class="form-control" type="search" name="q" value="<%= filters.q || '' %>" placeholder="Tìm theo tên nhân viên">
+          <i class="bi bi-search"></i>
+        </span>
+      </label>
+    <% } %>
+    <% if (pageConfig.showRoleFilter) { %>
+      <label>
+        <span>Vai trò</span>
+        <select class="form-select" name="roleCode">
+          <option value="">Tất cả</option>
+          <% roleOptions.forEach(role => { %>
+            <option value="<%= role.roleCode %>" <%= selected(filters.roleCode, role.roleCode) %>><%= role.roleName %></option>
+          <% }) %>
+        </select>
+      </label>
+    <% } %>
+    <% if (pageConfig.showEmployeeFilter && !pageConfig.showSearch) { %>
+      <label>
+        <span>Nhân viên</span>
+        <select class="form-select" name="employeeKey">
+          <option value="">Tất cả nhân viên</option>
+          <% employees.forEach(employee => { %>
+            <option value="<%= employee.employeeKey %>" <%= selected(filters.employeeKey, employee.employeeKey) %>><%= employee.fullName %></option>
+          <% }) %>
+        </select>
+      </label>
+    <% } %>
+    <% if (pageConfig.showStatusFilter !== false) { %>
+      <label>
+        <span>Trạng thái</span>
+        <select class="form-select" name="status">
+          <option value="">Tất cả</option>
+          <% statuses.forEach(status => { %>
+            <option value="<%= status %>" <%= selected(filters.status, status) %>><%= status %></option>
+          <% }) %>
+        </select>
+      </label>
+    <% } %>
+
+    <div class="shift-week-actions">
+      <% if (canManage) { %>
+        <% if (pageConfig.mode === 'admin') { %>
+          <a class="btn btn-primary" href="/admin/phan-ca/new?weekStart=<%= weekRange.start %>&departmentId=<%= filters.departmentId || '' %>">
+            <i class="bi bi-plus-lg me-2"></i>Thêm phân ca
+          </a>
+        <% } else { %>
+          <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createShiftAssignmentModal">
+            <i class="bi bi-plus-lg me-2"></i>Thêm phân ca
+          </button>
+        <% } %>
+      <% } %>
+      <button class="btn btn-success" type="button" data-export-table="shiftAssignmentsTable" data-filename="phan-ca-theo-tuan.csv">
+        <i class="bi bi-file-earmark-excel me-2"></i>Xuất Excel
+      </button>
+      <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
+      <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search me-2"></i>Lọc</button>
+      <% if (pageConfig.mode === 'admin') { %>
+        <a class="btn btn-light" href="/admin/phan-ca/edit?weekStart=<%= weekRange.start %>&departmentId=<%= filters.departmentId || '' %>">
+          <i class="bi bi-pencil-square me-2"></i>Chỉnh sửa
+        </a>
+      <% } else { %>
+        <button class="btn btn-light" type="button" data-bs-toggle="tooltip" title="Chọn ca trong bảng để chỉnh sửa">
+          <i class="bi bi-pencil-square me-2"></i>Chỉnh sửa
+        </button>
+      <% } %>
+    </div>
+  </form>
+
+  <div class="shift-week-summary">
+    <span><i class="bi bi-calendar3"></i> Tuần: <strong><%= weekText %></strong></span>
+    <% if (departments.length === 1 || filters.departmentId) {
+      const selectedDepartment = departments.find(item => String(item.departmentId) === String(filters.departmentId)) || departments[0];
+    %>
+      <span><i class="bi bi-building"></i> Khoa: <strong><%= selectedDepartment ? selectedDepartment.departmentName : 'Tất cả' %></strong></span>
+    <% } %>
+  </div>
+
+  <div class="module-table-wrap">
+    <table class="table app-table module-table shift-week-table" id="shiftAssignmentsTable">
+      <thead>
+        <tr>
+          <th>STT</th>
+          <th>Ca trực</th>
+          <% weekRange.weekDays.forEach(day => { %>
+            <th><%= day.label %><small><%= day.display %></small></th>
+          <% }) %>
+        </tr>
+      </thead>
+      <tbody>
+        <% shiftColumns.forEach((shiftName, shiftIndex) => {
+        %>
+          <tr>
+            <td class="text-center fw-bold"><%= shiftIndex + 1 %></td>
+            <td>
+              <div class="shift-day-label">
+                <strong><%= shiftName %></strong>
+                <% const firstShift = rows.find(row => row.shiftName === shiftName); %>
+                <small><%= defaultShiftTimes[shiftName] || (firstShift ? `${firstShift.startTime} - ${firstShift.endTime}` : '-') %></small>
+              </div>
+            </td>
+            <% weekRange.weekDays.forEach(day => {
+              const dayGroups = shiftsByDateAndName[day.value] || {};
+              const shiftPeople = dayGroups[shiftName] || [];
+            %>
+              <td>
+                <% if (shiftPeople.length) { %>
+                  <div class="shift-cell-stack">
+                    <% shiftPeople.forEach((shift, shiftIndex) => {
+                      const avatarClass = ['blue', 'pink', 'green', 'purple', 'orange'][shiftIndex % 5];
+                    %>
+                      <button class="shift-cell-card is-<%= statusClass(shift.status) %>" type="button" data-bs-toggle="modal" data-bs-target="#shiftDetail<%= shift.id %>">
+                        <span class="shift-cell-person">
+                          <i class="shift-week-avatar is-<%= avatarClass %> bi bi-person-fill"></i>
+                          <span>
+                            <strong><%= shift.employeeName || '-' %></strong>
+                            <small><%= shift.positionName || '-' %></small>
+                          </span>
+                        </span>
+                        <span><%= shift.startTime %> - <%= shift.endTime %></span>
+                        <em><%= shift.status %></em>
+                      </button>
+                    <% }) %>
+                  </div>
+                <% } else { %>
+                  <span class="shift-off-pill">Nghỉ</span>
+                <% } %>
+              </td>
+            <% }) %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="shift-week-legend">
+    <span><i class="legend-dot pending"></i>Chờ thực hiện</span>
+    <span><i class="legend-dot active"></i>Đang trực</span>
+    <span><i class="legend-dot done"></i>Hoàn thành</span>
+    <span><i class="legend-dot absent"></i>Vắng mặt</span>
+    <span><i class="legend-dot cancelled"></i>Hủy ca</span>
+    <span><i class="legend-dot off"></i>Nghỉ</span>
+  </div>
+</section>
+
+<datalist id="shiftNameOptions">
+  <% shiftOptions.forEach(name => { %>
+    <option value="<%= name %>"></option>
+  <% }) %>
+</datalist>
+
+<% rows.forEach(row => { %>
+  <div class="modal fade" id="shiftDetail<%= row.id %>" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content app-modal">
+        <div class="modal-header">
+          <div>
+            <span class="module-code"><%= row.shiftCode %></span>
+            <h5 class="modal-title">Chi tiết phân ca</h5>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <div class="info-list compact">
+            <div><small>Nhân viên</small><strong><%= row.employeeName || '-' %></strong></div>
+            <div><small>Chức vụ</small><strong><%= row.positionName || '-' %></strong></div>
+            <div><small>Khoa/phòng</small><strong><%= row.departmentName || '-' %></strong></div>
+            <div><small>Ngày làm việc</small><strong><%= toDateDisplay(row.workDate) %></strong></div>
+            <div><small>Ca trực</small><strong><%= row.shiftName %></strong></div>
+            <div><small>Thời gian</small><strong><%= row.startTime %> - <%= row.endTime %></strong></div>
+            <div><small>Trạng thái</small><strong><%= row.status %></strong></div>
+          </div>
+          <div class="mt-3 disease-detail-block">
+            <i class="bi bi-journal-text"></i>
+            <h6>Ghi chú</h6>
+            <p><%= row.note || 'Không có ghi chú.' %></p>
+          </div>
+        </div>
+        <% if (canManage) { %>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+            <form action="<%= pageConfig.actionPath %>/<%= row.id %>/delete" method="post" onsubmit="return confirm('Hủy phân ca này?')" class="me-auto">
+              <input type="hidden" name="activeMenu" value="<%= activeMenu %>">
+              <button class="btn btn-outline-danger" type="submit" <%= row.status !== 'Chờ thực hiện' ? 'disabled' : '' %>>
+                <i class="bi bi-trash me-2"></i>Xóa
+              </button>
+            </form>
+            <% if (pageConfig.mode === 'admin') { %>
+              <a class="btn btn-primary <%= row.status === 'Hoàn thành' ? 'disabled' : '' %>" href="/admin/phan-ca/edit?weekStart=<%= weekRange.start %>&departmentId=<%= row.departmentId %>">
+                <i class="bi bi-pencil-square me-2"></i>Chỉnh sửa
+              </a>
+            <% } else { %>
+              <button class="btn btn-primary" type="button" data-bs-target="#shiftEdit<%= row.id %>" data-bs-toggle="modal" <%= row.status === 'Hoàn thành' ? 'disabled' : '' %>>
+                <i class="bi bi-pencil-square me-2"></i>Chỉnh sửa
+              </button>
+            <% } %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <% if (canManage && pageConfig.mode !== 'admin') { %>
+    <div class="modal fade" id="shiftEdit<%= row.id %>" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content app-modal">
+          <form action="<%= pageConfig.actionPath %>/<%= row.id %>/update" method="post">
+            <input type="hidden" name="activeMenu" value="<%= activeMenu %>">
+            <div class="modal-header">
+              <h5 class="modal-title">Chỉnh sửa phân ca</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+              <div class="form-grid">
+                <div>
+                  <label class="form-label">Nhân viên</label>
+                  <select class="form-select" name="employeeKey" required>
+                    <% employees.forEach(employee => { %>
+                      <option value="<%= employee.employeeKey %>" <%= selected(row.employeeKey, employee.employeeKey) %>><%= employee.fullName %> - <%= employee.roleName || employee.employeeType %></option>
+                    <% }) %>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label">Khoa/phòng</label>
+                  <select class="form-select" name="departmentId" required>
+                    <% departments.forEach(department => { %>
+                      <option value="<%= department.departmentId %>" <%= selected(row.departmentId, department.departmentId) %>><%= department.departmentName %></option>
+                    <% }) %>
+                  </select>
+                </div>
+                <div><label class="form-label">Ngày làm việc</label><input class="form-control" type="date" name="workDate" value="<%= toDateInput(row.workDate) %>" required></div>
+                <div><label class="form-label">Ca làm việc</label><input class="form-control" name="shiftName" list="shiftNameOptions" value="<%= row.shiftName %>" required></div>
+                <div><label class="form-label">Giờ bắt đầu</label><input class="form-control" type="time" name="startTime" value="<%= row.startTime %>" required></div>
+                <div><label class="form-label">Giờ kết thúc</label><input class="form-control" type="time" name="endTime" value="<%= row.endTime %>" required></div>
+                <div>
+                  <label class="form-label">Trạng thái</label>
+                  <select class="form-select" name="status" required>
+                    <% statuses.forEach(status => { %>
+                      <option value="<%= status %>" <%= selected(row.status, status) %>><%= status %></option>
+                    <% }) %>
+                  </select>
+                </div>
+                <div class="span-2"><label class="form-label">Ghi chú</label><textarea class="form-control" name="note" rows="3"><%= row.note || '' %></textarea></div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+              <button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>Lưu thay đổi</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  <% } %>
+<% }) %>
+
+<% if (canManage && pageConfig.mode !== 'admin') { %>
+  <div class="modal fade" id="createShiftAssignmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content app-modal">
+        <form action="<%= pageConfig.actionPath %>" method="post">
+          <input type="hidden" name="activeMenu" value="<%= activeMenu %>">
+          <div class="modal-header">
+            <h5 class="modal-title">Thêm phân ca</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <div>
+                <label class="form-label">Nhân viên</label>
+                <select class="form-select" name="employeeKey" required>
+                  <option value="">Chọn nhân viên</option>
+                  <% employees.forEach(employee => { %>
+                    <option value="<%= employee.employeeKey %>"><%= employee.fullName %> - <%= employee.roleName || employee.employeeType %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div>
+                <label class="form-label">Khoa/phòng</label>
+                <select class="form-select" name="departmentId" required>
+                  <option value="">Chọn khoa/phòng</option>
+                  <% departments.forEach(department => { %>
+                    <option value="<%= department.departmentId %>"><%= department.departmentName %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div><label class="form-label">Ngày làm việc</label><input class="form-control" type="date" name="workDate" required></div>
+              <div><label class="form-label">Ca làm việc</label><input class="form-control" name="shiftName" list="shiftNameOptions" placeholder="Ca sáng" required></div>
+              <div><label class="form-label">Giờ bắt đầu</label><input class="form-control" type="time" name="startTime" required></div>
+              <div><label class="form-label">Giờ kết thúc</label><input class="form-control" type="time" name="endTime" required></div>
+              <div>
+                <label class="form-label">Trạng thái</label>
+                <select class="form-select" name="status" required>
+                  <% statuses.forEach(status => { %>
+                    <option value="<%= status %>" <%= status === 'Chờ thực hiện' ? 'selected' : '' %>><%= status %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="span-2"><label class="form-label">Ghi chú</label><textarea class="form-control" name="note" rows="3"></textarea></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>Lưu phân ca</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+<% } %>

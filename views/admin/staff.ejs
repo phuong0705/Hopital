@@ -1,3 +1,26 @@
+<%
+  const staffFilters = locals.filters || {};
+  const staffFilterOptions = locals.filterOptions || { types: [], sources: [] };
+  const pager = locals.pagination || { page: 1, pageSize: 10, totalRows: rows.length, totalPages: 1 };
+
+  function pageHref(page) {
+    const params = new URLSearchParams();
+    if (staffFilters.q) params.set('q', staffFilters.q);
+    if (staffFilters.type) params.set('type', staffFilters.type);
+    if (staffFilters.source) params.set('source', staffFilters.source);
+    params.set('page', page);
+    return `/admin/staff?${params.toString()}`;
+  }
+
+  const hasStaffFilters = Boolean(staffFilters.q || staffFilters.type || staffFilters.source);
+  const pageStart = pager.totalRows ? ((pager.page - 1) * pager.pageSize) + 1 : 0;
+  const pageEnd = Math.min(pager.page * pager.pageSize, pager.totalRows);
+  const pageNumbers = [];
+  for (let pageNo = Math.max(1, pager.page - 2); pageNo <= Math.min(pager.totalPages, pager.page + 2); pageNo += 1) {
+    pageNumbers.push(pageNo);
+  }
+%>
+
 <section class="module-hero">
   <div>
     <h2>Quản lý bác sĩ / nhân viên</h2>
@@ -9,23 +32,32 @@
 </section>
 
 <section class="panel mt-4">
-  <div class="module-toolbar three">
+  <form class="module-toolbar staff-filter-toolbar" method="get" action="/admin/staff">
     <div class="module-search">
       <i class="bi bi-search"></i>
-      <input class="form-control" type="search" placeholder="Tìm tên, mã, chuyên môn, khoa, role" data-module-search="adminStaffTable">
+      <input class="form-control" name="q" type="search" value="<%= staffFilters.q || '' %>" placeholder="Tìm tên, mã, chuyên môn, khoa, role">
     </div>
-    <select class="form-select" data-module-filter="adminStaffTable" data-filter-key="type">
+    <select class="form-select" name="type">
       <option value="">Tất cả loại nhân sự</option>
-      <% [...new Set(rows.map(row => row.staffType))].forEach(type => { %>
-        <option><%= type %></option>
+      <% staffFilterOptions.types.forEach(type => { %>
+        <option value="<%= type %>" <%= staffFilters.type === type ? 'selected' : '' %>><%= type %></option>
       <% }) %>
     </select>
-    <select class="form-select" data-module-filter="adminStaffTable" data-filter-key="source">
-      <option value="">Tất cả nguồn</option>
-      <% [...new Set(rows.map(row => row.sourceName))].forEach(source => { %>
-        <option><%= source %></option>
+    <select class="form-select" name="source">
+      <option value="">Tất cả role</option>
+      <% staffFilterOptions.sources.forEach(source => { %>
+        <option value="<%= source.value %>" <%= staffFilters.source === source.value ? 'selected' : '' %>><%= source.label %></option>
       <% }) %>
     </select>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-funnel me-2"></i>Lọc</button>
+    <% if (hasStaffFilters) { %>
+      <a class="btn btn-light" href="/admin/staff">Xóa lọc</a>
+    <% } %>
+  </form>
+
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 text-muted small">
+    <span>Hiển thị <strong><%= pageStart %>-<%= pageEnd %></strong> / <strong><%= pager.totalRows %></strong> nhân sự</span>
+    <span>Mỗi trang <%= pager.pageSize %> nhân sự</span>
   </div>
 
   <div class="module-table-wrap">
@@ -37,7 +69,7 @@
           <th>Khoa / ca</th>
           <th>Liên hệ</th>
           <th>Trạng thái</th>
-          <th>Nguồn</th>
+          <th>Role</th>
           <th class="text-end">Hành động</th>
         </tr>
       </thead>
@@ -46,7 +78,7 @@
           <tr
             data-search="<%= `${row.staffCode} ${row.fullName} ${row.specialty || ''} ${row.departmentName || ''} ${row.staffType}`.toLowerCase() %>"
             data-type="<%= row.staffType %>"
-            data-source="<%= row.sourceName %>">
+            data-source="<%= row.roleCode %>">
             <td>
               <div class="module-primary">
                 <strong><%= row.fullName %></strong>
@@ -63,7 +95,7 @@
               <small class="text-muted"><%= row.phone || '' %></small>
             </td>
             <td><%- include('../partials/badge', { text: row.status }) %></td>
-            <td><span class="status-badge status-info"><%= row.sourceName %></span></td>
+            <td><span class="status-badge status-info"><%= row.roleNameDisplay %></span></td>
             <td class="text-end">
               <div class="table-actions">
                 <% if (row.sourceName === 'Doctors') { %>
@@ -79,11 +111,40 @@
             </td>
           </tr>
 <% }) %>
+        <% if (!rows.length) { %>
+          <tr><td colspan="7" class="text-center py-4 text-muted">Không tìm thấy nhân sự phù hợp.</td></tr>
+        <% } %>
       </tbody>
     </table>
   </div>
-  <div class="empty-inline d-none" data-empty-for="adminStaffTable">
-    <i class="bi bi-search"></i>
-    <strong>Không tìm thấy nhân sự phù hợp</strong>
-  </div>
+
+  <% if (pager.totalPages > 1) { %>
+    <nav class="mt-4" aria-label="Phân trang nhân sự">
+      <ul class="pagination justify-content-end mb-0">
+        <li class="page-item <%= pager.page <= 1 ? 'disabled' : '' %>">
+          <a class="page-link" href="<%= pager.page <= 1 ? '#' : pageHref(pager.page - 1) %>">Trước</a>
+        </li>
+        <% if (!pageNumbers.includes(1)) { %>
+          <li class="page-item"><a class="page-link" href="<%= pageHref(1) %>">1</a></li>
+          <% if (pageNumbers[0] > 2) { %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          <% } %>
+        <% } %>
+        <% pageNumbers.forEach(pageNo => { %>
+          <li class="page-item <%= pageNo === pager.page ? 'active' : '' %>">
+            <a class="page-link" href="<%= pageHref(pageNo) %>"><%= pageNo %></a>
+          </li>
+        <% }) %>
+        <% if (!pageNumbers.includes(pager.totalPages)) { %>
+          <% if (pageNumbers[pageNumbers.length - 1] < pager.totalPages - 1) { %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          <% } %>
+          <li class="page-item"><a class="page-link" href="<%= pageHref(pager.totalPages) %>"><%= pager.totalPages %></a></li>
+        <% } %>
+        <li class="page-item <%= pager.page >= pager.totalPages ? 'disabled' : '' %>">
+          <a class="page-link" href="<%= pager.page >= pager.totalPages ? '#' : pageHref(pager.page + 1) %>">Sau</a>
+        </li>
+      </ul>
+    </nav>
+  <% } %>
 </section>

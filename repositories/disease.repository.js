@@ -196,6 +196,42 @@ async function createDisease(data) {
   });
 }
 
+async function updateDisease(diseaseId, data) {
+  await ensureDiseaseCatalog();
+
+  await execute(`
+    UPDATE DiseaseCatalog
+    SET disease_code = @diseaseCode,
+      icd10_code = @icd10Code,
+      disease_name = @diseaseName,
+      specialty = @specialty,
+      severity_level = @severityLevel,
+      common_symptoms = NULLIF(@commonSymptoms, ''),
+      suggested_tests = NULLIF(@suggestedTests, ''),
+      recommended_medicines = NULLIF(@recommendedMedicines, ''),
+      clinical_guidance = NULLIF(@clinicalGuidance, ''),
+      contraindications = NULLIF(@contraindications, ''),
+      description = NULLIF(@description, ''),
+      status = @status,
+      updated_at = SYSDATETIME()
+    WHERE disease_id = @diseaseId
+  `, {
+    diseaseId: Number(diseaseId),
+    diseaseCode: data.diseaseCode,
+    icd10Code: data.icd10Code,
+    diseaseName: data.diseaseName,
+    specialty: data.specialty,
+    severityLevel: data.severityLevel || 'Trung bình',
+    commonSymptoms: data.commonSymptoms || '',
+    suggestedTests: data.suggestedTests || '',
+    recommendedMedicines: data.recommendedMedicines || '',
+    clinicalGuidance: data.clinicalGuidance || '',
+    contraindications: data.contraindications || '',
+    description: data.description || '',
+    status: data.status || 'Đang sử dụng'
+  });
+}
+
 async function updateDiseaseStatus(diseaseId, status) {
   await ensureDiseaseCatalog();
 
@@ -213,5 +249,6 @@ async function updateDiseaseStatus(diseaseId, status) {
 module.exports = {
   getDiseases,
   createDisease,
+  updateDisease,
   updateDiseaseStatus
 };

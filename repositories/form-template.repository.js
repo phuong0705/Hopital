@@ -42,10 +42,22 @@ async function ensureFormTemplateTables() {
         template_type NVARCHAR(100) NOT NULL,
         description NVARCHAR(500),
         file_url NVARCHAR(500),
+        original_file_url NVARCHAR(500),
+        original_file_type NVARCHAR(20),
         status NVARCHAR(50) NOT NULL DEFAULT N'Đang sử dụng',
         created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
         updated_at DATETIME2
       );
+    END;
+
+    IF COL_LENGTH(N'FormTemplates', N'original_file_url') IS NULL
+    BEGIN
+      ALTER TABLE FormTemplates ADD original_file_url NVARCHAR(500);
+    END;
+
+    IF COL_LENGTH(N'FormTemplates', N'original_file_type') IS NULL
+    BEGIN
+      ALTER TABLE FormTemplates ADD original_file_type NVARCHAR(20);
     END;
   `);
 
@@ -71,7 +83,6 @@ async function seedDefaultFormTemplates() {
           template_type = source.template_type,
           description = source.description,
           file_url = source.file_url,
-          status = N'Đang sử dụng',
           updated_at = SYSDATETIME()
       WHEN NOT MATCHED THEN
         INSERT (template_code, template_name, template_type, description, file_url, status)
@@ -91,6 +102,8 @@ async function getFormTemplates() {
       template_type AS templateType,
       description,
       file_url AS fileUrl,
+      original_file_url AS originalFileUrl,
+      original_file_type AS originalFileType,
       status,
       created_at AS createdAt,
       updated_at AS updatedAt
@@ -99,6 +112,57 @@ async function getFormTemplates() {
   `);
 }
 
+async function createFormTemplate(data) {
+  await ensureFormTemplateTables();
+
+  await execute(`
+    INSERT INTO FormTemplates (
+      template_code,
+      template_name,
+      template_type,
+      description,
+      file_url,
+      original_file_url,
+      original_file_type,
+      status
+    )
+    VALUES (
+      @templateCode,
+      @templateName,
+      @templateType,
+      @description,
+      @fileUrl,
+      @originalFileUrl,
+      @originalFileType,
+      N'Đang sử dụng'
+    )
+  `, {
+    templateCode: String(data.templateCode || '').trim(),
+    templateName: String(data.templateName || '').trim(),
+    templateType: String(data.templateType || '').trim(),
+    description: String(data.description || '').trim() || null,
+    fileUrl: data.fileUrl,
+    originalFileUrl: data.originalFileUrl || null,
+    originalFileType: data.originalFileType || null
+  });
+}
+
+async function updateFormTemplateStatus(templateId, status) {
+  await ensureFormTemplateTables();
+
+  await execute(`
+    UPDATE FormTemplates
+    SET status = @status,
+      updated_at = SYSDATETIME()
+    WHERE template_id = @templateId
+  `, {
+    templateId: Number(templateId),
+    status
+  });
+}
+
 module.exports = {
-  getFormTemplates
+  getFormTemplates,
+  createFormTemplate,
+  updateFormTemplateStatus
 };

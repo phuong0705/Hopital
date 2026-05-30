@@ -1,0 +1,325 @@
+<%
+  const editMode = typeof isEditPage !== 'undefined' && Boolean(isEditPage);
+  const existingRows = typeof existingAssignments !== 'undefined' && Array.isArray(existingAssignments) ? existingAssignments : [];
+  const safeRoleOptions = typeof roleOptions !== 'undefined' && Array.isArray(roleOptions) ? roleOptions : [];
+  const safeStatusOptions = typeof statusOptions !== 'undefined' && Array.isArray(statusOptions) ? statusOptions : [];
+  const existingByDateShift = existingRows.reduce((map, row) => {
+    const dateKey = String(row.workDate instanceof Date ? row.workDate.toISOString().slice(0, 10) : row.workDate || '').slice(0, 10);
+    const shiftKey = row.shiftName || '';
+    map[dateKey] = map[dateKey] || {};
+    map[dateKey][shiftKey] = map[dateKey][shiftKey] || [];
+    map[dateKey][shiftKey].push(row);
+    return map;
+  }, {});
+  const assignmentJson = (assignment) => JSON.stringify(assignment)
+    .replace(/</g, '\\u003c')
+    .replace(/'/g, '&#39;');
+  const toDateDisplay = (value) => {
+    const [year, month, day] = String(value || '').slice(0, 10).split('-');
+    return day && month ? `${day}/${month}/${year}` : '-';
+  };
+  const toShiftTimeDisplay = (shift) => {
+    const suffix = shift.endTime <= shift.startTime ? ' hôm sau' : '';
+    return `${shift.startTime} - ${shift.endTime}${suffix}`;
+  };
+  const weekText = `${toDateDisplay(weekRange.start)} - ${toDateDisplay(weekRange.end)}`;
+%>
+
+<section class="shift-week-hero">
+  <div class="shift-week-title">
+    <span class="shift-week-icon"><i class="bi bi-calendar2-week"></i></span>
+    <div>
+      <h2><%= editMode ? 'CHỈNH SỬA PHÂN CA' : 'THÊM PHÂN CA' %></h2>
+      <p><%= editMode ? 'Điều chỉnh lịch trực theo tuần đã được phân công' : 'Tạo lịch trực theo tuần bằng thao tác kéo thả nhân viên' %></p>
+    </div>
+  </div>
+  <div class="shift-week-breadcrumb">
+    <a href="/dashboard/home">Trang chủ</a>
+    <i class="bi bi-chevron-right"></i>
+    <a href="/admin/phan-ca">Phân ca</a>
+    <i class="bi bi-chevron-right"></i>
+    <strong><%= editMode ? 'Chỉnh sửa phân ca' : 'Thêm phân ca' %></strong>
+  </div>
+</section>
+
+<form class="shift-create-shell" action="<%= editMode ? '/admin/phan-ca/batch-update' : '/admin/phan-ca/batch' %>" method="post" data-shift-create-form>
+  <input type="hidden" name="assignments" data-shift-assignments-input>
+  <input type="hidden" name="weekStart" value="<%= weekRange.start %>">
+
+  <section class="panel shift-create-toolbar">
+    <label>
+      <span>Khoa / Phòng</span>
+      <select class="form-select" name="departmentId" data-shift-department>
+        <% departments.forEach(department => { %>
+          <option value="<%= department.departmentId %>" <%= String(selectedDepartmentId) === String(department.departmentId) ? 'selected' : '' %>><%= department.departmentName %></option>
+        <% }) %>
+      </select>
+    </label>
+    <label>
+      <span>Tuần</span>
+      <input class="form-control" type="date" name="weekStartPicker" value="<%= weekRange.start %>" data-shift-week-picker>
+    </label>
+    <label>
+      <span>Khu vực <small>(Tùy chọn)</small></span>
+      <select class="form-select" name="area">
+        <option value="">Chọn khu vực</option>
+        <option>Phòng bệnh nội trú</option>
+        <option>Khu hồi sức</option>
+        <option>Khu cấp cứu</option>
+      </select>
+    </label>
+    <div class="shift-create-save">
+      <button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i><%= editMode ? 'Lưu chỉnh sửa' : 'Lưu phân ca' %></button>
+      <a class="btn btn-light" href="/admin/phan-ca?weekStart=<%= weekRange.start %>&departmentId=<%= selectedDepartmentId || '' %>"><i class="bi bi-calendar-check me-2"></i>Lịch đã lưu</a>
+      <a class="btn btn-light" href="/admin/phan-ca?weekStart=<%= weekRange.start %>&departmentId=<%= selectedDepartmentId || '' %>"><i class="bi bi-x-lg me-2"></i>Hủy</a>
+    </div>
+  </section>
+
+  <section class="shift-create-layout">
+    <aside class="panel shift-staff-panel">
+      <h3>Danh sách nhân viên</h3>
+      <div class="shift-staff-search">
+        <input class="form-control" type="search" placeholder="Tìm theo tên hoặc vai trò" data-shift-staff-search>
+        <i class="bi bi-search"></i>
+      </div>
+      <div class="shift-role-tabs">
+        <button type="button" class="active" data-role-filter="">Tất cả</button>
+        <% safeRoleOptions.slice(0, 4).forEach(role => { %>
+          <button type="button" data-role-filter="<%= role.roleCode %>"><%= role.roleName %></button>
+        <% }) %>
+      </div>
+      <div class="shift-staff-list">
+        <% employees.forEach((employee, index) => {
+          const avatarClass = ['blue', 'pink', 'green', 'purple', 'orange'][index % 5];
+        %>
+          <article
+            class="shift-staff-card"
+            draggable="true"
+            data-employee-key="<%= employee.employeeKey %>"
+            data-name="<%= employee.fullName %>"
+            data-role="<%= employee.roleCode || employee.employeeType %>"
+            data-role-name="<%= employee.roleName || employee.employeeType %>"
+            data-search="<%= `${employee.fullName} ${employee.roleName || ''} ${employee.employeeCode || ''}`.toLowerCase() %>">
+            <i class="bi bi-grip-vertical shift-staff-grip"></i>
+            <span class="shift-week-avatar is-<%= avatarClass %>"><i class="bi bi-person-fill"></i></span>
+            <span>
+              <strong><%= employee.fullName %></strong>
+              <small><%= employee.roleName || employee.employeeType %></small>
+              <em><i class="bi bi-dot"></i>Chưa phân ca</em>
+            </span>
+          </article>
+        <% }) %>
+      </div>
+      <p class="shift-create-hint"><i class="bi bi-info-circle"></i>Kéo và thả nhân viên vào ô ca trực</p>
+    </aside>
+
+    <section class="panel shift-planner-panel">
+      <div class="shift-planner-head">
+        <h3>Lịch phân ca tuần</h3>
+        <div>
+          <a class="btn btn-sm btn-light" href="/admin/phan-ca?weekStart=<%= weekRange.start %>&departmentId=<%= selectedDepartmentId || '' %>"><i class="bi bi-calendar3 me-2"></i>Xem theo tuần</a>
+          <button class="btn btn-sm btn-light" type="button" data-shift-clear><i class="bi bi-filter me-2"></i>Tùy chọn hiển thị</button>
+        </div>
+      </div>
+      <div class="shift-planner-grid">
+        <table class="shift-planner-table">
+          <thead>
+            <tr>
+              <th>Ca trực</th>
+              <% weekRange.weekDays.forEach(day => { %>
+                <th><%= day.label %><small><%= day.display %></small></th>
+              <% }) %>
+            </tr>
+          </thead>
+          <tbody>
+            <% shiftTemplates.forEach(shift => { %>
+              <tr>
+                <th>
+                  <strong class="is-<%= shift.color %>"><%= shift.name %></strong>
+                  <small><%= toShiftTimeDisplay(shift) %></small>
+                </th>
+                <% weekRange.weekDays.forEach(day => { %>
+                  <% const zoneAssignments = (existingByDateShift[day.value] && existingByDateShift[day.value][shift.name]) || []; %>
+                  <td>
+                    <div
+                      class="shift-drop-zone <%= zoneAssignments.length ? 'has-items' : '' %>"
+                      data-work-date="<%= day.value %>"
+                      data-shift-name="<%= shift.name %>"
+                      data-start-time="<%= shift.startTime %>"
+                      data-end-time="<%= shift.endTime %>">
+                      <span><i class="bi bi-cloud-arrow-up"></i>Kéo nhân viên vào đây</span>
+                      <% zoneAssignments.forEach((row) => {
+                        const assignment = {
+                          id: row.id,
+                          employeeKey: row.employeeKey,
+                          employeeName: row.employeeName,
+                          roleName: row.positionName,
+                          workDate: day.value,
+                          shiftName: shift.name,
+                          startTime: row.startTime || shift.startTime,
+                          endTime: row.endTime || shift.endTime,
+                          status: row.status,
+                          note: row.note || ''
+                        };
+                      %>
+                        <button
+                          type="button"
+                          class="shift-assigned-card"
+                          data-employee-key="<%= row.employeeKey %>"
+                          data-assignment='<%- assignmentJson(assignment) %>'>
+                          <span>
+                            <strong><%= row.employeeName %></strong>
+                            <small><%= row.positionName || '-' %></small>
+                          </span>
+                          <i class="bi bi-x" aria-label="Xóa"></i>
+                        </button>
+                      <% }) %>
+                    </div>
+                  </td>
+                <% }) %>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </section>
+</form>
+
+<script>
+  (() => {
+    const form = document.querySelector('[data-shift-create-form]');
+    if (!form) return;
+
+    const assignmentsInput = form.querySelector('[data-shift-assignments-input]');
+    const departmentSelect = form.querySelector('[data-shift-department]');
+    const weekPicker = form.querySelector('[data-shift-week-picker]');
+    const searchInput = form.querySelector('[data-shift-staff-search]');
+    const staffCards = Array.from(form.querySelectorAll('.shift-staff-card'));
+    const zones = Array.from(form.querySelectorAll('.shift-drop-zone'));
+    const roleButtons = Array.from(form.querySelectorAll('[data-role-filter]'));
+    let activeRole = '';
+    let dragged = null;
+
+    const applyFilters = () => {
+      const keyword = (searchInput?.value || '').trim().toLowerCase();
+      staffCards.forEach((card) => {
+        const matchesKeyword = !keyword || (card.dataset.search || '').includes(keyword);
+        const matchesRole = !activeRole || card.dataset.role === activeRole;
+        card.classList.toggle('d-none', !(matchesKeyword && matchesRole));
+      });
+    };
+
+    roleButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        activeRole = button.dataset.roleFilter || '';
+        roleButtons.forEach((item) => item.classList.toggle('active', item === button));
+        applyFilters();
+      });
+    });
+    searchInput?.addEventListener('input', applyFilters);
+
+    staffCards.forEach((card) => {
+      card.addEventListener('dragstart', (event) => {
+        dragged = card;
+        event.dataTransfer.effectAllowed = 'copy';
+      });
+      card.addEventListener('dragend', () => {
+        dragged = null;
+      });
+    });
+
+    zones.forEach((zone) => {
+      zone.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        zone.classList.add('is-over');
+      });
+      zone.addEventListener('dragleave', () => zone.classList.remove('is-over'));
+      zone.addEventListener('drop', (event) => {
+        event.preventDefault();
+        zone.classList.remove('is-over');
+        if (!dragged) return;
+
+        const duplicate = Array.from(zone.querySelectorAll('.shift-assigned-card'))
+          .some((item) => item.dataset.employeeKey === dragged.dataset.employeeKey);
+        if (duplicate) return;
+
+        const assignment = {
+          employeeKey: dragged.dataset.employeeKey,
+          employeeName: dragged.dataset.name,
+          roleName: dragged.dataset.roleName,
+          workDate: zone.dataset.workDate,
+          shiftName: zone.dataset.shiftName,
+          startTime: zone.dataset.startTime,
+          endTime: zone.dataset.endTime,
+          status: 'Chờ thực hiện'
+        };
+
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'shift-assigned-card';
+        card.dataset.employeeKey = assignment.employeeKey;
+        card.dataset.assignment = JSON.stringify(assignment);
+        card.innerHTML = `
+          <span>
+            <strong>${assignment.employeeName}</strong>
+            <small>${assignment.roleName}</small>
+          </span>
+          <i class="bi bi-x" aria-label="Xóa"></i>
+        `;
+        zone.appendChild(card);
+        zone.classList.add('has-items');
+      });
+    });
+
+    form.addEventListener('click', (event) => {
+      const remove = event.target.closest('.shift-assigned-card i');
+      if (remove) {
+        const card = remove.closest('.shift-assigned-card');
+        const zone = card.closest('.shift-drop-zone');
+        card.remove();
+        zone.classList.toggle('has-items', Boolean(zone.querySelector('.shift-assigned-card')));
+        return;
+      }
+
+      const card = event.target.closest('.shift-assigned-card');
+      if (card) {
+        card.classList.toggle('is-selected');
+      }
+    });
+
+    weekPicker?.addEventListener('change', () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('weekStart', weekPicker.value);
+      url.searchParams.set('departmentId', departmentSelect.value || '');
+      window.location.href = url.toString();
+    });
+
+    departmentSelect?.addEventListener('change', () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('departmentId', departmentSelect.value || '');
+      url.searchParams.set('weekStart', weekPicker.value || '<%= weekRange.start %>');
+      window.location.href = url.toString();
+    });
+
+    form.querySelector('[data-shift-clear]')?.addEventListener('click', () => {
+      zones.forEach((zone) => {
+        zone.querySelectorAll('.shift-assigned-card').forEach((card) => card.remove());
+        zone.classList.remove('has-items');
+      });
+    });
+
+    form.addEventListener('submit', (event) => {
+      const assignments = Array.from(form.querySelectorAll('.shift-assigned-card')).map((card) => ({
+        ...JSON.parse(card.dataset.assignment || '{}'),
+        departmentId: departmentSelect.value
+      }));
+      assignmentsInput.value = JSON.stringify(assignments);
+      if (!assignments.length && !<%- JSON.stringify(editMode) %>) {
+        event.preventDefault();
+        window.AppFlash?.warning('Vui lòng kéo nhân viên vào ít nhất một ca trực.');
+      }
+    });
+  })();
+</script>

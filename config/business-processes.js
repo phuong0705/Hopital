@@ -92,7 +92,8 @@ const businessGroups = [
       { key: 'hr-users', code: '7.1', title: 'Quản lý tài khoản nhân viên', href: '/users', icon: 'bi-shield-lock' },
       { key: 'doctor-duty', code: '7.2', title: 'Phân công bác sĩ trực', href: '/nghiep-vu/quan-ly-bac-si-truc', icon: 'bi-calendar-check' },
       { key: 'duty-shift', code: '7.3', title: 'Quản lý ca trực', href: '/nghiep-vu/quan-ly-ca-truc', icon: 'bi-calendar-week' },
-      { key: 'performance', code: '7.4', title: 'Theo dõi hiệu suất', href: '/nghiep-vu/theo-doi-hieu-suat', icon: 'bi-graph-up-arrow' }
+      { key: 'performance', code: '7.4', title: 'Theo dõi hiệu suất', href: '/nghiep-vu/theo-doi-hieu-suat', icon: 'bi-graph-up-arrow' },
+      { key: 'shift-assignments', code: '7.5', title: 'Phân ca', href: '/nghiep-vu/phan-ca', icon: 'bi-calendar2-week', roles: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'PHARMACY', 'LAB'] }
     ]
   },
   {

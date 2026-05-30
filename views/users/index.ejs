@@ -1,3 +1,26 @@
+<%
+  const userFilters = locals.filters || {};
+  const pager = locals.pagination || { page: 1, pageSize: 10, totalRows: rows.length, totalPages: 1 };
+
+  function pageHref(page) {
+    const params = new URLSearchParams();
+    if (userFilters.q) params.set('q', userFilters.q);
+    if (userFilters.role) params.set('role', userFilters.role);
+    if (userFilters.status) params.set('status', userFilters.status);
+    params.set('page', page);
+    return `/users?${params.toString()}`;
+  }
+
+  const currentPageHref = pageHref(pager.page);
+  const hasUserFilters = Boolean(userFilters.q || userFilters.role || userFilters.status);
+  const pageStart = pager.totalRows ? ((pager.page - 1) * pager.pageSize) + 1 : 0;
+  const pageEnd = Math.min(pager.page * pager.pageSize, pager.totalRows);
+  const pageNumbers = [];
+  for (let pageNo = Math.max(1, pager.page - 2); pageNo <= Math.min(pager.totalPages, pager.page + 2); pageNo += 1) {
+    pageNumbers.push(pageNo);
+  }
+%>
+
 <section class="module-hero">
   <div>
     <h2>Quản lý tài khoản</h2>
@@ -10,6 +33,33 @@
 </section>
 
 <section class="panel mt-4">
+  <form class="module-toolbar user-filter-toolbar" method="get" action="/users">
+    <div class="module-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" name="q" type="search" value="<%= userFilters.q || '' %>" placeholder="Tìm username, họ tên, email hoặc role">
+    </div>
+    <select class="form-select" name="role">
+      <option value="">Tất cả role</option>
+      <% roles.forEach(role => { %>
+        <option value="<%= role.roleCode %>" <%= userFilters.role === role.roleCode ? 'selected' : '' %>><%= role.roleName %></option>
+      <% }) %>
+    </select>
+    <select class="form-select" name="status">
+      <option value="">Tất cả trạng thái</option>
+      <option value="Hoạt động" <%= userFilters.status === 'Hoạt động' ? 'selected' : '' %>>Hoạt động</option>
+      <option value="Khóa" <%= userFilters.status === 'Khóa' ? 'selected' : '' %>>Khóa</option>
+    </select>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-funnel me-2"></i>Lọc</button>
+    <% if (hasUserFilters) { %>
+      <a class="btn btn-light" href="/users">Xóa lọc</a>
+    <% } %>
+  </form>
+
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 text-muted small">
+    <span>Hi&#7875;n th&#7883; <strong><%= pageStart %>-<%= pageEnd %></strong> / <strong><%= pager.totalRows %></strong> t&#224;i kho&#7843;n</span>
+    <span>M&#7895;i trang <%= pager.pageSize %> t&#224;i kho&#7843;n</span>
+  </div>
+
   <div class="table-responsive">
     <table class="table app-table">
       <thead>
@@ -41,6 +91,7 @@
                   <i class="bi bi-pencil"></i>
                 </button>
                 <form action="/users/<%= row.userId %>/delete" method="post" class="d-inline" onsubmit="return confirm('Xóa tài khoản này?')">
+                  <input type="hidden" name="returnTo" value="<%= currentPageHref %>">
                   <button class="btn btn-sm btn-light text-danger action-icon">
                     <i class="bi bi-trash"></i>
                   </button>
@@ -49,9 +100,42 @@
             </td>
           </tr>
         <% }) %>
+        <% if (!rows.length) { %>
+          <tr><td colspan="7" class="text-center py-4 text-muted">Kh&#244;ng c&#243; t&#224;i kho&#7843;n.</td></tr>
+        <% } %>
       </tbody>
     </table>
   </div>
+
+  <% if (pager.totalPages > 1) { %>
+    <nav class="mt-4" aria-label="Ph&#226;n trang t&#224;i kho&#7843;n">
+      <ul class="pagination justify-content-end mb-0">
+        <li class="page-item <%= pager.page <= 1 ? 'disabled' : '' %>">
+          <a class="page-link" href="<%= pager.page <= 1 ? '#' : pageHref(pager.page - 1) %>">Tr&#432;&#7899;c</a>
+        </li>
+        <% if (!pageNumbers.includes(1)) { %>
+          <li class="page-item"><a class="page-link" href="<%= pageHref(1) %>">1</a></li>
+          <% if (pageNumbers[0] > 2) { %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          <% } %>
+        <% } %>
+        <% pageNumbers.forEach(pageNo => { %>
+          <li class="page-item <%= pageNo === pager.page ? 'active' : '' %>">
+            <a class="page-link" href="<%= pageHref(pageNo) %>"><%= pageNo %></a>
+          </li>
+        <% }) %>
+        <% if (!pageNumbers.includes(pager.totalPages)) { %>
+          <% if (pageNumbers[pageNumbers.length - 1] < pager.totalPages - 1) { %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          <% } %>
+          <li class="page-item"><a class="page-link" href="<%= pageHref(pager.totalPages) %>"><%= pager.totalPages %></a></li>
+        <% } %>
+        <li class="page-item <%= pager.page >= pager.totalPages ? 'disabled' : '' %>">
+          <a class="page-link" href="<%= pager.page >= pager.totalPages ? '#' : pageHref(pager.page + 1) %>">Sau</a>
+        </li>
+      </ul>
+    </nav>
+  <% } %>
 </section>
 
 <!-- Modal Tạo mới -->
@@ -112,6 +196,7 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content app-modal">
       <form id="editUserForm" method="post">
+        <input type="hidden" name="returnTo" value="<%= currentPageHref %>">
         <div class="modal-header">
           <h5 class="modal-title">Chỉnh sửa tài khoản</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

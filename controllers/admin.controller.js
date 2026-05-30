@@ -16,6 +16,20 @@ function flattenModules() {
   );
 }
 
+function getRoleDisplayName(roleCode, fallback = '') {
+  const roleMap = {
+    ADMIN: 'Quản trị viên',
+    DOCTOR: 'Bác sĩ',
+    NURSE: 'Điều dưỡng',
+    RECEPTIONIST: 'Thu ngân / tiếp nhận',
+    LAB: 'Xét nghiệm',
+    PHARMACY: 'Dược',
+    PATIENT: 'Bệnh nhân'
+  };
+
+  return roleMap[roleCode] || fallback || roleCode || 'Chưa phân quyền';
+}
+
 async function rolesPermissions(req, res, next) {
   try {
     const [roles, counts] = await Promise.all([
@@ -102,19 +116,64 @@ async function modules(req, res, next) {
 async function staff(req, res, next) {
   try {
     const directory = await adminRepository.getStaffDirectory();
-    const rows = [
-      ...directory.doctors.map((row) => ({ ...row, sourceName: 'Doctors' })),
-      ...directory.users.map((row) => ({ ...row, sourceName: 'Users' }))
+    const allRows = [
+      ...directory.doctors.map((row) => ({
+        ...row,
+        sourceName: 'Doctors',
+        roleCode: 'DOCTOR',
+        roleNameDisplay: getRoleDisplayName('DOCTOR')
+      })),
+      ...directory.users.map((row) => ({
+        ...row,
+        sourceName: 'Users',
+        roleCode: row.staffType,
+        roleNameDisplay: getRoleDisplayName(row.staffType, row.specialty)
+      }))
     ];
+    const filters = {
+      q: String(req.query.q || '').trim(),
+      type: String(req.query.type || '').trim(),
+      source: String(req.query.source || '').trim()
+    };
+    const normalizeFilterText = (value) => String(value || '').toLowerCase();
+    const filteredRows = allRows.filter((row) => {
+      const searchText = normalizeFilterText(`${row.staffCode} ${row.fullName} ${row.specialty || ''} ${row.departmentName || ''} ${row.staffType} ${row.roleNameDisplay}`);
+      const matchesKeyword = !filters.q || searchText.includes(normalizeFilterText(filters.q));
+      const matchesType = !filters.type || row.staffType === filters.type;
+      const matchesSource = !filters.source || row.roleCode === filters.source;
+      return matchesKeyword && matchesType && matchesSource;
+    });
+    const pageSize = 10;
+    const requestedPage = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const totalRows = filteredRows.length;
+    const totalPages = Math.max(Math.ceil(totalRows / pageSize), 1);
+    const page = Math.min(requestedPage, totalPages);
+    const rows = filteredRows.slice((page - 1) * pageSize, page * pageSize);
 
     return res.render('admin/staff', {
       title: 'Quản lý bác sĩ / nhân viên',
       activeMenu: 'admin-staff',
       rows,
+      filters,
+      filterOptions: {
+        types: [...new Set(allRows.map((row) => row.staffType))],
+        sources: [
+          ...new Map(allRows.map((row) => [
+            row.roleCode,
+            { value: row.roleCode, label: row.roleNameDisplay }
+          ])).values()
+        ]
+      },
+      pagination: {
+        page,
+        pageSize,
+        totalRows,
+        totalPages
+      },
       summary: {
         doctors: directory.doctors.length,
         users: directory.users.length,
-        active: rows.filter((row) => row.status === 'Đang làm việc' || row.status === 'Hoạt động').length
+        active: allRows.filter((row) => row.status === 'Đang làm việc' || row.status === 'Hoạt động').length
       }
     });
   } catch (error) {
