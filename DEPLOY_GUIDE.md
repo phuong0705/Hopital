@@ -48,8 +48,8 @@ DB_TRUST_SERVER_CERTIFICATE=false
 Test:
 
 ```txt
-https://ten-backend.onrender.com/
-https://ten-backend.onrender.com/api/health
+https://hopital-yo0m.onrender.com/
+https://hopital-yo0m.onrender.com/api/health
 ```
 
 ## 3. Deploy frontend len Vercel
@@ -65,13 +65,20 @@ Vercel Project:
 Environment Variables:
 
 ```env
-NEXT_PUBLIC_API_URL=https://ten-backend.onrender.com
-REPORTS_API_BASE_URL=https://ten-backend.onrender.com
+NEXT_PUBLIC_API_URL=https://hopital-yo0m.onrender.com
+REPORTS_API_BASE_URL=https://hopital-yo0m.onrender.com
+NEXT_PUBLIC_HIS_URL=https://hopital-yo0m.onrender.com
 ```
 
 ## 4. Sau khi deploy
 
 Cap nhat `CLIENT_URL`, `REPORTS_FRONTEND_URL` va `REPORTS_FRONTEND_INTERNAL_URL` ben Render bang link frontend Vercel.
+
+Luu y production:
+
+- Link public landing page nen la backend HIS: `https://hopital-yo0m.onrender.com`.
+- Frontend Next chi dung cho module bao cao. Route `/` cua frontend se redirect ve `NEXT_PUBLIC_HIS_URL`.
+- Neu `NEXT_PUBLIC_HIS_URL` bi thieu hoac tro nham `/reports`, mo domain frontend co the vao thang bao cao va bi dua ve dang nhap.
 
 Redeploy backend.
 
