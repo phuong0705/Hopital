@@ -13,11 +13,11 @@
       <button class="btn btn-light" type="button" data-bs-toggle="modal" data-bs-target="#provisionModal">
         <i class="bi bi-file-earmark-arrow-down me-2"></i>Dự trù thuốc
       </button>
+      <a class="btn btn-light" href="#wardMedsTable"><i class="bi bi-boxes me-2"></i>Xem tồn kho</a>
+      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#cabinetEntryModal">
+        <i class="bi bi-plus-lg me-2"></i>Nhập hàng
+      </button>
     <% } %>
-    <a class="btn btn-light" href="#wardMedsTable"><i class="bi bi-boxes me-2"></i>Xem tồn kho</a>
-    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#cabinetEntryModal">
-      <i class="bi bi-plus-lg me-2"></i>Nhập hàng
-    </button>
   </div>
 </section>
 
@@ -278,4 +278,11 @@
         tableBody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Không thể tải lịch sử.</td></tr>';
       });
   }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('openEntry') === '1') {
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('cabinetEntryModal')).show();
+    }
+  });
 </script>

@@ -228,20 +228,9 @@
               <dd id="detailDepartment">-</dd>
               <dt>Bác sĩ phụ trách</dt>
               <dd id="detailDoctor">-</dd>
-              <dt>Ngày gửi</dt>
-              <dd id="detailOrderedDate">-</dd>
-              <dt>Chẩn đoán sơ bộ</dt>
-              <dd id="detailDiagnosis">-</dd>
               <dt>Loại chỉ định</dt>
               <dd id="detailTestType">-</dd>
-              <dt>Trạng thái</dt>
-              <dd id="detailStatus">-</dd>
-              <dt>Kết quả</dt>
-              <dd id="detailResult">-</dd>
-              <dt>Ghi chú</dt>
-              <dd id="detailResultNote">-</dd>
             </div>
-            <div class="mt-3" id="detailResultFiles"></div>
           </div>
         </div>
       </div>
@@ -262,14 +251,6 @@
       if (element) element.textContent = value || '-';
     };
 
-    const escapeHtml = value => (value || '').toString().replace(/[&<>"']/g, char => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;'
-    }[char]));
-
     detailModal.addEventListener('show.bs.modal', event => {
       const button = event.relatedTarget;
       if (!button) return;
@@ -281,22 +262,7 @@
       setText('detailPatientPhone', button.dataset.patientPhone);
       setText('detailDepartment', button.dataset.department);
       setText('detailDoctor', button.dataset.doctor);
-      setText('detailOrderedDate', button.dataset.orderedDate);
-      setText('detailDiagnosis', button.dataset.diagnosis);
       setText('detailTestType', button.dataset.testType);
-      setText('detailStatus', button.dataset.status);
-      setText('detailResult', button.dataset.result || 'Chưa có kết quả');
-      setText('detailResultNote', button.dataset.note);
-
-      const filesWrap = document.getElementById('detailResultFiles');
-      const files = JSON.parse(decodeURIComponent(button.dataset.files || '%5B%5D'));
-      filesWrap.innerHTML = files.length
-        ? `<div class="d-flex flex-wrap gap-2">${files.map(file => `
-          <a class="btn btn-sm btn-light" href="${escapeHtml(file.url)}" target="_blank" rel="noopener">
-            <i class="bi bi-image me-1"></i>${escapeHtml(file.originalName || 'Ảnh kết quả')}
-          </a>
-        `).join('')}</div>`
-        : '<span class="text-muted">Chưa có ảnh kết quả</span>';
     });
   });
 </script>

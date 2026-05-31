@@ -5,7 +5,7 @@
   <div class="module-actions">
     <button class="btn btn-light" type="button" data-print-page><i class="bi bi-printer me-2"></i>In</button>
     <button class="btn btn-light" type="button" data-export-table="servicesTable" data-filename="danh-muc-dich-vu.csv"><i class="bi bi-filetype-csv me-2"></i>CSV</button>
-    <% if (['ADMIN', 'RECEPTIONIST'].includes(currentUser.roleCode)) { %>
+    <% if (currentUser.roleCode === 'ADMIN') { %>
       <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#serviceModal">
         Thêm dịch vụ
       </button>    <% } %>
@@ -72,7 +72,7 @@
                 <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#serviceDetail<%= row.serviceId %>" data-bs-title="Xem chi tiết">
                   <i class="bi bi-eye"></i>
                 </button>
-              <% if (['ADMIN', 'RECEPTIONIST'].includes(currentUser.roleCode)) { %>
+              <% if (currentUser.roleCode === 'ADMIN') { %>
                 <button class="btn btn-sm btn-light action-icon" type="button" data-bs-toggle="modal" data-bs-target="#serviceEdit<%= row.serviceId %>" data-bs-title="Chỉnh sửa">
                   <i class="bi bi-pencil-square"></i>
                 </button>
@@ -122,7 +122,7 @@
     </div>
   </div>
 
-  <% if (['ADMIN', 'RECEPTIONIST'].includes(currentUser.roleCode)) { %>
+  <% if (currentUser.roleCode === 'ADMIN') { %>
     <div class="modal fade" id="serviceEdit<%= row.serviceId %>" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content app-modal">
@@ -156,7 +156,7 @@
   <% } %>
 <% }) %>
 
-<% if (['ADMIN', 'RECEPTIONIST'].includes(currentUser.roleCode)) { %>
+<% if (currentUser.roleCode === 'ADMIN') { %>
   <div class="modal fade" id="serviceModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
       <div class="modal-content app-modal">
